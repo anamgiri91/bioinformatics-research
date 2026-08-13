@@ -1,0 +1,55 @@
+Loading BRCA 53 Alive datasets...
+Finished loading.
+
+Building reference table (Normal) ... this is the slow step, please wait
+Done in 5.43 minutes
+
+Building reference table (Tumor) ...
+Done in 5.57 minutes
+
+Flagging outlier CpGs per sample (Normal) ...
+Flagging outlier CpGs per sample (Tumor) ...
+
+===== Per-sample outlier CpG counts: Normal =====
+  N15   N17   N48   N14   N31   N49   N23   N34   N52   N35   N53   N46   N30 
+71266 63851 47746 44533 37232 34759 29441 23612 19678 18786 18434 17458 15485 
+  N13   N27   N11   N24   N10   N38    N9    N4    N3   N26   N25   N28   N32 
+14337 13972 13895 13072 12830 12592 12045 12028 11868 11794 11577 10463 10155 
+   N8   N22   N19   N39   N21   N33    N5   N18    N6    N2   N50   N37    N1 
+ 9425  9253  8923  8902  8882  8181  8129  8103  7722  6517  6213  6197  6057 
+  N29   N42   N16   N12   N47    N7   N20   N36   N44   N41   N40   N45   N51 
+ 5958  5771  5195  4972  4939  4912  4364  4099  3772  2811  2339  2180  2072 
+  N43 
+ 1906 
+
+===== Per-sample outlier CpG counts: Tumor =====
+  T15    T6   T14   T17   T44   T16   T25   T34   T36   T32   T33    T5   T35 
+61538 61078 52356 40092 32952 31898 30666 26461 23912 22056 21754 21012 20410 
+  T10   T38   T23   T51    T7   T28   T18    T4   T40   T26   T43    T2   T12 
+19969 19597 19476 18025 17574 14424 13622 12958 12660 12107 11392  9683  9486 
+  T19    T8   T22   T29    T3   T39   T13   T52   T45   T53   T11   T24   T27 
+ 8471  8423  7212  6887  6490  6346  6167  5923  5712  5632  5515  4809  4240 
+  T21   T42   T30   T20   T50   T46    T1    T9   T31   T41   T47   T37   T49 
+ 4115  4096  4045  3970  3910  3466  3384  2859  2273  2076  2027  1930  1874 
+  T48 
+ 1699 
+
+Normal samples flagged as outliers (mean + 2*SD):
+[1] "N14" "N15" "N17" "N48"
+
+Tumor samples flagged as outliers (mean + 2*SD):
+[1] "T6"  "T14" "T15"
+
+Dimensions before removal:
+[1] 380355     53
+[1] 380355     53
+Dimensions after removal:
+[1] 380355     49
+[1] 380355     50
+
+===== Numeric Summary After Removing Outlier Samples =====
+                   Dataset      Mean    Median        SD       Min       Max
+1 Normal (samples removed) 0.4656364 0.4852514 0.3700014 0.0039882 0.9970498
+2  Tumor (samples removed) 0.4787441 0.5057737 0.3640356 0.0030078 0.9969434
+
+DONE.

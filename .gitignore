@@ -1,0 +1,8 @@
+Data/*.txt
+Data/*.rda
+*.tar.gz
+Slurm/
+.RData
+.Rhistory
+.RDataTmp
+.DS_Store

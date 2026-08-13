@@ -1,0 +1,116 @@
+
+R version 4.3.1 (2023-06-16) -- "Beagle Scouts"
+Copyright (C) 2023 The R Foundation for Statistical Computing
+Platform: x86_64-redhat-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> library(OutlierMeth)
+>  
+> cat("Loading BRCA 53 Alive datasets...\n")
+Loading BRCA 53 Alive datasets...
+> BRCA.53AN <- read.table(
++   "Sorted.BRCA.53Alive.Normal.380355cg.75col.May28.2026.txt",
++   header = TRUE
++ )
+> BRCA.53AT <- read.table(
++   "Sorted.BRCA.53Alive.Tumor.380355cg.75col.May28.2026.txt",
++   header = TRUE
++ )
+> cat("Finished loading.\n")
+Finished loading.
+>  
+> normal.beta <- as.matrix(BRCA.53AN[, 5:57])
+> tumor.beta  <- as.matrix(BRCA.53AT[, 5:57])
+> rownames(normal.beta) <- BRCA.53AN$Composite.Element.REF
+> rownames(tumor.beta)  <- BRCA.53AT$Composite.Element.REF
+>  
+> run_full <- function(beta, label) {
++   t0 <- Sys.time()
++   ref  <- referenceMeth(beta)
++   flag <- flagMeth(beta[rownames(ref), ], reference = ref, p = 0.01)
++   cat(label, "done in", round(difftime(Sys.time(), t0, units = "mins"), 2), "min\n")
++   list(per.cpg = rowSums(abs(flag), na.rm = TRUE),
++        per.sample = colSums(abs(flag), na.rm = TRUE))
++ }
+>  
+> cat("\n=== BEFORE removing samples 14-17 ===\n")
+
+=== BEFORE removing samples 14-17 ===
+> before.normal <- run_full(normal.beta, "Normal (before)")
+Normal (before) done in 6.6 min
+> before.tumor  <- run_full(tumor.beta,  "Tumor (before)")
+Tumor (before) done in 7.11 min
+>  
+> # ---- remove sample columns N14/N15/N16/N17 and T14/T15/T16/T17 ----
+> # NOTE: adjust the "N"/"T" prefixes below if your column names differ
+> remove.ids          <- 14:17
+> remove.cols.normal  <- paste0("N", remove.ids)
+> remove.cols.tumor   <- paste0("T", remove.ids)
+>  
+> cat("\nColumns targeted for removal:\n")
+
+Columns targeted for removal:
+> cat("  Normal:", paste(remove.cols.normal, collapse = ", "), "\n")
+  Normal: N14, N15, N16, N17 
+> cat("  Tumor :", paste(remove.cols.tumor,  collapse = ", "), "\n")
+  Tumor : T14, T15, T16, T17 
+>  
+> missing.normal <- setdiff(remove.cols.normal, colnames(normal.beta))
+> missing.tumor  <- setdiff(remove.cols.tumor,  colnames(tumor.beta))
+> if (length(missing.normal) > 0) cat("WARNING - not found in Normal columns:", missing.normal, "\n")
+> if (length(missing.tumor)  > 0) cat("WARNING - not found in Tumor columns:",  missing.tumor,  "\n")
+>  
+> normal.clean <- normal.beta[, !(colnames(normal.beta) %in% remove.cols.normal)]
+> tumor.clean  <- tumor.beta[,  !(colnames(tumor.beta)  %in% remove.cols.tumor)]
+>  
+> cat("\nDimensions before removal -> Normal:", ncol(normal.beta), " Tumor:", ncol(tumor.beta), "\n")
+
+Dimensions before removal -> Normal: 53  Tumor: 53 
+> cat("Dimensions after removal  -> Normal:", ncol(normal.clean), " Tumor:", ncol(tumor.clean), "\n")
+Dimensions after removal  -> Normal: 49  Tumor: 49 
+>  
+> cat("\n=== AFTER removing samples 14-17 ===\n")
+
+=== AFTER removing samples 14-17 ===
+> after.normal <- run_full(normal.clean, "Normal (after)")
+Normal (after) done in 7.04 min
+> after.tumor  <- run_full(tumor.clean,  "Tumor (after)")
+Tumor (after) done in 6.61 min
+>  
+> cat("\n===== Mean per-CpG outlier count, before vs after =====\n")
+
+===== Mean per-CpG outlier count, before vs after =====
+> cat("Normal before:", mean(before.normal$per.cpg), " after:", mean(after.normal$per.cpg), "\n")
+Normal before: 1.999982  after: 1.999971 
+> cat("Tumor before:",  mean(before.tumor$per.cpg),  " after:", mean(after.tumor$per.cpg),  "\n")
+Tumor before: 1.999997  after: 1.999997 
+>  
+> cat("\nDONE.\n")
+
+DONE.
+> 
+> proc.time()
+    user   system  elapsed 
+1686.764    4.189 1723.802 
+Error in gzfile(file, "wb") : cannot open the connection
+Calls: sys.save.image -> save.image -> save -> gzfile
+In addition: Warning message:
+In gzfile(file, "wb") :
+  cannot open compressed file '.RDataTmp', probable reason 'Permission denied'
+Execution halted
+Warning message:
+In file.remove(outfile) :
+  cannot remove file '.RDataTmp', reason 'No such file or directory'

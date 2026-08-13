@@ -1,0 +1,136 @@
+
+R version 4.3.1 (2023-06-16) -- "Beagle Scouts"
+Copyright (C) 2023 The R Foundation for Statistical Computing
+Platform: x86_64-redhat-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> 
+> library(OutlierMeth)
+> library(dplyr)
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+> library(tidyr)
+>  
+> cat("Loading BRCA 53 Alive datasets...\n")
+Loading BRCA 53 Alive datasets...
+> BRCA.53AN <- read.table(
++   "Sorted.BRCA.53Alive.Normal.380355cg.75col.May28.2026.txt",
++   header = TRUE
++ )
+> BRCA.53AT <- read.table(
++   "Sorted.BRCA.53Alive.Tumor.380355cg.75col.May28.2026.txt",
++   header = TRUE
++ )
+>  
+> normal.beta <- as.matrix(BRCA.53AN[, 5:57])
+> tumor.beta  <- as.matrix(BRCA.53AT[, 5:57])
+> rownames(normal.beta) <- BRCA.53AN$Composite.Element.REF
+> rownames(tumor.beta)  <- BRCA.53AT$Composite.Element.REF
+>  
+> cat("Building reference + flags (Normal) ...\n")
+Building reference + flags (Normal) ...
+> ref.normal  <- referenceMeth(normal.beta)
+> flag.normal <- flagMeth(normal.beta[rownames(ref.normal), ], reference = ref.normal, p = 0.01)
+>  
+> cat("Building reference + flags (Tumor) ...\n")
+Building reference + flags (Tumor) ...
+> ref.tumor  <- referenceMeth(tumor.beta)
+> flag.tumor <- flagMeth(tumor.beta[rownames(ref.tumor), ], reference = ref.tumor, p = 0.01)
+>  
+> # ---- helper: cross-tabulate flag value against methy.state ----
+> build_state_flag_table <- function(flag_matrix, methy_state_lookup) {
++   flag_df <- as.data.frame(flag_matrix)
++   flag_df$cpg <- rownames(flag_matrix)
++  
++   flag_long <- flag_df %>%
++     pivot_longer(-cpg, names_to = "sample", values_to = "flag")
++  
++   flag_long$methy.state <- methy_state_lookup[flag_long$cpg]
++  
++   tab <- table(flag_long$methy.state, flag_long$flag)
++  
++   # enforce a consistent row order; drop any state not present in the data
++   state_order <- c("L", "LM", "M", "HM", "H", "Rc")
++   state_order <- state_order[state_order %in% rownames(tab)]
++   tab <- tab[state_order, , drop = FALSE]
++  
++   pct <- round(prop.table(tab, margin = 1) * 100, 2)  # row % (within each state)
++  
++   combined <- matrix(
++     paste0(tab, " (", pct, "%)"),
++     nrow = nrow(tab), dimnames = dimnames(tab)
++   )
++  
++   list(counts = tab, percent = pct, combined = combined)
++ }
+>  
+> methy_lookup_normal <- setNames(BRCA.53AN$methy.state, BRCA.53AN$Composite.Element.REF)
+> methy_lookup_tumor  <- setNames(BRCA.53AT$methy.state, BRCA.53AT$Composite.Element.REF)
+>  
+> cat("\n===== Flag x Methylation State — Normal =====\n")
+
+===== Flag x Methylation State — Normal =====
+> result.normal <- build_state_flag_table(flag.normal, methy_lookup_normal)
+> print(result.normal$combined)
+    
+     -1               0                  1               
+  L  "104535 (1.89%)" "5331546 (96.23%)" "104539 (1.89%)"
+  LM "56636 (1.89%)"  "2888436 (96.23%)" "56636 (1.89%)" 
+  M  "36785 (1.89%)"  "1876035 (96.23%)" "36785 (1.89%)" 
+  HM "97094 (1.89%)"  "4951794 (96.23%)" "97094 (1.89%)" 
+  H  "61845 (1.89%)"  "3154096 (96.23%)" "61844 (1.89%)" 
+>  
+> cat("\n===== Flag x Methylation State — Tumor =====\n")
+
+===== Flag x Methylation State — Tumor =====
+> result.tumor <- build_state_flag_table(flag.tumor, methy_lookup_tumor)
+> print(result.tumor$combined)
+    
+     -1              0                  1              
+  L  "76105 (1.89%)" "3881407 (96.23%)" "76106 (1.89%)"
+  LM "40824 (1.89%)" "2082024 (96.23%)" "40824 (1.89%)"
+  M  "5436 (1.89%)"  "277236 (96.23%)"  "5436 (1.89%)" 
+  HM "74430 (1.89%)" "3795930 (96.23%)" "74430 (1.89%)"
+  H  "30080 (1.89%)" "1534080 (96.23%)" "30080 (1.89%)"
+>  
+> write.csv(result.normal$combined, "/mmfs1/home/wln26/Experiments.Outlier.July31.2026/Results/task10_flag_by_state_normal.csv")
+> write.csv(result.tumor$combined,  "/mmfs1/home/wln26/Experiments.Outlier.July31.2026/Results/task10_flag_by_state_tumor.csv")
+>  
+> cat("\nDONE. CSVs written to working directory.\n")
+
+DONE. CSVs written to working directory.
+> 
+> proc.time()
+    user   system  elapsed 
+1003.299   51.013 1104.470 
+Error in gzfile(file, "wb") : cannot open the connection
+Calls: sys.save.image -> save.image -> save -> gzfile
+In addition: Warning message:
+In gzfile(file, "wb") :
+  cannot open compressed file '.RDataTmp', probable reason 'Permission denied'
+Execution halted
+Warning message:
+In file.remove(outfile) :
+  cannot remove file '.RDataTmp', reason 'No such file or directory'

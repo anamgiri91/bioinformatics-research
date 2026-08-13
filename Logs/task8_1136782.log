@@ -1,0 +1,20 @@
+Loading BRCA 53 Alive datasets...
+Finished loading.
+
+Original rows: 380355 
+
+=== BEFORE filtering (full genome) ===
+Normal (before) done in 5.69 min
+Tumor (before) done in 6.14 min
+
+Filtered rows -> Normal: 213970  Tumor: 274169 
+
+=== AFTER filtering (H/L removed) ===
+Normal (after) done in 3.55 min
+Tumor (after) done in 4.35 min
+
+===== Mean per-CpG outlier count, before vs after =====
+Normal before: 1.999982  after: 2 
+Tumor before: 1.999997  after: 2 
+
+DONE.

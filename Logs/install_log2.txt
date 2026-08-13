@@ -1,0 +1,519 @@
+Installing packages into ‘/mmfs1/home/wln26/R/x86_64-redhat-linux-gnu-library/4.3’
+(as ‘lib’ is unspecified)
+trying URL 'https://cloud.r-project.org/src/contrib/stringr_1.6.0.tar.gz'
+Content type 'application/x-gzip' length 195833 bytes (191 KB)
+==================================================
+downloaded 191 KB
+
+trying URL 'https://cloud.r-project.org/src/contrib/scales_1.4.0.tar.gz'
+Content type 'application/x-gzip' length 328671 bytes (320 KB)
+==================================================
+downloaded 320 KB
+
+trying URL 'https://cloud.r-project.org/src/contrib/tidyr_1.3.2.tar.gz'
+Content type 'application/x-gzip' length 809031 bytes (790 KB)
+==================================================
+downloaded 790 KB
+
+trying URL 'https://cloud.r-project.org/src/contrib/ggplot2_4.0.3.tar.gz'
+Content type 'application/x-gzip' length 6327703 bytes (6.0 MB)
+==================================================
+downloaded 6.0 MB
+
+* installing *source* package ‘stringr’ ...
+** package ‘stringr’ successfully unpacked and MD5 sums checked
+** using staged installation
+** R
+** data
+*** moving datasets to lazyload DB
+** inst
+** byte-compile and prepare package for lazy loading
+** help
+*** installing help indices
+  converting help for package ‘stringr’
+    finding HTML links ... done
+    case                                    html  
+    invert_match                            html  
+    modifiers                               html  
+    pipe                                    html  
+    str_c                                   html  
+    str_conv                                html  
+    str_count                               html  
+    str_detect                              html  
+    str_dup                                 html  
+    str_equal                               html  
+    str_escape                              html  
+    str_extract                             html  
+    str_flatten                             html  
+    str_glue                                html  
+    str_interp                              html  
+    str_length                              html  
+    str_like                                html  
+    str_locate                              html  
+    str_match                               html  
+    str_order                               html  
+    str_pad                                 html  
+    str_remove                              html  
+    str_replace                             html  
+    str_replace_na                          html  
+    str_split                               html  
+    str_starts                              html  
+    str_sub                                 html  
+    str_subset                              html  
+    str_to_camel                            html  
+    str_trim                                html  
+    str_trunc                               html  
+    str_unique                              html  
+    str_view                                html  
+    str_which                               html  
+    str_wrap                                html  
+    stringr-data                            html  
+    stringr-package                         html  
+    word                                    html  
+*** copying figures
+** building package indices
+** installing vignettes
+** testing if installed package can be loaded from temporary location
+** testing if installed package can be loaded from final location
+** testing if installed package keeps a record of temporary installation path
+* DONE (stringr)
+* installing *source* package ‘scales’ ...
+** package ‘scales’ successfully unpacked and MD5 sums checked
+** using staged installation
+** R
+** byte-compile and prepare package for lazy loading
+** help
+*** installing help indices
+  converting help for package ‘scales’
+    finding HTML links ... done
+    Range                                   html  
+    alpha                                   html  
+    breaks_exp                              html  
+    breaks_extended                         html  
+    breaks_log                              html  
+    breaks_pretty                           html  
+    breaks_timespan                         html  
+    breaks_width                            html  
+    cbreaks                                 html  
+    col2hcl                                 html  
+    col_mix                                 html  
+    col_numeric                             html  
+    colour_manip                            html  
+    colour_ramp                             html  
+    comma                                   html  
+    compose_label                           html  
+    cscale                                  html  
+    date_breaks                             html  
+    date_format                             html  
+    demo_continuous                         html  
+    dollar_format                           html  
+    dscale                                  html  
+    expand_range                            html  
+    format_format                           html  
+    fullseq                                 html  
+    label_bytes                             html  
+    label_currency                          html  
+    label_date                              html  
+    label_dictionary                        html  
+    label_glue                              html  
+    label_log                               html  
+    label_number                            html  
+    label_number_auto                       html  
+    label_number_si                         html  
+    label_ordinal                           html  
+    label_parse                             html  
+    label_percent                           html  
+    label_pvalue                            html  
+    label_scientific                        html  
+    label_wrap                              html  
+    minor_breaks_log                        html  
+    minor_breaks_width                      html  
+    muted                                   html  
+    new_continuous_palette                  html  
+    new_transform                           html  
+    number                                  html  
+    number_bytes_format                     html  
+    number_options                          html  
+    oob                                     html  
+    ordinal_format                          html  
+    pal_area                                html  
+    pal_brewer                              html  
+    pal_dichromat                           html  
+    pal_div_gradient                        html  
+    pal_gradient_n                          html  
+    pal_grey                                html  
+    pal_hue                                 html  
+    pal_identity                            html  
+    pal_linetype                            html  
+    pal_manual                              html  
+    pal_rescale                             html  
+    pal_seq_gradient                        html  
+    pal_shape                               html  
+    pal_viridis                             html  
+    palette-recommendations                 html  
+    parse_format                            html  
+    percent_format                          html  
+    pretty_breaks                           html  
+    pvalue_format                           html  
+    regular_minor_breaks                    html  
+    rescale                                 html  
+    rescale_max                             html  
+    rescale_mid                             html  
+    rescale_none                            html  
+    scales-package                          html  
+    scientific_format                       html  
+    show_col                                html  
+    train_continuous                        html  
+    train_discrete                          html  
+    trans_breaks                            html  
+    trans_format                            html  
+    transform_asinh                         html  
+    transform_asn                           html  
+    transform_atanh                         html  
+    transform_boxcox                        html  
+    transform_compose                       html  
+    transform_date                          html  
+    transform_exp                           html  
+    transform_identity                      html  
+    transform_log                           html  
+    transform_probability                   html  
+    transform_reciprocal                    html  
+    transform_reverse                       html  
+    transform_sqrt                          html  
+    transform_time                          html  
+    transform_timespan                      html  
+    transform_yj                            html  
+    trim_to_domain                          html  
+    unit_format                             html  
+    wrap_format                             html  
+    zero_range                              html  
+*** copying figures
+** building package indices
+** testing if installed package can be loaded from temporary location
+** testing if installed package can be loaded from final location
+** testing if installed package keeps a record of temporary installation path
+* DONE (scales)
+* installing *source* package ‘tidyr’ ...
+** package ‘tidyr’ successfully unpacked and MD5 sums checked
+** using staged installation
+** libs
+using C++ compiler: ‘g++ (GCC) 11.2.0’
+g++ -std=gnu++17 -I"/usr/include/R" -DNDEBUG  -I'/mmfs1/home/wln26/R/x86_64-redhat-linux-gnu-library/4.3/cpp11/include' -I/usr/local/include    -fpic  -O2 -g -pipe -Wall -fpic -c cpp11.cpp -o cpp11.o
+g++ -std=gnu++17 -I"/usr/include/R" -DNDEBUG  -I'/mmfs1/home/wln26/R/x86_64-redhat-linux-gnu-library/4.3/cpp11/include' -I/usr/local/include    -fpic  -O2 -g -pipe -Wall -fpic -c melt.cpp -o melt.o
+g++ -std=gnu++17 -I"/usr/include/R" -DNDEBUG  -I'/mmfs1/home/wln26/R/x86_64-redhat-linux-gnu-library/4.3/cpp11/include' -I/usr/local/include    -fpic  -O2 -g -pipe -Wall -fpic -c simplifyPieces.cpp -o simplifyPieces.o
+g++ -std=gnu++17 -shared -L/usr/lib64/R/lib -Wl,-z,relro -Wl,-z,now -specs=/usr/lib/rpm/redhat/redhat-hardened-ld -o tidyr.so cpp11.o melt.o simplifyPieces.o -L/usr/lib64/R/lib -lR
+installing to /mmfs1/home/wln26/R/x86_64-redhat-linux-gnu-library/4.3/00LOCK-tidyr/00new/tidyr/libs
+** R
+** data
+*** moving datasets to lazyload DB
+** inst
+** byte-compile and prepare package for lazy loading
+** help
+*** installing help indices
+  converting help for package ‘tidyr’
+    finding HTML links ... done
+    billboard                               html  
+    check_pivot_spec                        html  
+    chop                                    html  
+    cms_patient_experience                  html  
+    complete                                html  
+    construction                            html  
+    deprecated-se                           html  
+    drop_na                                 html  
+    expand                                  html  
+    expand_grid                             html  
+    extract                                 html  
+    extract_numeric                         html  
+    fill                                    html  
+    fish_encounters                         html  
+    full_seq                                html  
+    gather                                  html  
+    hoist                                   html  
+    household                               html  
+    nest                                    html  
+    nest_legacy                             html  
+    pack                                    html  
+    pipe                                    html  
+    pivot_longer                            html  
+    pivot_longer_spec                       html  
+    pivot_wider                             html  
+    pivot_wider_spec                        html  
+    reexports                               html  
+    relig_income                            html  
+    replace_na                              html  
+    separate                                html  
+    separate_longer_delim                   html  
+    separate_rows                           html  
+    separate_wider_delim                    html  
+    smiths                                  html  
+    spread                                  html  
+    table1                                  html  
+    tidyr-package                           html  
+    tidyr_data_masking                      html  
+    tidyr_legacy                            html  
+    tidyr_tidy_select                       html  
+    uncount                                 html  
+    unite                                   html  
+    unnest                                  html  
+    unnest_auto                             html  
+    unnest_longer                           html  
+    unnest_wider                            html  
+    us_rent_income                          html  
+    who                                     html  
+    world_bank_pop                          html  
+*** copying figures
+** building package indices
+** installing vignettes
+** testing if installed package can be loaded from temporary location
+** checking absolute paths in shared objects and dynamic libraries
+** testing if installed package can be loaded from final location
+** testing if installed package keeps a record of temporary installation path
+* DONE (tidyr)
+* installing *source* package ‘ggplot2’ ...
+** package ‘ggplot2’ successfully unpacked and MD5 sums checked
+** using staged installation
+** R
+** data
+*** moving datasets to lazyload DB
+** inst
+** byte-compile and prepare package for lazy loading
+** help
+*** installing help indices
+  converting help for package ‘ggplot2’
+    finding HTML links ... done
+    Coord                                   html  
+    Facet                                   html  
+    Geom                                    html  
+    Guide                                   html  
+    Layer-class                             html  
+    Layout                                  html  
+    Position                                html  
+    Scale                                   html  
+    Stat                                    html  
+    absoluteGrob                            html  
+    add_theme                               html  
+    aes                                     html  
+    aes_                                    html  
+    aes_all                                 html  
+    aes_auto                                html  
+    aes_colour_fill_alpha                   html  
+    aes_eval                                html  
+    aes_group_order                         html  
+    aes_linetype_size_shape                 html  
+    aes_position                            html  
+    annotate                                html  
+    annotation_borders                      html  
+    annotation_custom                       html  
+    annotation_logticks                     html  
+    annotation_map                          html  
+    annotation_raster                       html  
+    as.list.ggproto                         html  
+    as_labeller                             html  
+    autolayer                               html  
+    automatic_plotting                      html  
+    autoplot                                html  
+    benchplot                               html  
+    bidirection                             html  
+    binned_scale                            html  
+    calc_element                            html  
+    check_device                            html  
+    class_definitions                       html  
+    class_ggplot                            html  
+    class_ggplot_built                      html  
+    class_labels                            html  
+    class_mapping                           html  
+    class_theme                             html  
+    combine_vars                            html  
+    complete_theme                          html  
+    continuous_scale                        html  
+    coord_cartesian                         html  
+    coord_fixed                             html  
+    coord_flip                              html  
+    coord_map                               html  
+    coord_munch                             html  
+    coord_radial                            html  
+    coord_transform                         html  
+    cut_interval                            html  
+    datetime_scale                          html  
+    diamonds                                html  
+    discrete_scale                          html  
+    draw_key                                html  
+    economics                               html  
+    element                                 html  
+    element_grob                            html  
+    element_render                          html  
+    expand_limits                           html  
+    expansion                               html  
+    facet_grid                              html  
+    facet_null                              html  
+    facet_wrap                              html  
+    faithfuld                               html  
+    fill_alpha                              html  
+    find_panel                              html  
+    fortify-multcomp                        html  
+    fortify                                 html  
+    fortify.lm                              html  
+    fortify.map                             html  
+    fortify.sp                              html  
+    geom_abline                             html  
+    geom_bar                                html  
+    geom_bin_2d                             html  
+    geom_blank                              html  
+    geom_boxplot                            html  
+    geom_contour                            html  
+    geom_count                              html  
+    geom_density                            html  
+    geom_density_2d                         html  
+    geom_dotplot                            html  
+    geom_function                           html  
+    geom_hex                                html  
+    geom_histogram                          html  
+    geom_jitter                             html  
+    geom_linerange                          html  
+    geom_map                                html  
+    geom_path                               html  
+    geom_point                              html  
+    geom_polygon                            html  
+    geom_qq                                 html  
+    geom_quantile                           html  
+    geom_ribbon                             html  
+    geom_rug                                html  
+    geom_segment                            html  
+    geom_smooth                             html  
+    geom_spoke                              html  
+    geom_text                               html  
+    geom_tile                               html  
+    geom_violin                             html  
+    get_alt_text                            html  
+    get_geom_defaults                       html  
+    get_guide_data                          html  
+    get_last_plot                           html  
+    get_strip_labels                        html  
+    get_theme                               html  
+    gg-add                                  html  
+    gg_dep                                  html  
+    gg_par                                  html  
+    ggplot                                  html  
+    ggplot2-ggproto                         html  
+    ggplot2-package                         html  
+    ggplotGrob                              html  
+    ggplot_build                            html  
+    ggplot_gtable                           html  
+    ggproto                                 html  
+    ggsave                                  html  
+    ggsf                                    html  
+    ggtheme                                 html  
+    graphical-units                         html  
+    guide_axis                              html  
+    guide_axis_logticks                     html  
+    guide_axis_stack                        html  
+    guide_axis_theta                        html  
+    guide_bins                              html  
+    guide_colourbar                         html  
+    guide_coloursteps                       html  
+    guide_custom                            html  
+    guide_legend                            html  
+    guide_none                              html  
+    guides                                  html  
+    hmisc                                   html  
+    ignoring_data                           html  
+    is_rel                                  html  
+    is_tests                                html  
+    label_bquote                            html  
+    labeller                                html  
+    labellers                               html  
+    labs                                    html  
+    layer                                   html  
+    layer_geoms                             html  
+    layer_positions                         html  
+    layer_sf                                html  
+    layer_stats                             html  
+    limits                                  html  
+    lims                                    html  
+    luv_colours                             html  
+    make_constructor                        html  
+    map_data                                html  
+    max_height                              html  
+    mean_se                                 html  
+    merge_element                           html  
+    midwest                                 html  
+    mpg                                     html  
+    msleep                                  html  
+    new_guide                               html  
+    old_guide                               html  
+    pattern_alpha                           html  
+    position_dodge                          html  
+    position_identity                       html  
+    position_jitter                         html  
+    position_jitterdodge                    html  
+    position_nudge                          html  
+    position_stack                          html  
+    presidential                            html  
+    print.ggplot                            html  
+    print.ggproto                           html  
+    qplot                                   html  
+    reexports                               html  
+    register_theme_elements                 html  
+    remove_missing                          html  
+    render_axes                             html  
+    render_strips                           html  
+    resolution                              html  
+    scale_alpha                             html  
+    scale_binned                            html  
+    scale_brewer                            html  
+    scale_colour_continuous                 html  
+    scale_colour_discrete                   html  
+    scale_continuous                        html  
+    scale_date                              html  
+    scale_discrete                          html  
+    scale_gradient                          html  
+    scale_grey                              html  
+    scale_hue                               html  
+    scale_identity                          html  
+    scale_linetype                          html  
+    scale_linewidth                         html  
+    scale_manual                            html  
+    scale_shape                             html  
+    scale_size                              html  
+    scale_steps                             html  
+    scale_type                              html  
+    scale_viridis                           html  
+    seals                                   html  
+    sec_axis                                html  
+    set_last_plot                           html  
+    sf_transform_xy                         html  
+    should_stop                             html  
+    standardise_aes_names                   html  
+    stat_connect                            html  
+    stat_ecdf                               html  
+    stat_ellipse                            html  
+    stat_identity                           html  
+    stat_manual                             html  
+    stat_sf_coordinates                     html  
+    stat_summary                            html  
+    stat_summary_2d                         html  
+    stat_unique                             html  
+    subtheme                                html  
+    summarise_plot                          html  
+    theme                                   html  
+    tidyeval                                html  
+    transform_position                      html  
+    translate_shape_string                  html  
+    txhousing                               html  
+    update_defaults                         html  
+    update_ggplot                           html  
+    update_labels                           html  
+    vars                                    html  
+    waiver                                  html  
+    wrap_dims                               html  
+    zeroGrob                                html  
+*** copying figures
+** building package indices
+** installing vignettes
+** testing if installed package can be loaded from temporary location
+** testing if installed package can be loaded from final location
+** testing if installed package keeps a record of temporary installation path
+* DONE (ggplot2)
+
+The downloaded source packages are in
+	‘/tmp/Rtmpy9a7QS/downloaded_packages’

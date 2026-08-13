@@ -1,0 +1,13 @@
+Package: OutlierMeth
+Type: Package
+Title: Flags and analyzes outliers from DNA methylation array data
+Version: 1.2.1
+Date: 2025-02-06
+Author: Bradley Downs and Leslie Cope
+Maintainer: Bradley Downs <bdowns4@jhmi.edu> and Leslie Cope <Lcope1@jhmi.edu>
+Description: Flags and analyzes outliers in methylation array data using thresholds determined from normal tissues 
+License: GPL-2
+LazyData: yes
+NeedsCompilation: no
+Packaged: 2025-02-06 15:33:34 UTC; bradleydowns
+Depends: R (>= 3.5.0)

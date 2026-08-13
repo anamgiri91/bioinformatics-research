@@ -1,0 +1,74 @@
+
+R version 4.3.1 (2023-06-16) -- "Beagle Scouts"
+Copyright (C) 2023 The R Foundation for Statistical Computing
+Platform: x86_64-redhat-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> library(OutlierMeth)
+> 
+> cat("Loading BRCA 53 Alive datasets...\n")
+Loading BRCA 53 Alive datasets...
+> BRCA.53AN <- read.table("Sorted.BRCA.53Alive.Normal.380355cg.75col.May28.2026.txt", header = TRUE)
+> BRCA.53AT <- read.table("Sorted.BRCA.53Alive.Tumor.380355cg.75col.May28.2026.txt", header = TRUE)
+> 
+> normal.beta <- as.matrix(BRCA.53AN[, 5:57])
+> tumor.beta  <- as.matrix(BRCA.53AT[, 5:57])
+> rownames(normal.beta) <- BRCA.53AN$Composite.Element.REF
+> rownames(tumor.beta)  <- BRCA.53AT$Composite.Element.REF
+> 
+> cat("Loading external TCGA reference panel...\n")
+Loading external TCGA reference panel...
+> load("/mmfs1/home/wln26/OutlierMeth_tarball_check/OutlierMeth/data/tcga.rda")
+> 
+> cat("\n=== Self-referential (own 53 samples as reference) ===\n")
+
+=== Self-referential (own 53 samples as reference) ===
+> ref.self.normal  <- referenceMeth(normal.beta)
+> flag.self.normal <- flagMeth(normal.beta[rownames(ref.self.normal), ], reference = ref.self.normal, p = 0.01)
+> 
+> ref.self.tumor  <- referenceMeth(tumor.beta)
+> flag.self.tumor <- flagMeth(tumor.beta[rownames(ref.self.tumor), ], reference = ref.self.tumor, p = 0.01)
+> 
+> cat("Self-referential mean per-CpG count -> Normal:", mean(rowSums(abs(flag.self.normal), na.rm = TRUE)),
++     " Tumor:", mean(rowSums(abs(flag.self.tumor), na.rm = TRUE)), "\n")
+Self-referential mean per-CpG count -> Normal: 1.999982  Tumor: 1.999997 
+> 
+> cat("\n=== External reference (tcga.rda, ~2,000 independent samples) ===\n")
+
+=== External reference (tcga.rda, ~2,000 independent samples) ===
+> flag.ext.normal <- flagMeth(normal.beta, reference = tcga, p = 0.01)
+> flag.ext.tumor  <- flagMeth(tumor.beta,  reference = tcga, p = 0.01)
+> 
+> cat("External-reference mean per-CpG count -> Normal:", mean(rowSums(abs(flag.ext.normal), na.rm = TRUE)),
++     " Tumor:", mean(rowSums(abs(flag.ext.tumor), na.rm = TRUE)), "\n")
+External-reference mean per-CpG count -> Normal: 1.351395  Tumor: 6.505044 
+> 
+> cat("\nDONE.\n")
+
+DONE.
+> 
+> proc.time()
+   user  system elapsed 
+842.177   2.755 849.890 
+Error in gzfile(file, "wb") : cannot open the connection
+Calls: sys.save.image -> save.image -> save -> gzfile
+In addition: Warning message:
+In gzfile(file, "wb") :
+  cannot open compressed file '.RDataTmp', probable reason 'Permission denied'
+Execution halted
+Warning message:
+In file.remove(outfile) :
+  cannot remove file '.RDataTmp', reason 'No such file or directory'

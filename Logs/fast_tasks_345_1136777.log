@@ -1,0 +1,16 @@
+Loading BRCA 53 Alive...
+
+=== Task 3: Alive chrX/chr22 ===
+Alive chrX Normal done in 6.9 sec
+Alive chr22 Normal done in 4.8 sec
+Alive chrX Tumor done in 6.8 sec
+Alive chr22 Tumor done in 5.1 sec
+Mean per-CpG outlier count -> chrX N: 2  chr22 N: 2  chrX T: 2  chr22 T: 2 
+
+Loading BRCA 32 Dead...
+
+=== Task 5: Dead chrX/chr22 ===
+Error in `[.data.frame`(df, df$Chromosome == chrom, 5:57) : 
+  undefined columns selected
+Calls: run_chrom ... referenceMeth -> apply -> mk -> as.matrix -> [ -> [.data.frame
+Execution halted

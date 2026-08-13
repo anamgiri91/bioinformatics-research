@@ -1,0 +1,44 @@
+Loading BRCA 53 Alive...
+
+=== Task 3: Alive chrX/chr22 ===
+Alive chrX Normal done in 6.9 sec
+Alive chr22 Normal done in 4.8 sec
+Alive chrX Tumor done in 6.9 sec
+Alive chr22 Tumor done in 5.1 sec
+Mean per-CpG outlier count -> chrX N: 2  chr22 N: 2  chrX T: 2  chr22 T: 2 
+
+Loading BRCA 32 Dead...
+
+=== Task 5: Dead chrX/chr22 ===
+Dead chrX Normal done in 9 sec
+Dead chr22 Normal done in 4.5 sec
+Dead chrX Tumor done in 6.7 sec
+Dead chr22 Tumor done in 4.7 sec
+Mean per-CpG outlier count -> chrX N: 2  chr22 N: 2  chrX T: 2  chr22 T: 2 
+
+=== Task 4: 5-CpG printout (real OutlierMeth) ===
+Per-CpG outlier sample counts (Tumor):
+cg27487046 cg06838427 cg01150641 cg23625715 cg06973463 
+         2          2          2          2          2 
+
+Raw flags (1=high outlier, -1=low outlier, 0=normal):
+           T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 T15 T16 T17 T18 T19
+cg27487046  0  0  0  0  0  0  0  0  0   0   0   0   0   0   0   0   0   0   0
+cg06838427  0  0  0  0  0  0  0  0  0   0   0   0   0   0   0   0   0   1   0
+cg01150641  0  0  0  0  0  0 -1  0  0   0   0   0   0   0   0   0   0   0   0
+cg23625715  0  0  0  0  0  0  0  0  0   0  -1   0   0   0   0   0   0   0   0
+cg06973463  0  0  0  0  0  0  0  0  0   0   0   0   0   0   0   0   0   0   0
+           T20 T21 T22 T23 T24 T25 T26 T27 T28 T29 T30 T31 T32 T33 T34 T35 T36
+cg27487046   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+cg06838427   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0  -1   0
+cg01150641   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+cg23625715   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+cg06973463   0   0   0   0   0   0   0   0   1   0   0   0   0   0  -1   0   0
+           T37 T38 T39 T40 T41 T42 T43 T44 T45 T46 T47 T48 T49 T50 T51 T52 T53
+cg27487046   0   1   0   0   0   0  -1   0   0   0   0   0   0   0   0   0   0
+cg06838427   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+cg01150641   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0
+cg23625715   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0
+cg06973463   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+
+DONE.
