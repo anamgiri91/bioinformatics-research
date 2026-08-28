@@ -1,0 +1,5 @@
+"tissue","method","n.cpgs","n.eligible.cpgs","total.flags","per.cpg.min","per.cpg.max","per.cpg.distinct","forced.constant"
+"Normal","bio",100,71,71,0,1,2,TRUE
+"Normal","bio.loo",100,71,99,0,2,3,FALSE
+"Normal","self",100,71,200,2,2,1,TRUE
+"Normal","ext",100,71,150,0,8,8,FALSE
