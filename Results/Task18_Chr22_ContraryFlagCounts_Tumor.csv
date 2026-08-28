@@ -1,0 +1,17 @@
+"tissue","method","methy.state","contrary.flag","n.cpgs","n.evaluated","contrary.count","contrary.pct"
+"Tumor","bio","L",-1,7,371,0,0
+"Tumor","bio.loo","L",-1,7,371,0,0
+"Tumor","ext","L",-1,7,318,4,1.258
+"Tumor","self","L",-1,7,371,7,1.887
+"Tumor","bio","LM",-1,8,424,0,0
+"Tumor","bio.loo","LM",-1,8,424,0,0
+"Tumor","ext","LM",-1,8,424,29,6.84
+"Tumor","self","LM",-1,8,424,8,1.887
+"Tumor","bio","HM",1,19,1007,0,0
+"Tumor","bio.loo","HM",1,19,1007,0,0
+"Tumor","ext","HM",1,19,1007,43,4.27
+"Tumor","self","HM",1,19,1007,19,1.887
+"Tumor","bio","H",1,1,53,0,0
+"Tumor","bio.loo","H",1,1,53,0,0
+"Tumor","ext","H",1,1,53,0,0
+"Tumor","self","H",1,1,53,1,1.887

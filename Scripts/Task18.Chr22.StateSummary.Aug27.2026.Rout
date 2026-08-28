@@ -1,0 +1,935 @@
+
+R version 4.6.0 (2026-04-24) -- "Because it was There"
+Copyright (C) 2026 The R Foundation for Statistical Computing
+Platform: aarch64-apple-darwin23
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # ================================================================
+> # Task 18 - Chromosome 22 flag summary by methylation state
+> # Date: Aug 27, 2026
+> #
+> # Addresses item 1 of the pre-meeting email:
+> #
+> #   "For chr22, summarize by state ... example of 100 CG sites
+> #    H, 11 CG sites, % of -1, 0, 1 for bio/self, % of -1, 0, 1 for
+> #    external-ref, counts of these two methods.
+> #    For the H and HM, see if there is any flag.count for 1.
+> #    For the L and LM, see if there is any flag.count for -1.
+> #    If there are non-zero counts, zoom in to see which sample and
+> #    which site, why?"
+> #
+> # Uses the SAME 100 consecutive chr22 CpGs selected in Task 17 - the
+> # email's "H, 11 CG sites" matches that selection exactly (H = 11).
+> #
+> # THREE flagging methods are compared per CpG x sample cell:
+> #   bio  - state-aware percentile rule from Task 17
+> #            L/LM -> +1 if beta > 99th percentile of the 53 values
+> #            H/HM -> -1 if beta <  1st percentile of the 53 values
+> #            M/R  -> no rule, always 0
+> #   self - OutlierMeth flagMeth() against thresholds derived from the
+> #          same 53 samples          (Task13_*_selfref_flags.csv)
+> #   ext  - OutlierMeth flagMeth() against the external TCGA panel
+> #          of ~2,000 independent samples (Task13_*_extref_flags.csv)
+> #
+> # A fourth column, bio.loo, repeats the bio rule leave-one-out: the
+> # threshold for sample i is computed from the other 52 samples. See
+> # the note on degeneracy below for why this is included.
+> #
+> # ---------------------------------------------------------------
+> # NOTE ON DEGENERACY (read before interpreting the bio/self columns)
+> #
+> # quantile(x, 0.99) over n = 53 values interpolates between the 52nd
+> # and 53rd order statistics, so exactly one sample can exceed it; the
+> # 0.01 quantile likewise admits exactly one below. The literal bio
+> # rule therefore assigns exactly ONE flag to every eligible CpG, and
+> # the self-referential OutlierMeth flags assign exactly one -1 and one
+> # +1 to every CpG, regardless of the data. Task 17 shows this: 71
+> # eligible CpGs (L 8 + LM 14 + H 11 + HM 38) produced exactly 71 flags.
+> #
+> # The bio and self columns are reproduced here as specified so the
+> # comparison the email asks for can be made, but their per-CpG counts
+> # carry no biological signal. bio.loo removes the guaranteed self-flag.
+> # The ext column is unaffected and is the one that can be interpreted.
+> # ---------------------------------------------------------------
+> #
+> # NOTE ON methy.state ACROSS TISSUES: methy.state is annotated per
+> # tissue, so the same cgID can sit in different states in Normal and
+> # Tumor. Each tissue is summarized under its OWN state annotation;
+> # the site set (100 cgIDs) is held constant so the two are comparable.
+> # Both state distributions are printed for reference.
+> #
+> # NOTE ON PHYSICAL SPAN: these 100 CpGs are consecutive by index, not
+> # tightly clustered. They span 11,915,060 - 17,085,407 (5.17 Mb) with
+> # a median inter-site gap of 450 bp but a single 3.41 Mb gap. The
+> # email asked for sites "close to each other"; this is flagged in the
+> # output so a tighter window can be chosen for follow-up.
+> #
+> # Run for Normal (N1-N53) and Tumor (T1-T53).
+> # ================================================================
+> 
+> options(stringsAsFactors = FALSE)
+> 
+> # ------------------------------------------------
+> # 1. Paths
+> # ------------------------------------------------
+> 
+> # Directories resolve to leap2 when present, otherwise to a local
+> # working copy, so the same script runs unmodified in both places.
+> pick_dir <- function(...) {
++   cand <- c(...)
++   for (d in cand) if (dir.exists(d)) return(d)
++   stop("no candidate directory exists:\n  ", paste(cand, collapse = "\n  "))
++ }
+> 
+> src_dir <- pick_dir(
++   "/home/s_s355/research3.data/TCGA/filter.BRCA.UCEC.Aug17.2022/sorted.TCGA.380355cg.files",
++   path.expand("~/Downloads/tcga_brca_380355cg")
++ )
+> 
+> input_normal <- file.path(src_dir, "Sorted.BRCA.53Alive.Normal.380355cg.75col.May28.2026.txt")
+> input_tumor  <- file.path(src_dir, "Sorted.BRCA.53Alive.Tumor.380355cg.75col.May28.2026.txt")
+> 
+> out_dir <- pick_dir(
++   "/mmfs1/home/wln26/Experiments.Outlier.July31.2026/Results",
++   path.expand("~/Desktop/bioinformatics-research/Results")
++ )
+> 
+> cat("src_dir:", src_dir, "\nout_dir:", out_dir, "\n\n")
+src_dir: /Users/anamgiri/Downloads/tcga_brca_380355cg 
+out_dir: /Users/anamgiri/Desktop/bioinformatics-research/Results 
+
+> 
+> flag_files <- list(
++   Normal = list(
++     self = file.path(out_dir, "Task13_Normal_selfref_flags.csv"),
++     ext  = file.path(out_dir, "Task13_Normal_extref_flags.csv")
++   ),
++   Tumor = list(
++     self = file.path(out_dir, "Task13_Tumor_selfref_flags.csv"),
++     ext  = file.path(out_dir, "Task13_Tumor_extref_flags.csv")
++   )
++ )
+> 
+> tcga_ref <- Filter(file.exists, c(
++   "/mmfs1/home/wln26/OutlierMeth_tarball_check/OutlierMeth/data/tcga.rda",
++   path.expand("~/Downloads/tcga.rda")
++ ))
+> tcga_ref <- if (length(tcga_ref)) tcga_ref[1] else NA_character_
+> 
+> dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
+> 
+> N_SITES     <- 100
+> STATE_ORDER <- c("L", "LM", "M", "HM", "H", "R")   # "R", not "Rc"
+> P_LEVEL     <- 0.01                                 # matches Task 13 flagging
+> 
+> # ------------------------------------------------
+> # 2. Helpers
+> # ------------------------------------------------
+> 
+> # fread when available (the flag CSVs are ~61 MB each), base R otherwise
+> read_src <- function(path) {
++   if (requireNamespace("data.table", quietly = TRUE)) {
++     as.data.frame(data.table::fread(path, sep = "\t", header = TRUE,
++                                     check.names = FALSE, showProgress = FALSE))
++   } else {
++     read.table(path, header = TRUE, sep = "\t", check.names = FALSE)
++   }
++ }
+> 
+> read_big <- function(path) {
++   if (requireNamespace("data.table", quietly = TRUE)) {
++     as.data.frame(data.table::fread(path, showProgress = FALSE))
++   } else {
++     read.csv(path, check.names = FALSE)
++   }
++ }
+> 
+> write_out <- function(tbl, fname) {
++   path <- file.path(out_dir, fname)
++   write.csv(tbl, path, row.names = FALSE)
++   cat("  written:", path, "\n")
++   invisible(path)
++ }
+> 
+> cat("====================================================\n")
+====================================================
+> cat("TASK 18 - CHR22 FLAG SUMMARY BY METHYLATION STATE\n")
+TASK 18 - CHR22 FLAG SUMMARY BY METHYLATION STATE
+> cat("====================================================\n\n")
+====================================================
+
+> 
+> # ------------------------------------------------
+> # 3. Select the 100 CpGs (from Normal, by position)
+> # ------------------------------------------------
+> 
+> cat("Loading Normal source dataset...\n")
+Loading Normal source dataset...
+> normal <- read_src(input_normal)
+> 
+> cat("Loading Tumor source dataset...\n")
+Loading Tumor source dataset...
+> tumor <- read_src(input_tumor)
+> 
+> cat("  Normal:", nrow(normal), "rows x", ncol(normal), "cols\n")
+  Normal: 380355 rows x 75 cols
+> cat("  Tumor :", nrow(tumor),  "rows x", ncol(tumor),  "cols\n\n")
+  Tumor : 380355 rows x 75 cols
+
+> 
+> normal22 <- normal[normal$Chromosome == "chr22", ]
+> normal22 <- normal22[order(normal22$Start), ]
+> 
+> n_sel <- min(N_SITES, nrow(normal22))
+> sel   <- normal22[seq_len(n_sel), ]
+> sel_ids <- sel$Composite.Element.REF
+> 
+> cat("Selected", n_sel, "consecutive chr22 CpGs (by position, from Normal).\n")
+Selected 100 consecutive chr22 CpGs (by position, from Normal).
+> cat("  first position:", sel$Start[1], "\n")
+  first position: 11915060 
+> cat("  last  position:", sel$Start[n_sel], "\n")
+  last  position: 17085407 
+> cat("  physical span :", sel$Start[n_sel] - sel$Start[1], "bp\n")
+  physical span : 5170347 bp
+> 
+> gaps <- diff(sel$Start)
+> cat("  inter-site gaps: min", min(gaps), " median", median(gaps),
++     " max", max(gaps), "bp\n")
+  inter-site gaps: min 6  median 512  max 3410179 bp
+> if (max(gaps) > 1e6) {
++   cat("  WARNING: largest gap exceeds 1 Mb - these sites are consecutive by\n")
++   cat("           index but not tightly clustered. Consider a narrower window.\n")
++ }
+  WARNING: largest gap exceeds 1 Mb - these sites are consecutive by
+           index but not tightly clustered. Consider a narrower window.
+> cat("\n")
+
+> 
+> # ------------------------------------------------
+> # 4. Per-tissue assembly
+> # ------------------------------------------------
+> 
+> # state-aware biological rule -----------------------------------
+> #   literal: threshold from all 53 values (as specified in the email)
+> #   loo    : threshold for sample i from the other 52
+> build_bio_flag <- function(meth, states, leave_one_out = FALSE) {
++ 
++   n_cpg <- nrow(meth)
++   n_smp <- ncol(meth)
++ 
++   out <- matrix(0, nrow = n_cpg, ncol = n_smp,
++                 dimnames = list(rownames(meth), colnames(meth)))
++ 
++   for (i in seq_len(n_cpg)) {
++ 
++     state  <- states[i]
++     values <- as.numeric(meth[i, ])
++ 
++     if (all(is.na(values))) { out[i, ] <- NA; next }
++     if (!state %in% c("L", "LM", "H", "HM")) next   # M / R: no rule
++ 
++     hi <- state %in% c("L", "LM")   # L/LM look for unusually HIGH
++     p  <- if (hi) 1 - P_LEVEL else P_LEVEL
++ 
++     if (!leave_one_out) {
++       thr <- quantile(values, probs = p, na.rm = TRUE, names = FALSE)
++       out[i, ] <- if (hi) as.integer(values > thr) else -as.integer(values < thr)
++       out[i, is.na(values)] <- NA
++     } else {
++       for (j in seq_len(n_smp)) {
++         if (is.na(values[j])) { out[i, j] <- NA; next }
++         others <- values[-j]
++         if (all(is.na(others))) { out[i, j] <- NA; next }
++         thr <- quantile(others, probs = p, na.rm = TRUE, names = FALSE)
++         out[i, j] <- if (hi) as.integer(values[j] > thr) else -as.integer(values[j] < thr)
++       }
++     }
++   }
++   out
++ }
+> 
+> # pull the 100 selected rows out of a Task 13 flag matrix
+> subset_flag_file <- function(path, ids, sample_cols) {
++   fl  <- read_big(path)
++   idx <- match(ids, fl$cgID)
++   if (anyNA(idx)) {
++     stop("cgIDs missing from ", basename(path), ": ", sum(is.na(idx)))
++   }
++   m <- as.matrix(fl[idx, sample_cols, drop = FALSE])
++   rownames(m) <- ids
++   storage.mode(m) <- "numeric"
++   m
++ }
+> 
+> assemble <- function(tissue) {
++ 
++   cat("--------------------------------------------------\n")
++   cat("Assembling", tissue, "\n")
++   cat("--------------------------------------------------\n")
++ 
++   src         <- if (tissue == "Normal") normal else tumor
++   sample_cols <- paste0(substr(tissue, 1, 1), 1:53)   # N1..N53 / T1..T53
++ 
++   idx <- match(sel_ids, src$Composite.Element.REF)
++   if (anyNA(idx)) stop("selected cgIDs missing from ", tissue, " source")
++   meta <- src[idx, ]
++ 
++   meth <- as.matrix(meta[, sample_cols, drop = FALSE])
++   rownames(meth) <- sel_ids
++   storage.mode(meth) <- "numeric"
++ 
++   states <- meta$methy.state
++   names(states) <- sel_ids
++ 
++   cat("  state distribution over the ", n_sel, " sites:\n", sep = "")
++   print(table(factor(states, levels = STATE_ORDER)))
++ 
++   cat("  building bio flags (literal)...\n")
++   bio <- build_bio_flag(meth, states, leave_one_out = FALSE)
++ 
++   cat("  building bio flags (leave-one-out)...\n")
++   bio_loo <- build_bio_flag(meth, states, leave_one_out = TRUE)
++ 
++   cat("  loading self-reference flags...\n")
++   self <- subset_flag_file(flag_files[[tissue]]$self, sel_ids, sample_cols)
++ 
++   cat("  loading external-reference flags...\n")
++   ext <- subset_flag_file(flag_files[[tissue]]$ext, sel_ids, sample_cols)
++ 
++   n_na_ext <- sum(apply(ext, 1, function(r) all(is.na(r))))
++   cat("  CpGs absent from the external panel (all-NA rows):", n_na_ext, "\n\n")
++ 
++   list(tissue = tissue, meta = meta, meth = meth, states = states,
++        sample_cols = sample_cols,
++        flags = list(bio = bio, bio.loo = bio_loo, self = self, ext = ext))
++ }
+> 
+> # ------------------------------------------------
+> # 5. Part A - summarize by state, per method
+> # ------------------------------------------------
+> 
+> state_summary <- function(A) {
++ 
++   rows <- list()
++ 
++   for (method in names(A$flags)) {
++ 
++     fm <- A$flags[[method]]
++ 
++     for (st in STATE_ORDER) {
++ 
++       keep <- which(A$states == st)
++       if (length(keep) == 0) next
++ 
++       cells <- as.vector(fm[keep, , drop = FALSE])
++       n_obs <- sum(!is.na(cells))
++       n_na  <- sum(is.na(cells))
++ 
++       c_neg <- sum(cells == -1, na.rm = TRUE)
++       c_zer <- sum(cells ==  0, na.rm = TRUE)
++       c_pos <- sum(cells ==  1, na.rm = TRUE)
++ 
++       pct <- function(x) if (n_obs > 0) round(100 * x / n_obs, 3) else NA
++ 
++       rows[[length(rows) + 1]] <- data.frame(
++         tissue      = A$tissue,
++         method      = method,
++         methy.state = st,
++         n.cpgs      = length(keep),
++         n.samples   = ncol(fm),
++         n.cells     = length(cells),
++         n.evaluated = n_obs,
++         n.NA        = n_na,
++         count.neg1  = c_neg,
++         count.0     = c_zer,
++         count.pos1  = c_pos,
++         pct.neg1    = pct(c_neg),
++         pct.0       = pct(c_zer),
++         pct.pos1    = pct(c_pos)
++       )
++     }
++   }
++ 
++   out <- do.call(rbind, rows)
++   out$method      <- factor(out$method, levels = names(A$flags))
++   out$methy.state <- factor(out$methy.state, levels = STATE_ORDER)
++   out <- out[order(out$methy.state, out$method), ]
++   rownames(out) <- NULL
++   out
++ }
+> 
+> # ------------------------------------------------
+> # 6. Part B - flags that contradict the state
+> # ------------------------------------------------
+> #   H / HM  ->  a +1 is contrary  (already high; "higher" is expected)
+> #   L / LM  ->  a -1 is contrary  (already low;  "lower"  is expected)
+> #
+> # The bio rule cannot produce a contrary flag by construction - it only
+> # ever assigns +1 at L/LM and -1 at H/HM - so bio and bio.loo are
+> # expected to be structurally zero here. self and ext are the informative
+> # columns, and ext is the only one free of the degeneracy.
+> 
+> CONTRARY <- list(H = 1, HM = 1, L = -1, LM = -1)
+> 
+> contrary_counts <- function(A) {
++ 
++   rows <- list()
++ 
++   for (method in names(A$flags)) {
++     fm <- A$flags[[method]]
++     for (st in names(CONTRARY)) {
++ 
++       keep <- which(A$states == st)
++       if (length(keep) == 0) next
++ 
++       want  <- CONTRARY[[st]]
++       cells <- as.vector(fm[keep, , drop = FALSE])
++       n_obs <- sum(!is.na(cells))
++       hits  <- sum(cells == want, na.rm = TRUE)
++ 
++       rows[[length(rows) + 1]] <- data.frame(
++         tissue         = A$tissue,
++         method         = method,
++         methy.state    = st,
++         contrary.flag  = want,
++         n.cpgs         = length(keep),
++         n.evaluated    = n_obs,
++         contrary.count = hits,
++         contrary.pct   = if (n_obs > 0) round(100 * hits / n_obs, 3) else NA
++       )
++     }
++   }
++ 
++   out <- do.call(rbind, rows)
++   out$methy.state <- factor(out$methy.state, levels = c("L", "LM", "HM", "H"))
++   out <- out[order(out$methy.state, out$method), ]
++   rownames(out) <- NULL
++   out
++ }
+> 
+> # ------------------------------------------------
+> # 7. Part C - drill-down: which sample, which site, why
+> # ------------------------------------------------
+> 
+> contrary_detail <- function(A, tcga = NULL) {
++ 
++   rows <- list()
++ 
++   for (method in names(A$flags)) {
++     fm <- A$flags[[method]]
++ 
++     for (st in names(CONTRARY)) {
++       want <- CONTRARY[[st]]
++       keep <- which(A$states == st)
++       if (length(keep) == 0) next
++ 
++       hit <- which(fm[keep, , drop = FALSE] == want, arr.ind = TRUE)
++       if (nrow(hit) == 0) next
++ 
++       for (k in seq_len(nrow(hit))) {
++ 
++         i <- keep[hit[k, "row"]]
++         j <- hit[k, "col"]
++ 
++         cg   <- rownames(fm)[i]
++         smp  <- colnames(fm)[j]
++         vals <- as.numeric(A$meth[i, ])
++         v    <- vals[j]
++ 
++         # where the external thresholds sat for this CpG, when available
++         pthr <- nthr <- NA_real_
++         if (!is.null(tcga) && cg %in% rownames(tcga)) {
++           pthr <- as.numeric(tcga[cg, paste0("P", P_LEVEL)])
++           nthr <- as.numeric(tcga[cg, paste0("N", P_LEVEL)])
++         }
++ 
++         rows[[length(rows) + 1]] <- data.frame(
++           tissue        = A$tissue,
++           method        = method,
++           cgID          = cg,
++           chr           = A$meta$Chromosome[i],
++           pos           = A$meta$Start[i],
++           methy.state   = st,
++           sample        = smp,
++           flag          = want,
++           beta          = round(v, 5),
++           cohort.min    = round(min(vals, na.rm = TRUE), 5),
++           cohort.median = round(median(vals, na.rm = TRUE), 5),
++           cohort.max    = round(max(vals, na.rm = TRUE), 5),
++           rank.in.cohort = rank(vals, na.last = "keep")[j],
++           ext.P.thresh  = round(pthr, 5),
++           ext.N.thresh  = round(nthr, 5),
++           margin.beyond = round(
++             if (want == 1 && !is.na(pthr)) v - pthr
++             else if (want == -1 && !is.na(nthr)) nthr - v
++             else NA_real_, 5)
++         )
++       }
++     }
++   }
++ 
++   if (length(rows) == 0) {
++     return(data.frame(tissue = character(0), method = character(0),
++                       cgID = character(0)))
++   }
++ 
++   out <- do.call(rbind, rows)
++   out <- out[order(out$method, out$methy.state, out$pos, out$sample), ]
++   rownames(out) <- NULL
++   out
++ }
+> 
+> # ------------------------------------------------
+> # 8. Run
+> # ------------------------------------------------
+> 
+> tcga <- NULL
+> if (!is.na(tcga_ref)) {
++   cat("Loading external TCGA reference panel for threshold lookup...\n")
++   load(tcga_ref)              # provides `tcga`
++   cat("  tcga:", nrow(tcga), "CpGs x", ncol(tcga), "threshold columns\n\n")
++ } else {
++   cat("NOTE: tcga.rda not found; ext.P.thresh / ext.N.thresh will be NA\n\n")
++ }
+NOTE: tcga.rda not found; ext.P.thresh / ext.N.thresh will be NA
+
+> 
+> for (tissue in c("Normal", "Tumor")) {
++ 
++   A <- assemble(tissue)
++ 
++   cat("===== Part A: flag distribution by state -", tissue, "=====\n")
++   summ <- state_summary(A)
++   print(summ, row.names = FALSE)
++   write_out(summ, paste0("Task18_Chr22_StateSummary_", tissue, ".csv"))
++ 
++   cat("\n===== Part B: flags contrary to state -", tissue, "=====\n")
++   cat("  (H/HM flagged +1, or L/LM flagged -1)\n")
++   contra <- contrary_counts(A)
++   print(contra, row.names = FALSE)
++   write_out(contra, paste0("Task18_Chr22_ContraryFlagCounts_", tissue, ".csv"))
++ 
++   cat("\n===== Part C: contrary-flag detail -", tissue, "=====\n")
++   detail <- contrary_detail(A, tcga)
++   if (nrow(detail) == 0) {
++     cat("  none found\n")
++   } else {
++     cat("  ", nrow(detail), " contrary flags; by method:\n", sep = "")
++     print(table(detail$method, detail$methy.state))
++     cat("\n  first 20 rows:\n")
++     print(utils::head(detail, 20), row.names = FALSE)
++   }
++   write_out(detail, paste0("Task18_Chr22_ContraryFlagDetail_", tissue, ".csv"))
++   cat("\n")
++ }
+--------------------------------------------------
+Assembling Normal 
+--------------------------------------------------
+  state distribution over the 100 sites:
+
+ L LM  M HM  H  R 
+ 8 14 24 38 11  5 
+  building bio flags (literal)...
+  building bio flags (leave-one-out)...
+  loading self-reference flags...
+  loading external-reference flags...
+  CpGs absent from the external panel (all-NA rows): 1 
+
+===== Part A: flag distribution by state - Normal =====
+ tissue  method methy.state n.cpgs n.samples n.cells n.evaluated n.NA
+ Normal     bio           L      8        53     424         424    0
+ Normal bio.loo           L      8        53     424         424    0
+ Normal    self           L      8        53     424         424    0
+ Normal     ext           L      8        53     424         371   53
+ Normal     bio          LM     14        53     742         742    0
+ Normal bio.loo          LM     14        53     742         742    0
+ Normal    self          LM     14        53     742         742    0
+ Normal     ext          LM     14        53     742         742    0
+ Normal     bio           M     24        53    1272        1272    0
+ Normal bio.loo           M     24        53    1272        1272    0
+ Normal    self           M     24        53    1272        1272    0
+ Normal     ext           M     24        53    1272        1272    0
+ Normal     bio          HM     38        53    2014        2014    0
+ Normal bio.loo          HM     38        53    2014        2014    0
+ Normal    self          HM     38        53    2014        2014    0
+ Normal     ext          HM     38        53    2014        2014    0
+ Normal     bio           H     11        53     583         583    0
+ Normal bio.loo           H     11        53     583         583    0
+ Normal    self           H     11        53     583         583    0
+ Normal     ext           H     11        53     583         583    0
+ Normal     bio           R      5        53     265         265    0
+ Normal bio.loo           R      5        53     265         265    0
+ Normal    self           R      5        53     265         265    0
+ Normal     ext           R      5        53     265         265    0
+ count.neg1 count.0 count.pos1 pct.neg1   pct.0 pct.pos1
+          0     416          8    0.000  98.113    1.887
+          0     409         15    0.000  96.462    3.538
+          8     408          8    1.887  96.226    1.887
+          8     359          4    2.156  96.765    1.078
+          0     728         14    0.000  98.113    1.887
+          0     724         18    0.000  97.574    2.426
+         14     714         14    1.887  96.226    1.887
+         21     718          3    2.830  96.765    0.404
+          0    1272          0    0.000 100.000    0.000
+          0    1272          0    0.000 100.000    0.000
+         24    1224         24    1.887  96.226    1.887
+         12    1241         19    0.943  97.563    1.494
+         38    1976          0    1.887  98.113    0.000
+         52    1962          0    2.582  97.418    0.000
+         38    1938         38    1.887  96.226    1.887
+         16    1952         46    0.794  96.922    2.284
+         11     572          0    1.887  98.113    0.000
+         14     569          0    2.401  97.599    0.000
+         11     561         11    1.887  96.226    1.887
+          2     571         10    0.343  97.942    1.715
+          0     265          0    0.000 100.000    0.000
+          0     265          0    0.000 100.000    0.000
+          5     255          5    1.887  96.226    1.887
+          5     256          4    1.887  96.604    1.509
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task18_Chr22_StateSummary_Normal.csv 
+
+===== Part B: flags contrary to state - Normal =====
+  (H/HM flagged +1, or L/LM flagged -1)
+ tissue  method methy.state contrary.flag n.cpgs n.evaluated contrary.count
+ Normal     bio           L            -1      8         424              0
+ Normal bio.loo           L            -1      8         424              0
+ Normal     ext           L            -1      8         371              8
+ Normal    self           L            -1      8         424              8
+ Normal     bio          LM            -1     14         742              0
+ Normal bio.loo          LM            -1     14         742              0
+ Normal     ext          LM            -1     14         742             21
+ Normal    self          LM            -1     14         742             14
+ Normal     bio          HM             1     38        2014              0
+ Normal bio.loo          HM             1     38        2014              0
+ Normal     ext          HM             1     38        2014             46
+ Normal    self          HM             1     38        2014             38
+ Normal     bio           H             1     11         583              0
+ Normal bio.loo           H             1     11         583              0
+ Normal     ext           H             1     11         583             10
+ Normal    self           H             1     11         583             11
+ contrary.pct
+        0.000
+        0.000
+        2.156
+        1.887
+        0.000
+        0.000
+        2.830
+        1.887
+        0.000
+        0.000
+        2.284
+        1.887
+        0.000
+        0.000
+        1.715
+        1.887
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task18_Chr22_ContraryFlagCounts_Normal.csv 
+
+===== Part C: contrary-flag detail - Normal =====
+  156 contrary flags; by method:
+      
+        H HM  L LM
+  ext  10 46  8 21
+  self 11 38  8 14
+
+  first 20 rows:
+ tissue method       cgID   chr      pos methy.state sample flag    beta
+ Normal    ext cg17204569 chr22 15511444           H    N24    1 0.99058
+ Normal    ext cg17204569 chr22 15511444           H    N29    1 0.98859
+ Normal    ext cg17204569 chr22 15511444           H    N30    1 0.98855
+ Normal    ext cg17204569 chr22 15511444           H    N31    1 0.98900
+ Normal    ext cg03966099 chr22 15820367           H    N30    1 0.98719
+ Normal    ext cg03966099 chr22 15820367           H    N36    1 0.98778
+ Normal    ext cg03966099 chr22 15820367           H    N48    1 0.98619
+ Normal    ext cg07155303 chr22 17008477           H    N53    1 0.97494
+ Normal    ext cg13595439 chr22 17083860           H    N15    1 0.96107
+ Normal    ext cg13595439 chr22 17083860           H     N4    1 0.96325
+ Normal    ext cg22224202 chr22 11915060          HM    N32    1 0.92906
+ Normal    ext cg22224202 chr22 11915060          HM    N33    1 0.92869
+ Normal    ext cg22224202 chr22 11915060          HM    N39    1 0.93270
+ Normal    ext cg03887676 chr22 12095366          HM    N23    1 0.82487
+ Normal    ext cg03312332 chr22 12097898          HM    N48    1 0.94623
+ Normal    ext cg26835374 chr22 12097959          HM    N29    1 0.94917
+ Normal    ext cg26835374 chr22 12097959          HM    N31    1 0.96916
+ Normal    ext cg26835374 chr22 12097959          HM    N38    1 0.95250
+ Normal    ext cg05924543 chr22 15554962          HM    N15    1 0.83366
+ Normal    ext cg05924543 chr22 15554962          HM    N17    1 0.82886
+ cohort.min cohort.median cohort.max rank.in.cohort ext.P.thresh ext.N.thresh
+    0.94842       0.98084    0.99058             53           NA           NA
+    0.94842       0.98084    0.99058             51           NA           NA
+    0.94842       0.98084    0.99058             50           NA           NA
+    0.94842       0.98084    0.99058             52           NA           NA
+    0.80670       0.95930    0.98778             52           NA           NA
+    0.80670       0.95930    0.98778             53           NA           NA
+    0.80670       0.95930    0.98778             51           NA           NA
+    0.84384       0.93315    0.97494             53           NA           NA
+    0.84922       0.93705    0.96325             52           NA           NA
+    0.84922       0.93705    0.96325             53           NA           NA
+    0.72026       0.85769    0.93270             52           NA           NA
+    0.72026       0.85769    0.93270             51           NA           NA
+    0.72026       0.85769    0.93270             53           NA           NA
+    0.61349       0.71319    0.82487             53           NA           NA
+    0.72031       0.84502    0.94623             53           NA           NA
+    0.51120       0.79239    0.96916             51           NA           NA
+    0.51120       0.79239    0.96916             53           NA           NA
+    0.51120       0.79239    0.96916             52           NA           NA
+    0.41639       0.55392    0.83366             53           NA           NA
+    0.41639       0.55392    0.83366             52           NA           NA
+ margin.beyond
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task18_Chr22_ContraryFlagDetail_Normal.csv 
+
+--------------------------------------------------
+Assembling Tumor 
+--------------------------------------------------
+  state distribution over the 100 sites:
+
+ L LM  M HM  H  R 
+ 7  8 13 19  1 52 
+  building bio flags (literal)...
+  building bio flags (leave-one-out)...
+  loading self-reference flags...
+  loading external-reference flags...
+  CpGs absent from the external panel (all-NA rows): 1 
+
+===== Part A: flag distribution by state - Tumor =====
+ tissue  method methy.state n.cpgs n.samples n.cells n.evaluated n.NA
+  Tumor     bio           L      7        53     371         371    0
+  Tumor bio.loo           L      7        53     371         371    0
+  Tumor    self           L      7        53     371         371    0
+  Tumor     ext           L      7        53     371         318   53
+  Tumor     bio          LM      8        53     424         424    0
+  Tumor bio.loo          LM      8        53     424         424    0
+  Tumor    self          LM      8        53     424         424    0
+  Tumor     ext          LM      8        53     424         424    0
+  Tumor     bio           M     13        53     689         689    0
+  Tumor bio.loo           M     13        53     689         689    0
+  Tumor    self           M     13        53     689         689    0
+  Tumor     ext           M     13        53     689         689    0
+  Tumor     bio          HM     19        53    1007        1007    0
+  Tumor bio.loo          HM     19        53    1007        1007    0
+  Tumor    self          HM     19        53    1007        1007    0
+  Tumor     ext          HM     19        53    1007        1007    0
+  Tumor     bio           H      1        53      53          53    0
+  Tumor bio.loo           H      1        53      53          53    0
+  Tumor    self           H      1        53      53          53    0
+  Tumor     ext           H      1        53      53          53    0
+  Tumor     bio           R     52        53    2756        2756    0
+  Tumor bio.loo           R     52        53    2756        2756    0
+  Tumor    self           R     52        53    2756        2756    0
+  Tumor     ext           R     52        53    2756        2756    0
+ count.neg1 count.0 count.pos1 pct.neg1   pct.0 pct.pos1
+          0     364          7    0.000  98.113    1.887
+          0     362          9    0.000  97.574    2.426
+          7     357          7    1.887  96.226    1.887
+          4     307          7    1.258  96.541    2.201
+          0     416          8    0.000  98.113    1.887
+          0     414         10    0.000  97.642    2.358
+          8     408          8    1.887  96.226    1.887
+         29     362         33    6.840  85.377    7.783
+          0     689          0    0.000 100.000    0.000
+          0     689          0    0.000 100.000    0.000
+         13     663         13    1.887  96.226    1.887
+        178     473         38   25.835  68.650    5.515
+         19     988          0    1.887  98.113    0.000
+         27     980          0    2.681  97.319    0.000
+         19     969         19    1.887  96.226    1.887
+        204     760         43   20.258  75.472    4.270
+          1      52          0    1.887  98.113    0.000
+          2      51          0    3.774  96.226    0.000
+          1      51          1    1.887  96.226    1.887
+         14      39          0   26.415  73.585    0.000
+          0    2756          0    0.000 100.000    0.000
+          0    2756          0    0.000 100.000    0.000
+         52    2652         52    1.887  96.226    1.887
+        551    2010        195   19.993  72.932    7.075
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task18_Chr22_StateSummary_Tumor.csv 
+
+===== Part B: flags contrary to state - Tumor =====
+  (H/HM flagged +1, or L/LM flagged -1)
+ tissue  method methy.state contrary.flag n.cpgs n.evaluated contrary.count
+  Tumor     bio           L            -1      7         371              0
+  Tumor bio.loo           L            -1      7         371              0
+  Tumor     ext           L            -1      7         318              4
+  Tumor    self           L            -1      7         371              7
+  Tumor     bio          LM            -1      8         424              0
+  Tumor bio.loo          LM            -1      8         424              0
+  Tumor     ext          LM            -1      8         424             29
+  Tumor    self          LM            -1      8         424              8
+  Tumor     bio          HM             1     19        1007              0
+  Tumor bio.loo          HM             1     19        1007              0
+  Tumor     ext          HM             1     19        1007             43
+  Tumor    self          HM             1     19        1007             19
+  Tumor     bio           H             1      1          53              0
+  Tumor bio.loo           H             1      1          53              0
+  Tumor     ext           H             1      1          53              0
+  Tumor    self           H             1      1          53              1
+ contrary.pct
+        0.000
+        0.000
+        1.258
+        1.887
+        0.000
+        0.000
+        6.840
+        1.887
+        0.000
+        0.000
+        4.270
+        1.887
+        0.000
+        0.000
+        0.000
+        1.887
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task18_Chr22_ContraryFlagCounts_Tumor.csv 
+
+===== Part C: contrary-flag detail - Tumor =====
+  111 contrary flags; by method:
+      
+        H HM  L LM
+  ext   0 43  4 29
+  self  1 19  7  8
+
+  first 20 rows:
+ tissue method       cgID   chr      pos methy.state sample flag    beta
+  Tumor    ext cg03312332 chr22 12097898          HM    T29    1 0.95396
+  Tumor    ext cg03312332 chr22 12097898          HM    T36    1 0.96816
+  Tumor    ext cg17204569 chr22 15511444          HM    T23    1 0.98959
+  Tumor    ext cg17204569 chr22 15511444          HM    T28    1 0.99210
+  Tumor    ext cg17204569 chr22 15511444          HM    T33    1 0.99155
+  Tumor    ext cg17204569 chr22 15511444          HM    T34    1 0.98999
+  Tumor    ext cg17204569 chr22 15511444          HM    T37    1 0.98897
+  Tumor    ext cg04778411 chr22 15572298          HM    T27    1 0.95609
+  Tumor    ext cg04778411 chr22 15572298          HM    T29    1 0.96427
+  Tumor    ext cg04778411 chr22 15572298          HM    T36    1 0.95496
+  Tumor    ext cg04778411 chr22 15572298          HM     T4    1 0.95606
+  Tumor    ext cg07885834 chr22 15749417          HM    T15    1 0.84722
+  Tumor    ext cg07885834 chr22 15749417          HM    T33    1 0.84227
+  Tumor    ext cg07885834 chr22 15749417          HM    T36    1 0.85486
+  Tumor    ext cg07885834 chr22 15749417          HM     T4    1 0.85440
+  Tumor    ext cg07885834 chr22 15749417          HM    T40    1 0.83137
+  Tumor    ext cg07885834 chr22 15749417          HM     T6    1 0.87868
+  Tumor    ext cg07885834 chr22 15749417          HM     T7    1 0.83054
+  Tumor    ext cg03966099 chr22 15820367          HM    T23    1 0.98655
+  Tumor    ext cg03966099 chr22 15820367          HM    T28    1 0.99033
+ cohort.min cohort.median cohort.max rank.in.cohort ext.P.thresh ext.N.thresh
+    0.54456       0.81242    0.96816             52           NA           NA
+    0.54456       0.81242    0.96816             53           NA           NA
+    0.67581       0.98046    0.99210             50           NA           NA
+    0.67581       0.98046    0.99210             53           NA           NA
+    0.67581       0.98046    0.99210             52           NA           NA
+    0.67581       0.98046    0.99210             51           NA           NA
+    0.67581       0.98046    0.99210             49           NA           NA
+    0.47222       0.89976    0.96427             52           NA           NA
+    0.47222       0.89976    0.96427             53           NA           NA
+    0.47222       0.89976    0.96427             50           NA           NA
+    0.47222       0.89976    0.96427             51           NA           NA
+    0.52010       0.74896    0.87868             50           NA           NA
+    0.52010       0.74896    0.87868             49           NA           NA
+    0.52010       0.74896    0.87868             52           NA           NA
+    0.52010       0.74896    0.87868             51           NA           NA
+    0.52010       0.74896    0.87868             48           NA           NA
+    0.52010       0.74896    0.87868             53           NA           NA
+    0.52010       0.74896    0.87868             47           NA           NA
+    0.70181       0.97322    0.99033             50           NA           NA
+    0.70181       0.97322    0.99033             53           NA           NA
+ margin.beyond
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+            NA
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task18_Chr22_ContraryFlagDetail_Tumor.csv 
+
+> 
+> # ------------------------------------------------
+> # 9. Selected region reference copy
+> # ------------------------------------------------
+> 
+> region <- data.frame(
++   cgID                = sel_ids,
++   chr                 = sel$Chromosome,
++   pos                 = sel$Start,
++   end                 = sel$End,
++   methy.state.normal  = sel$methy.state,
++   methy.state.tumor   = tumor$methy.state[match(sel_ids, tumor$Composite.Element.REF)],
++   gap.to.previous.bp  = c(NA, diff(sel$Start))
++ )
+> write_out(region, "Task18_Chr22_Selected100CpGs_BothTissues.csv")
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task18_Chr22_Selected100CpGs_BothTissues.csv 
+> 
+> cat("\n====================================================\n")
+
+====================================================
+> cat("TASK 18 COMPLETE\n")
+TASK 18 COMPLETE
+> cat("====================================================\n")
+====================================================
+> cat("Sites:", n_sel, "consecutive chr22 CpGs\n")
+Sites: 100 consecutive chr22 CpGs
+> cat("Methods: bio (literal), bio.loo (leave-one-out), self, ext\n")
+Methods: bio (literal), bio.loo (leave-one-out), self, ext
+> cat("Tissues: Normal, Tumor\n")
+Tissues: Normal, Tumor
+> cat("Significance level: p =", P_LEVEL, "\n")
+Significance level: p = 0.01 
+> cat("\nReminder: bio and self per-CpG counts are fixed by n and p and\n")
+
+Reminder: bio and self per-CpG counts are fixed by n and p and
+> cat("carry no biological signal. Interpret the ext column.\n")
+carry no biological signal. Interpret the ext column.
+> cat("====================================================\n")
+====================================================
+> 
+> proc.time()
+   user  system elapsed 
+  5.390   1.776  16.205 
