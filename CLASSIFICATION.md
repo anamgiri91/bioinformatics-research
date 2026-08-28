@@ -1,6 +1,6 @@
 # Public / Private Classification
 
-Last reviewed: 2026-08-27, against the full `Experiments.Outlier.July31.2026`
+Last reviewed: 2026-08-28, against the full `Experiments.Outlier.July31.2026`
 tree pulled from `leap2.txstate.edu:/mmfs1/home/wln26/`.
 
 The split is enforced by `.gitignore`, not by moving files. Everything stays
@@ -28,6 +28,10 @@ private; anything that collapses across samples is public.**
 | `Results/Task13_Tumor_extref_flags.csv` | 63 MB | same |
 | `Results/Task13_FullFlagMatrix.xlsx` | 272 MB | all four of the above in one workbook |
 | `Results/Task17_Chr22_BiologicalValidation_Normal_100CpGs.csv` | 15 KB | 100 CpGs x 53 individuals |
+| `Results/Task18_Chr22_ContraryFlagDetail_*.csv` | 27 KB | names cgID + position + sample + that sample's beta |
+| `Results/Task19_Chr22_TopSampleDetail_*.csv` | 41 KB | same |
+| `Results/Task20_Chr22_*_ContraryDetail_*.csv` | 120 KB | same, plus cohort quartiles and MAD-z |
+| `Results/Task21_Chr22_N37_Cluster_Normal.csv` | 2 KB | one named sample's betas across 11 identified sites |
 
 Samples are de-identified (`N1..N53` / `T1..T53`) and carry no TCGA barcodes —
 I grepped the whole tree and found none. That is necessary but not sufficient:
@@ -35,6 +39,15 @@ a per-individual matrix over 380k methylation sites is high-dimensional enough
 to be treated as individual-level genomic data regardless of the label on the
 column. These belong in a controlled repository (dbGaP / institutional store),
 not a public git remote.
+
+The Task 18-21 drill-down tables are small, but size is not the test.
+Each row resolves a named sample to a named genomic position and reports its
+beta value, which is the same class of disclosure as the flag matrices above
+and is narrower only in count. Their aggregate siblings - `StateSummary`,
+`ContraryCounts`, `Concordance`, `SampleBurden`, `ScaleComparison`,
+`ContraryDrivers`, `ExtFlagMagnitude` - carry counts per sample with no
+genomic coordinates and stay public, consistent with the treatment of the
+Task 13/14 sample summaries below.
 
 `Task13_FullFlagMatrix.xlsx` is independently disqualified — 272 MB exceeds
 GitHub's 100 MB hard per-file limit and would reject the push outright.

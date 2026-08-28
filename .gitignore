@@ -48,6 +48,20 @@ Thumbs.db
 # Tracked as a documented dependency instead - see CLASSIFICATION.md.
 Packages/OutlierMeth/.git/
 
+# ---------- PRIVATE: site-level drill-down tables ----------
+# The Task 18-21 "detail" and "cluster" outputs name a cgID, a
+# genomic position AND a sample, and carry that sample's beta value.
+# That is individual-level data at identified sites - the same class
+# as the flag matrices above, just narrower. The per-sample COUNT
+# tables (StateSummary, ContraryCounts, Concordance, SampleBurden,
+# ScaleComparison, ContraryDrivers, ExtFlagMagnitude) carry no
+# genomic coordinates and stay public, consistent with the Task 13/14
+# sample summaries. See CLASSIFICATION.md.
+Results/*ContraryDetail*
+Results/*ContraryFlagDetail*
+Results/*TopSampleDetail*
+Results/*_Cluster_*
+
 # ---------- Safety net ----------
 # Any future per-sample flag matrix should be private by default.
 Results/*_flags.csv
