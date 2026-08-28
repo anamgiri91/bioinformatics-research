@@ -1,0 +1,3 @@
+"window","note","first.pos","last.pos","span.bp","gap.min","gap.median","gap.max","n.within.1kb.of.neighbour"
+"index100","first 100 chr22 CpGs by position (Task 17/18 legacy)",11915060,17085407,5170347,6,512,3410179,61
+"tight100","100 consecutive chr22 CpGs of minimum genomic span",50459312,50532711,73399,3,187,13823,80

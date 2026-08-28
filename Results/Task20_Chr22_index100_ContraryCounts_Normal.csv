@@ -1,0 +1,17 @@
+"tissue","window","method","methy.state","contrary.flag","n.cpgs","n.evaluated","contrary.count","contrary.pct","n.cpgs.affected","n.samples.affected"
+"Normal","index100","bio","L",-1,8,424,0,0,0,0
+"Normal","index100","bio.loo","L",-1,8,424,0,0,0,0
+"Normal","index100","ext","L",-1,8,371,8,2.156,4,8
+"Normal","index100","self","L",-1,8,424,8,1.887,8,8
+"Normal","index100","bio","LM",-1,14,742,0,0,0,0
+"Normal","index100","bio.loo","LM",-1,14,742,0,0,0,0
+"Normal","index100","ext","LM",-1,14,742,21,2.83,8,14
+"Normal","index100","self","LM",-1,14,742,14,1.887,14,13
+"Normal","index100","bio","HM",1,38,2014,0,0,0,0
+"Normal","index100","bio.loo","HM",1,38,2014,0,0,0,0
+"Normal","index100","ext","HM",1,38,2014,46,2.284,23,19
+"Normal","index100","self","HM",1,38,2014,38,1.887,38,18
+"Normal","index100","bio","H",1,11,583,0,0,0,0
+"Normal","index100","bio.loo","H",1,11,583,0,0,0,0
+"Normal","index100","ext","H",1,11,583,10,1.715,4,9
+"Normal","index100","self","H",1,11,583,11,1.887,11,10

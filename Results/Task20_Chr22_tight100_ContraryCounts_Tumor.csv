@@ -1,0 +1,17 @@
+"tissue","window","method","methy.state","contrary.flag","n.cpgs","n.evaluated","contrary.count","contrary.pct","n.cpgs.affected","n.samples.affected"
+"Tumor","tight100","bio","L",-1,38,2014,0,0,0,0
+"Tumor","tight100","bio.loo","L",-1,38,2014,0,0,0,0
+"Tumor","tight100","ext","L",-1,38,2014,52,2.582,17,20
+"Tumor","tight100","self","L",-1,38,2014,38,1.887,38,19
+"Tumor","tight100","bio","LM",-1,12,636,0,0,0,0
+"Tumor","tight100","bio.loo","LM",-1,12,636,0,0,0,0
+"Tumor","tight100","ext","LM",-1,12,583,33,5.66,8,25
+"Tumor","tight100","self","LM",-1,12,636,12,1.887,12,11
+"Tumor","tight100","bio","HM",1,20,1060,0,0,0,0
+"Tumor","tight100","bio.loo","HM",1,20,1060,0,0,0,0
+"Tumor","tight100","ext","HM",1,20,1060,47,4.434,16,18
+"Tumor","tight100","self","HM",1,20,1060,20,1.887,20,9
+"Tumor","tight100","bio","H",1,12,636,0,0,0,0
+"Tumor","tight100","bio.loo","H",1,12,636,0,0,0,0
+"Tumor","tight100","ext","H",1,12,636,40,6.289,9,23
+"Tumor","tight100","self","H",1,12,636,12,1.887,12,10

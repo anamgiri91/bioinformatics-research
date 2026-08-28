@@ -1,0 +1,17 @@
+"tissue","window","method","methy.state","contrary.flag","n.cpgs","n.evaluated","contrary.count","contrary.pct","n.cpgs.affected","n.samples.affected"
+"Normal","tight100","bio","L",-1,40,2120,0,0,0,0
+"Normal","tight100","bio.loo","L",-1,40,2120,0,0,0,0
+"Normal","tight100","ext","L",-1,40,2120,39,1.84,23,20
+"Normal","tight100","self","L",-1,40,2120,40,1.887,40,19
+"Normal","tight100","bio","LM",-1,11,583,0,0,0,0
+"Normal","tight100","bio.loo","LM",-1,11,583,0,0,0,0
+"Normal","tight100","ext","LM",-1,11,530,5,0.943,3,5
+"Normal","tight100","self","LM",-1,11,583,11,1.887,11,10
+"Normal","tight100","bio","HM",1,21,1113,0,0,0,0
+"Normal","tight100","bio.loo","HM",1,21,1113,0,0,0,0
+"Normal","tight100","ext","HM",1,21,1113,9,0.809,6,7
+"Normal","tight100","self","HM",1,21,1113,21,1.887,21,12
+"Normal","tight100","bio","H",1,16,848,0,0,0,0
+"Normal","tight100","bio.loo","H",1,16,848,0,0,0,0
+"Normal","tight100","ext","H",1,16,848,16,1.887,9,10
+"Normal","tight100","self","H",1,16,848,16,1.887,16,10
