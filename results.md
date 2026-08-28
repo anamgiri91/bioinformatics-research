@@ -16,6 +16,48 @@ Illumina 450k array. Chromosome 22 carries 6,809 of them.
 | `self` | `referenceMeth()` on the same 53 samples | how the package was run in Tasks 10–15 |
 | `ext` | the packaged TCGA-GEO panel: 2,015 independent normal and tumour-adjacent samples | how the package was **designed** to be run |
 
+### Two things to fix in your head before reading any table
+
+**The unit of analysis changes between sections.** Most apparent
+contradictions dissolve once you check which one a table is counting:
+
+| unit | what one row/count means | used in |
+|---|---|---|
+| **CpG** | one probe on the array, 380,355 total | §1 state counts, §8 |
+| **cell** (sample × CpG) | one measurement — 53 per CpG | §1–3, §7 rates and % |
+| **sample burden** | flags summed down one sample's column | §3, §4 |
+| **event** | a run of ≥3 flagged CpGs within 1 kb, counted once | §4 |
+
+A sample can have many *flags* and one *event*; a state can have a high *cell*
+rate and few affected *CpGs*. Neither is a contradiction.
+
+**The `ext` denominator differs from the `bio`/`self` denominator, and it
+varies by state.** CpGs missing from the 2,015-sample panel come back all-NA,
+so `ext` is scored on fewer cells at the same sites. Panel coverage is
+systematically uneven:
+
+| state | Normal: CpGs absent from panel | Tumour |
+|---|---|---|
+| `H` | 1.05% | 0.46% |
+| `L` | 2.94% | 2.34% |
+| `HM` | 3.30% | 3.38% |
+| `R` | 8.91% | 8.27% |
+| `LM` | **14.39%** | **11.47%** |
+| `M` | **16.29%** | **24.82%** |
+
+`Results/Task26_DenominatorAudit_*.csv`
+
+Every percentage below is computed over *evaluable* cells for that method, so
+each percentage is internally correct — but a raw **count** comparison between
+`ext` and `bio` at `LM` or `M` sites compares different denominators. This is a
+limitation of the comparison, not a bug, and it is why counts and
+evaluable-cell totals are printed side by side throughout.
+
+> **Read §8 first if you are short of time.** A typo was deleting the entire
+> `R` methylation state from Tasks 10, 13 and 14 — 40.4% of tumour CpGs and
+> 65.0% of tumour flag mass. It materially changes the previously reported
+> tumour result and affects how every earlier table should be read.
+
 > **Read the `ext` column.** At n = 53, `quantile(x, 0.99)` sits between the
 > 52nd and 53rd order statistic, so exactly one sample can exceed it. `bio` and
 > `self` therefore assign a fixed number of flags to every eligible CpG no
@@ -31,10 +73,10 @@ Illumina 450k array. Chromosome 22 carries 6,809 of them.
 |---|---|---|
 | 1 | Summarise chr22 by state | Done, both tissues, all 6 states — §1 |
 | 2 | Any `+1` at `H`/`HM`? Any `−1` at `L`/`LM`? | **Yes, routinely.** Up to 6.3% of cells at tumour `H` sites — §2 |
-| 3 | If non-zero, which sample, which site, why? | Three samples drive a third of them; the cause is threshold geometry, not biology — §3 |
-| 4 | Debug the sample summary, N37 on top | N37 is **41st of 53** chromosome-wide. Its window rank was an artifact — but it does carry one real focal event — §4 |
+| 3 | If non-zero, which sample, which site, why? | Three samples drive a third of them; the pattern is strongly consistent with threshold geometry, though biological and technical contributors are not yet excluded — §3 |
+| 4 | Debug the sample summary, N37 on top | N37 is **41st of 53** chromosome-wide, so its window rank was an artifact. It carries one *candidate* focal event, pending probe QC — §4 |
 | 5 | Explore genuinely adjacent CpGs | The original 100 sites span 5.17 Mb. A true 73 kb window changes the picture — §5 |
-| 6 | Compare the state-aware rule with the external reference | They barely agree: κ = 0.21 (normal), 0.11 (tumour) — §6 |
+| 6 | Compare the state-aware rule with the external reference | Agreement is low once the shared-zero class is accounted for: κ = 0.21 (normal), 0.11 (tumour) — §6 |
 
 Beyond the four questions, §7–§9 report why the flags behave this way, a
 bug fix that changes a headline number, and a benchmark of seven alternatives.
@@ -86,8 +128,15 @@ tumour: `R` grows from 5 to 52 of the 100.
 | **LM** | 8 | ext | **29** | 362 | 33 | **6.84** | 85.38 | 7.78 |
 | **M** | 13 | ext | 178 | 473 | 38 | 25.84 | 68.65 | 5.52 |
 | **HM** | 19 | ext | 204 | 760 | **43** | 20.26 | 75.47 | **4.27** |
-| **H** | 1 | ext | 14 | 39 | 0 | 26.42 | 73.59 | 0.00 |
+| **H** | **1** ⚠ | ext | 14 | 39 | 0 | 26.42 | 73.59 | 0.00 |
 | **R** | 52 | ext | 551 | 2010 | 195 | 19.99 | 72.93 | 7.08 |
+
+⚠ **Do not read the `H` row.** It is a single CpG, so "26.42%" means 14 flagged
+cells at *one probe*. A percentage over n = 1 CpG estimates nothing. The `L`
+(7 CpGs) and `LM` (8 CpGs) rows are also thin. This is a property of the window,
+not of tumour biology: chr22's tumour annotation moves most of these sites into
+`R`. The genome-wide tumour table in §8 — where `H` has 30,080 CpGs — is the one
+to quote.
 
 `Results/Task20_Chr22_index100_StateSummary_Tumor.csv` (bio/self rows omitted —
 identical constants)
@@ -193,9 +242,26 @@ Because the difference being flagged is negligible. Measuring
 `Results/Task21_Chr22_ExtFlagMagnitude.csv`
 
 **98% of the flags at `H` sites move beta by less than 0.10.** At `R` sites the
-median flag moves it by 0.21–0.27. The flags are statistically real and
-biologically empty, and exactly where the state predicts. §7 gives the
-mechanism.
+median flag moves it by 0.21–0.27. Many flags therefore carry small absolute
+beta differences, raising the concern that statistical flagging is not tracking
+biologically meaningful effect sizes — and the pattern falls exactly where the
+methylation state predicts. §7 gives a mechanism consistent with this.
+
+**This is no longer a chr22-only result.** Repeated over all 380,355 CpGs:
+
+| state | tissue | CpGs | flags | median \|Δβ\| | under 0.10 |
+|---|---|---|---|---|---|
+| `H` | Normal | 61,845 | 78,259 | 0.031 | **96.97%** |
+| `L` | Normal | 104,540 | 174,567 | 0.042 | 81.53% |
+| `R` | Normal | 23,455 | 38,131 | **0.269** | 3.68% |
+| `H` | Tumour | 30,080 | 68,114 | 0.028 | **96.16%** |
+| `L` | Tumour | 76,106 | 163,788 | 0.031 | 85.21% |
+| `R` | Tumour | 153,479 | 1,608,650 | **0.213** | 19.92% |
+
+`Results/Task26_GenomeWideMagnitude.csv`
+
+The chr22 figures (97.7% / 82.2% / 3.6%) reproduce genome-wide to within about
+a percentage point.
 
 ![Magnitude by state](Results/Fig2_FlagMagnitudeByState.png)
 
@@ -243,10 +309,12 @@ of narrow maxima. It had not:
 
 `Results/Task21_Chr22_N37_Cluster_Normal.csv` (private)
 
-Seven consecutive `LM` CpGs across 1,740 bp, N37 at β 0.28–0.55 against a
+Seven consecutive `LM` CpGs across 1,740 bp, N37 at β 0.276–0.553 against a
 cohort median of 0.015–0.089, median margin 0.195 over the next-highest sample.
-**That is a focal epimutation.** The per-sample summary was right for the wrong
-reason: it counted one event seven times.
+**This is a candidate focal epimutation pattern, pending probe masking and
+technical-quality checks** — the caveat below is not a formality. What can be
+said without qualification is narrower: the per-sample summary counted one
+contiguous run seven times.
 
 The correct unit is the event, not the flag — following the `epimutacions`
 definition of ≥3 outlier CpGs within 1 kb. By that unit N37 has one.
@@ -309,8 +377,15 @@ honest metrics instead:
 By state (Normal, `bio` vs `ext`): κ = 0.26 at `H`, 0.17 at `HM`, 0.17 at `L`,
 0.35 at `LM`, and 0.00 at `R` — where `bio` has no rule at all.
 
-**The two methods are close to independent.** They are not two views of one
-outlier set; they are two different definitions of the word.
+Agreement is low once the large shared-zero class is accounted for
+(κ ≈ 0.21 normal, 0.11 tumour), indicating that the two methods
+**operationalise "outlier" differently** rather than offering two views of one
+underlying set.
+
+A caution on κ itself: under this much class imbalance (>95% zeros) κ is
+sensitive to the marginal flag rates, so it should be read alongside the
+`agreement | flagged` column rather than on its own. Both point the same way
+here, which is why the conclusion stands.
 
 ---
 
@@ -340,11 +415,31 @@ Normal, chr22 medians. `Results/Task22_Chr22_ThresholdGeometry_Normal.csv`
 
 At an `H` site the hyper-outlier zone is 0.037 of the beta scale and the hypo
 zone is 0.886 — a 24-fold asymmetry — yet **87.8% of observed flags are `+1`**.
-Per unit of room available that is 30,363 flags in the hyper direction against
-177 in the hypo: a **171× higher flag density in the direction the state
-already constrains**. At `L` sites, 44×.
+
+The arithmetic spelled out, because this ratio is the whole argument. There are
+1,283 flags at `H` sites in Normal:
+
+```
+hyper flags = 1,283 x 87.8% = 1,126   in a zone 0.037 wide
+hypo  flags = 1,283 x 12.2% =   157   in a zone 0.886 wide
+
+flags per unit of beta space
+  hyper = 1,126 / 0.037 = 30,363
+  hypo  =   157 / 0.886 =    177        ratio = 171x
+```
+
+Per unit of room available, flags are **171× denser in the direction the state
+already constrains**. At `L` sites the same calculation gives 44×. A rule with
+no directional preference would give a ratio near 1.
 
 ![Threshold geometry](Results/Fig3_ThresholdGeometry.png)
+
+*Reading Figure 3:* each row is one methylation state. The coloured bands are
+**threshold zones, not data** — blue is the range of beta in which a sample
+would be called hypo, red the range for hyper, grey the range treated as
+normal. The number beside each red band is its width. Compare the red band at
+`H` (0.037 wide) against the one at `L` (0.900): a sample at an `H` site has
+almost nowhere to go before it is called an outlier.
 
 ### The decision boundary sits inside the array's noise
 
@@ -385,9 +480,16 @@ columns already sitting unused in the source files — has a state bias too, a
 `Results/Task22_Chr22_PercentileVsTukey_Normal.csv`
 
 The reason is the second column: the IQR that Tukey thresholds on is *itself* a
-function of the state. **The defect follows from applying any scale-free
-dispersion threshold to bounded, heteroscedastic beta values** — not from one
-package.
+function of the state.
+
+**The defect follows from applying any scale-free dispersion threshold to beta
+values that are squeezed against their own bounds** — not from one package.
+Unpacking that: beta is trapped between 0 and 1, so the spread of values is much
+smaller near 0 and near 1 than in the middle (the formal term is
+*heteroscedasticity* — the variance is not constant across the range; Du et al.
+2010). Both rules here are *scale-free*: they ask "which samples are in the
+extreme tail?" and never "by how much?". At a site where the whole cohort sits
+within 0.03 of each other, something is always in the tail.
 
 ### What was ruled out
 
@@ -490,20 +592,51 @@ of outlier methods is close to meaningless.
 
 ### Three conclusions, one of which reverses an earlier recommendation
 
-**1. The absolute-difference floor is the fix.** Adding `|β − cohort median| ≥
-0.10` on top of the existing external reference roughly triples stability
-(0.33 → 0.90 normal, 0.65 → 0.95 tumour), quadruples the magnitude ratio
-(0.12 → 0.49), and removes trivial flags by construction. It is one line of
-code on top of what already runs. `epimutacions` ships the same idea as
-`offset_abs = 0.15`.
+**1. An absolute-difference floor is the strongest candidate tested so far,
+but the cut-off is not yet justified.** Two follow-ups were run specifically to
+stress-test this claim, and both matter.
 
-Its state-rate ratio *rises* to 62–128, and that is the point rather than a
-defect: it removes nearly all `H`/`L` flags because those flags had no
-magnitude. Whether that is correct depends on accepting that sites with no room
-genuinely have fewer real outliers — which §7 argues they do.
+*Is 0.10 special?* No. It was chosen after seeing these data, so it was swept
+across 0.05–0.20 (`Results/Task26_FloorSensitivity_*.csv`, Normal):
 
-*Caveat:* the floor is a filter, not a calibrated method, so its rate (1.09%)
-is below the others and some of its stability advantage is a lower-rate effect.
+| floor | flag rate | flags retained | stability | mag H÷R | % trivial |
+|---|---|---|---|---|---|
+| 0 (current) | 2.67% | 100% | 0.328 | 0.117 | 61.5 |
+| 0.05 | 1.69% | 63.3% | 0.748 | 0.243 | 39.1 |
+| **0.10** | 1.03% | 38.6% | 0.794 | 0.492 | 0.0 |
+| 0.15 | 0.54% | 20.2% | 0.820 | 0.526 | 0.0 |
+| 0.20 | 0.31% | 11.6% | 0.868 | — | 0.0 |
+
+Stability rises **monotonically**, so this curve cannot select a value — pushed
+far enough the floor flags almost nothing and scores nearly perfectly. At 0.20
+no `H`-state flag survives at all, which is why the magnitude ratio is
+undefined. **The cut-off has to be justified biologically — as the smallest
+beta difference worth calling real on this platform — not read off this table.**
+`epimutacions` uses 0.15; the gap between 0.10 and 0.15 is small here (0.794 vs
+0.820), so either is defensible and 0.10 is not privileged.
+
+*Is the advantage just a lower flag rate?* No. Every competing method was
+re-tuned **down** to the floor's exact rate and re-scored
+(`Results/Task26_RateMatchedStability_*.csv`):
+
+| method (Normal, all at 1.031%) | stability | mag H÷R | % trivial |
+|---|---|---|---|
+| **ext + 0.10 floor** | **0.794** | **0.492** | **0.0** |
+| tukey.iqr | 0.474 | 0.172 | 53.9 |
+| mad.beta | 0.424 | 0.158 | 53.3 |
+| beta.fit | 0.221 | 0.164 | 40.2 |
+| mad.mvalue | 0.191 | 0.157 | 46.7 |
+
+Tumour behaves the same way (floor 0.907, mad.beta 0.680, tukey 0.654,
+beta.fit 0.537, mad.mvalue 0.429). At identical sensitivity the floor still
+leads by a wide margin, so the advantage is a property of the method rather
+than of its flag rate. That was a genuine weakness in the first draft of this
+section; it is now tested rather than merely caveated.
+
+Its state-rate ratio *rises* to 55–117, which is the intended effect rather
+than a defect: it removes nearly all `H`/`L` flags because those flags had no
+magnitude. Whether that is correct depends on accepting that sites with little
+room genuinely have fewer real outliers — which §7 argues but does not prove.
 
 **2. M-values do not help — they make it worse.** This reverses the
 recommendation in the earlier README and plan. `mad.mvalue` is the **least**
@@ -530,6 +663,7 @@ state. Read it alongside its stability (0.40 / 0.52), which is poor.
 | `Scripts/Task23.*` | corrected state tables, `R` restored |
 | `Scripts/Task24.*` | seven-method benchmark |
 | `Scripts/Task25.*` | figures |
+| `Scripts/Task26.*` | review response: denominators, floor sensitivity, rate-matched stability, genome-wide magnitude |
 | `Results/Fig1–5*.png` | the five figures above |
 | `Slurm/Task2*.sbatch` | batch equivalents |
 
@@ -546,8 +680,10 @@ steps; `REVIEW.md` has the code-level findings.
 
 1. **Probe masking** (Chen 2013 / Zhou 2017). Blocks any biological claim,
    including N37's event.
-2. **Confirm §7 genome-wide.** The mechanism rests on chr22; the Task 13
-   matrices already cover all 380,355 sites.
+2. ~~**Confirm §7 genome-wide.**~~ Partly done — Task 26 repeats the magnitude
+   analysis over all 380,355 CpGs and the chr22 figures reproduce to within a
+   percentage point. The threshold-geometry and stability results in §7 are
+   still chr22-only and remain to be extended.
 3. **Measure the noise instead of assuming it.** §7's stability result uses a
    literature range. Technical replicates — or adjacent co-methylated probe
    pairs — would replace it with this cohort's own value.

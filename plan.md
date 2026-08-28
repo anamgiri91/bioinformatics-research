@@ -224,6 +224,41 @@ per-CpG flag count, a statistic pinned at exactly 2 by construction. It cannot
 answer its own question and cost ~28 minutes of compute doing so. Delete or
 mark superseded; do not rerun under the current design.
 
+## 7b. Items raised by the 2026-08-28 supervisor review
+
+Answered empirically in Task 26 and written up in `REVIEW.md` Part 1:
+denominator asymmetry, floor sensitivity, rate-matched stability, genome-wide
+magnitude, the `outliers.coef2/3` definition, and the matched-pairs test.
+Four items remain open.
+
+1. **Confirm the normal/tumour pairing from the TCGA barcodes.** A
+   methylation-based identity test puts `cor(N_i, T_i)` as the row maximum in
+   only 10 of 53 cases on the most variable CpGs — above chance, but far from
+   what genuine pairs give. The filtered 380k set appears to drop the `rs`
+   identity probes. Nothing currently uses pairing, but the phrase "53 matched
+   pairs" is inherited, not verified.
+
+2. **Establish that the external panel is technically comparable.** Array
+   version, preprocessing, normalisation, batch structure, and the definition
+   of "tumour-adjacent" are all unverified. Gross miscalibration is ruled out
+   (no CpG flags more than 11 of 53 samples), but that is not comparability.
+   This is the largest un-addressed threat to the external arm.
+
+3. **Add direction-specific agreement and precision/recall to §6.** Cohen's
+   kappa is unreliable under >95% zeros. Task 20 already writes the full
+   contingency counts, so this is an aggregation over existing output: do the
+   methods agree on `+1` and `−1` separately, and what is precision/recall
+   against a designated reference method?
+
+4. **Uniform provenance blocks.** Every table names its output CSV and every
+   CSV has one producing script with a `.Rout` transcript, but the review asked
+   for a consistent block — script, inputs, output, denominator, reference
+   mode, parameters — under each of ~20 tables and 5 figures. Formatting, not
+   analysis.
+
+Also extend the §7 threshold-geometry and noise-stability experiments beyond
+chr22. The magnitude result is now genome-wide; these two are not.
+
 ## 8. Housekeeping
 
 - Fix Task 12's denominator — the self-referential mean is taken over
