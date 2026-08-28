@@ -1,0 +1,5 @@
+"reference","tissue","R.cpgs","pct.of.all.cpgs","R.flags","all.flags","pct.of.all.flags"
+"selfref","Normal",23455,6.17,46910,760703,6.17
+"selfref","Tumor",153479,40.35,306958,760709,40.35
+"extref","Normal",23455,6.17,38131,514010,7.42
+"extref","Tumor",153479,40.35,1608650,2474226,65.02
