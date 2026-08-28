@@ -1,0 +1,7 @@
+"tissue","window","ext.flag.rate.pct","contrary.pct","bio.vs.ext.kappa","median.dbeta.H","median.dbeta.L","pct.trivial"
+"Normal","index100",2.86,2.29,0.143,0.0265,0.0184,44
+"Normal","tight100",2.08,1.5,0.206,0.04,0.0109,74.5
+"Normal","minmaxgap100",2.91,1.81,0.229,0.0076,0.0334,43
+"Tumor","index100",24.7,4.22,0.036,0.0497,0.0659,26.2
+"Tumor","tight100",7.11,4.01,0.109,0.0286,0.0073,62.4
+"Tumor","minmaxgap100",9.09,5.42,0.1,0.015,0.0191,44.5

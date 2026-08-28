@@ -1,0 +1,262 @@
+
+R version 4.6.0 (2026-04-24) -- "Because it was There"
+Copyright (C) 2026 The R Foundation for Statistical Computing
+Platform: aarch64-apple-darwin23
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # ================================================================
+> # Task 28 - How should the 100-CpG window be chosen, and does it matter?
+> # Date: Aug 28, 2026
+> #
+> # Task 20 replaced the Task 17 window (100 CpGs consecutive by INDEX,
+> # spanning 5.17 Mb) with tight100: the 100 consecutive CpGs of minimum
+> # total SPAN. A fair objection was raised: minimising total span does
+> # not stop one large internal gap. tight100 still has a 13,823 bp hole.
+> #
+> # The stricter criterion proposed was: find 100 consecutive CpGs where
+> # EVERY neighbouring gap is small - a genuinely continuous region.
+> #
+> # This script:
+> #   A. enumerates all 6,710 possible 100-CpG windows and asks whether
+> #      any satisfies "every gap <= 1 kb";
+> #   B. builds the min-max-gap window and compares it against index100
+> #      and tight100 on spacing AND on how representative its state mix
+> #      is of chr22 as a whole;
+> #   C. asks the question that decides it - do the three windows give
+> #      different scientific answers? Contrary-flag rates, bio-vs-ext
+> #      agreement and flag magnitude are recomputed in each.
+> #   D. reports the longest genuinely continuous runs on chr22, since
+> #      those - not any 100-CpG window - are the right unit for a
+> #      co-methylation question.
+> # ================================================================
+> 
+> options(stringsAsFactors = FALSE)
+> 
+> pick_dir <- function(...) { for (d in c(...)) if (dir.exists(d)) return(d); stop("no dir") }
+> src_dir <- pick_dir(
++   "/home/s_s355/research3.data/TCGA/filter.BRCA.UCEC.Aug17.2022/sorted.TCGA.380355cg.files",
++   path.expand("~/Downloads/tcga_brca_380355cg"))
+> repo <- pick_dir("/mmfs1/home/wln26/Experiments.Outlier.July31.2026",
++                  path.expand("~/Desktop/bioinformatics-research"))
+> out_dir <- file.path(repo, "Results")
+> 
+> inputs <- list(
++   Normal = file.path(src_dir,"Sorted.BRCA.53Alive.Normal.380355cg.75col.May28.2026.txt"),
++   Tumor  = file.path(src_dir,"Sorted.BRCA.53Alive.Tumor.380355cg.75col.May28.2026.txt"))
+> fext <- list(Normal=file.path(out_dir,"Task13_Normal_extref_flags.csv"),
++              Tumor =file.path(out_dir,"Task13_Tumor_extref_flags.csv"))
+> 
+> W <- 100; ST <- c("L","LM","M","HM","H","R"); P_LEVEL <- 0.01
+> rd <- function(p,tab=FALSE) as.data.frame(data.table::fread(
++   p, sep=if(tab) "\t" else ",", header=TRUE, check.names=FALSE, showProgress=FALSE))
+> wo <- function(t,f){ p<-file.path(out_dir,f); write.csv(t,p,row.names=FALSE)
++   cat("  written:",p," (",nrow(t)," rows )\n",sep="") }
+> 
+> cat("=========================================================\n")
+=========================================================
+> cat("TASK 28 - WINDOW SELECTION: SPAN vs MAXIMUM GAP\n")
+TASK 28 - WINDOW SELECTION: SPAN vs MAXIMUM GAP
+> cat("=========================================================\n\n")
+=========================================================
+
+> 
+> normal <- rd(inputs$Normal, TRUE); tumor <- rd(inputs$Tumor, TRUE)
+> c22 <- normal[normal$Chromosome=="chr22",]; c22 <- c22[order(c22$Start),]
+> pos <- c22$Start; n <- nrow(c22); nw <- n-W+1; gaps <- diff(pos)
+> 
+> # ---------- A. enumerate every window ----------
+> span <- pos[W:n] - pos[1:nw]
+> mx <- sapply(1:nw, function(i) max(gaps[i:(i+W-2)]))
+> md <- sapply(1:nw, function(i) median(gaps[i:(i+W-2)]))
+> u1 <- sapply(1:nw, function(i) sum(gaps[i:(i+W-2)] <= 1000))
+> enum <- data.frame(start.index=1:nw, start.pos=pos[1:nw], end.pos=pos[W:n],
++                    span=span, max.gap=mx, median.gap=md, gaps.under.1kb=u1)
+> wo(enum, "Task28_Chr22_AllWindows.csv")
+  written:/Users/anamgiri/Desktop/bioinformatics-research/Results/Task28_Chr22_AllWindows.csv (6710 rows )
+> 
+> cat("A. Is a fully continuous 100-CpG window possible on chr22?\n")
+A. Is a fully continuous 100-CpG window possible on chr22?
+> for (thr in c(1000,2000,5000,10000))
++   cat(sprintf("   windows with every gap <= %5d bp : %d of %d\n", thr, sum(mx<=thr), nw))
+   windows with every gap <=  1000 bp : 0 of 6710
+   windows with every gap <=  2000 bp : 0 of 6710
+   windows with every gap <=  5000 bp : 0 of 6710
+   windows with every gap <= 10000 bp : 2 of 6710
+> cat("\n   ANSWER: no. The 450k array does not place 100 consecutive probes\n")
+
+   ANSWER: no. The 450k array does not place 100 consecutive probes
+> cat("   that densely anywhere on chr22. The constraint is the platform's\n")
+   that densely anywhere on chr22. The constraint is the platform's
+> cat("   probe design, not the search.\n\n")
+   probe design, not the search.
+
+> 
+> # ---------- B. the three candidate windows ----------
+> wins <- list(index100 = 1,
++              tight100 = which.min(span),
++              minmaxgap100 = which.min(mx))
+> expected <- table(factor(c22$methy.state, levels=ST)) / n * W
+> 
+> cat("B. The three candidate windows\n\n")
+B. The three candidate windows
+
+> rows <- list()
+> for (nm in names(wins)) {
++   i <- wins[[nm]]; idx <- i:(i+W-1); g <- diff(pos[idx])
++   obs <- table(factor(c22$methy.state[idx], levels=ST))
++   chisq <- sum((obs-expected)^2/expected)
++   rows[[nm]] <- data.frame(window=nm, start.index=i,
++     start.pos=pos[i], end.pos=pos[i+W-1], span=pos[i+W-1]-pos[i],
++     max.gap=max(g), median.gap=median(g), gaps.under.1kb=sum(g<=1000),
++     L=obs[["L"]],LM=obs[["LM"]],M=obs[["M"]],HM=obs[["HM"]],H=obs[["H"]],R=obs[["R"]],
++     state.chisq.vs.chr22=round(chisq,1))
++ }
+> cmp <- do.call(rbind, rows); rownames(cmp) <- NULL
+> print(cmp[,c("window","span","max.gap","median.gap","gaps.under.1kb",
++              "L","LM","M","HM","H","R","state.chisq.vs.chr22")], row.names=FALSE)
+       window    span max.gap median.gap gaps.under.1kb  L LM  M HM  H R
+     index100 5170347 3410179        512             61  8 14 24 38 11 5
+     tight100   73399   13823        187             80 40 11  9 21 16 3
+ minmaxgap100   80357    9789        295             71 30 12 17 27 10 4
+ state.chisq.vs.chr22
+                 41.4
+                  4.5
+                  4.8
+> cat("\n   state.chisq.vs.chr22 = how far the window's state mix departs from\n")
+
+   state.chisq.vs.chr22 = how far the window's state mix departs from
+> cat("   chr22 overall (lower = more representative).\n")
+   chr22 overall (lower = more representative).
+> wo(cmp, "Task28_Chr22_WindowCandidates.csv")
+  written:/Users/anamgiri/Desktop/bioinformatics-research/Results/Task28_Chr22_WindowCandidates.csv (3 rows )
+> 
+> # ---------- C. does the choice change the answer? ----------
+> build_bio <- function(B, states) {
++   o <- matrix(0, nrow(B), ncol(B))
++   for (i in seq_len(nrow(B))) {
++     st <- states[i]; v <- as.numeric(B[i,])
++     if (all(is.na(v))) { o[i,] <- NA; next }
++     if (!st %in% c("L","LM","H","HM")) next
++     hi <- st %in% c("L","LM"); p <- if (hi) 1-P_LEVEL else P_LEVEL
++     thr <- quantile(v,p,na.rm=TRUE,names=FALSE)
++     o[i,] <- if (hi) as.integer(v>thr) else -as.integer(v<thr)
++     o[i,is.na(v)] <- NA
++   }
++   o
++ }
+> kappa2 <- function(a,b){ k<-!is.na(a)&!is.na(b); a<-a[k]; b<-b[k]
++   if(!length(a)) return(NA_real_)
++   tb<-table(factor(a,levels=c(-1,0,1)),factor(b,levels=c(-1,0,1))); N<-sum(tb)
++   po<-sum(diag(tb))/N; pe<-sum(rowSums(tb)*colSums(tb))/N^2
++   if (pe==1) NA_real_ else (po-pe)/(1-pe) }
+> CONTRARY <- list(H=1,HM=1,L=-1,LM=-1)
+> 
+> cat("\nC. Do the three windows give different scientific answers?\n\n")
+
+C. Do the three windows give different scientific answers?
+
+> res <- list()
+> for (tissue in c("Normal","Tumor")) {
++   src <- if (tissue=="Normal") normal else tumor
++   cols <- paste0(substr(tissue,1,1),1:53)
++   fx <- rd(fext[[tissue]])
++   for (nm in names(wins)) {
++     i <- wins[[nm]]; ids <- c22$Composite.Element.REF[i:(i+W-1)]
++     meta <- src[match(ids, src$Composite.Element.REF),]
++     B <- as.matrix(meta[,cols,drop=FALSE]); storage.mode(B)<-"numeric"
++     st <- meta$methy.state
++     bio <- build_bio(B, st)
++     E <- as.matrix(fx[match(ids,fx$cgID),cols,drop=FALSE]); storage.mode(E)<-"numeric"
++     med <- apply(B,1,median,na.rm=TRUE); dev <- abs(B-med)
++     contra <- ev <- 0
++     for (s in names(CONTRARY)) { k<-which(st==s); if(!length(k)) next
++       contra <- contra + sum(E[k,]==CONTRARY[[s]], na.rm=TRUE)
++       ev <- ev + sum(!is.na(E[k,])) }
++     ok <- !is.na(E) & E!=0
++     magH <- median(dev[ok & st=="H"], na.rm=TRUE)
++     magL <- median(dev[ok & st=="L"], na.rm=TRUE)
++     res[[length(res)+1]] <- data.frame(tissue=tissue, window=nm,
++       ext.flag.rate.pct=round(100*mean(E!=0,na.rm=TRUE),2),
++       contrary.pct=round(100*contra/max(1,ev),2),
++       bio.vs.ext.kappa=round(kappa2(as.vector(bio),as.vector(E)),3),
++       median.dbeta.H=round(magH,4), median.dbeta.L=round(magL,4),
++       pct.trivial=round(100*mean(dev[ok]<0.10,na.rm=TRUE),1))
++   }
++   rm(fx); invisible(gc())
++ }
+> sens <- do.call(rbind,res)
+> print(sens, row.names=FALSE)
+ tissue       window ext.flag.rate.pct contrary.pct bio.vs.ext.kappa
+ Normal     index100              2.86         2.29            0.143
+ Normal     tight100              2.08         1.50            0.206
+ Normal minmaxgap100              2.91         1.81            0.229
+  Tumor     index100             24.70         4.22            0.036
+  Tumor     tight100              7.11         4.01            0.109
+  Tumor minmaxgap100              9.09         5.42            0.100
+ median.dbeta.H median.dbeta.L pct.trivial
+         0.0265         0.0184        44.0
+         0.0400         0.0109        74.5
+         0.0076         0.0334        43.0
+         0.0497         0.0659        26.2
+         0.0286         0.0073        62.4
+         0.0150         0.0191        44.5
+> wo(sens, "Task28_Chr22_WindowSensitivity.csv")
+  written:/Users/anamgiri/Desktop/bioinformatics-research/Results/Task28_Chr22_WindowSensitivity.csv (6 rows )
+> 
+> # ---------- D. genuinely continuous runs ----------
+> cat("\nD. The longest genuinely continuous runs on chr22\n")
+
+D. The longest genuinely continuous runs on chr22
+> cat("   (if the goal is co-methylation, this - not a 100-CpG window - is the unit)\n\n")
+   (if the goal is co-methylation, this - not a 100-CpG window - is the unit)
+
+> runs <- list()
+> for (thr in c(500,1000,2000,5000)) {
++   r <- rle(gaps <= thr)
++   if (!any(r$values)) next
++   ends <- cumsum(r$lengths)[r$values]; starts <- ends - r$lengths[r$values] + 1
++   ncpg <- r$lengths[r$values] + 1
++   b <- which.max(ncpg); s <- starts[b]; e <- ends[b]+1
++   runs[[length(runs)+1]] <- data.frame(max.gap.bp=thr, longest.run.cpgs=max(ncpg),
++     start.pos=pos[s], end.pos=pos[e], span.bp=pos[e]-pos[s],
++     median.gap.bp=median(diff(pos[s:e])),
++     runs.ge.20.cpgs=sum(ncpg>=20), runs.ge.30.cpgs=sum(ncpg>=30))
++ }
+> rr <- do.call(rbind,runs)
+> print(rr, row.names=FALSE)
+ max.gap.bp longest.run.cpgs start.pos  end.pos span.bp median.gap.bp
+        500               26  43109886 43111659    1773          44.0
+       1000               26  39316628 39320251    3623          39.0
+       2000               39  19754903 19767811   12908         213.5
+       5000               82  50244071 50290990   46919         257.0
+ runs.ge.20.cpgs runs.ge.30.cpgs
+               3               0
+               8               0
+              23               4
+              59              17
+> wo(rr, "Task28_Chr22_ContinuousRuns.csv")
+  written:/Users/anamgiri/Desktop/bioinformatics-research/Results/Task28_Chr22_ContinuousRuns.csv (4 rows )
+> 
+> cat("\n=========================================================\n")
+
+=========================================================
+> cat("TASK 28 COMPLETE\n=========================================================\n")
+TASK 28 COMPLETE
+=========================================================
+> 
+> proc.time()
+   user  system elapsed 
+  4.634   1.967  28.443 
