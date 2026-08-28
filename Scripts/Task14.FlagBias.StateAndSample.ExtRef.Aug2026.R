@@ -1,13 +1,3 @@
-## ============================================================================
-## Task 14 -- Outlier flag (-1,0,1) bias analysis, WITH external reference
-##
-## Exact repeat of Task 13's two analyses (state bias, mean vs median; and
-## sample 14-17 check), but using the external TCGA reference panel
-## (tcga.rda, ~2,000 independent samples) instead of the 53-sample
-## self-reference. Data loading / column layout kept identical to
-## Task10 / Task12.
-## ============================================================================
-
 library(OutlierMeth)
 library(dplyr)
 library(tidyr)
@@ -41,10 +31,6 @@ flag.normal <- flagMeth(normal.beta, reference = tcga, p = 0.01)
 
 cat("Flagging against external reference (Tumor) ...\n")
 flag.tumor <- flagMeth(tumor.beta, reference = tcga, p = 0.01)
-
-## ---------------------------------------------------------------------
-## Part A: Flag vs methylation state  (same helpers as Task13)
-## ---------------------------------------------------------------------
 
 build_state_flag_table <- function(flag_matrix, methy_state_lookup) {
   flag_df <- as.data.frame(flag_matrix)
@@ -109,14 +95,10 @@ cat("\n===== Part A: mean vs median outlier RATE by state (external ref) -- Tumo
 bias.tumor <- state_bias_summary(flag.tumor, methy_lookup_tumor)
 print(bias.tumor)
 
-write.csv(as.data.frame.matrix(tabA.normal$percent), "task14_stateFlagPct_normal_extRef.csv")
-write.csv(as.data.frame.matrix(tabA.tumor$percent),  "task14_stateFlagPct_tumor_extRef.csv")
-write.csv(bias.normal, "task14_stateBias_meanMedian_normal_extRef.csv", row.names = FALSE)
-write.csv(bias.tumor,  "task14_stateBias_meanMedian_tumor_extRef.csv", row.names = FALSE)
-
-## ---------------------------------------------------------------------
-## Part B: Flag vs sample -- are samples 14-17 unusual? (same helper as Task13)
-## ---------------------------------------------------------------------
+write.csv(as.data.frame.matrix(tabA.normal$percent), "/mmfs1/home/wln26/Experiments.Outlier.July31.2026/Results/task14_stateFlagPct_normal_extRef.csv")
+write.csv(as.data.frame.matrix(tabA.tumor$percent),  "/mmfs1/home/wln26/Experiments.Outlier.July31.2026/Results/task14_stateFlagPct_tumor_extRef.csv")
+write.csv(bias.normal, "/mmfs1/home/wln26/Experiments.Outlier.July31.2026/Results/task14_stateBias_meanMedian_normal_extRef.csv", row.names = FALSE)
+write.csv(bias.tumor,  "/mmfs1/home/wln26/Experiments.Outlier.July31.2026/Results/task14_stateBias_meanMedian_tumor_extRef.csv", row.names = FALSE)
 
 sample_outlier_check <- function(flag_matrix, target_ids, label) {
   per.sample.total <- colSums(abs(flag_matrix), na.rm = TRUE)
@@ -167,7 +149,7 @@ sampB.normal <- sample_outlier_check(flag.normal, target.normal, "Normal")
 cat("\n===== Part B: sample-level flag summary (external ref) -- Tumor =====\n")
 sampB.tumor <- sample_outlier_check(flag.tumor, target.tumor, "Tumor")
 
-write.csv(sampB.normal, "task14_sampleFlagSummary_normal_extRef.csv", row.names = FALSE)
-write.csv(sampB.tumor,  "task14_sampleFlagSummary_tumor_extRef.csv", row.names = FALSE)
+write.csv(sampB.normal, "/mmfs1/home/wln26/Experiments.Outlier.July31.2026/Results/task14_sampleFlagSummary_normal_extRef.csv", row.names = FALSE)
+write.csv(sampB.tumor,  "/mmfs1/home/wln26/Experiments.Outlier.July31.2026/Results/task14_sampleFlagSummary_tumor_extRef.csv", row.names = FALSE)
 
 cat("\nDONE. Task14 (external reference) CSVs written to working directory.\n")
