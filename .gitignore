@@ -66,3 +66,4 @@ Results/*_Cluster_*
 # Any future per-sample flag matrix should be private by default.
 Results/*_flags.csv
 Results/*FullFlagMatrix*
+.venv/
