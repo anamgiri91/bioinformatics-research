@@ -1,0 +1,15 @@
+"tissue","method","flag.rate.pct","stability.jaccard","state.rate.ratio","magnitude.H.vs.R","median.abs.dbeta","pct.trivial"
+"Normal","ext.floor.0.10",1.087,0.8986,62,0.492,0.153,0
+"Normal","tukey.iqr",2.819,0.5829,4.53,0.135,0.0835,59.53
+"Normal","mad.beta",2.819,0.5582,5.54,0.128,0.0825,59.99
+"Normal","loo.quantile",3.774,0.3966,1,0.145,0.081,58.49
+"Normal","beta.fit",2.819,0.3904,1.75,0.151,0.109,45.36
+"Normal","ext.percentile",2.819,0.3281,2.78,0.117,0.078,61.45
+"Normal","mad.mvalue",2.819,0.3078,3.22,0.14,0.0947,52.64
+"Tumor","ext.floor.0.10",6.613,0.9528,128.3,0.463,0.2239,0
+"Tumor","ext.percentile",10.778,0.6481,4.65,0.144,0.1382,38.65
+"Tumor","mad.beta",10.777,0.6282,1.96,0.117,0.1054,48.56
+"Tumor","tukey.iqr",10.778,0.6,1.37,0.115,0.0982,50.49
+"Tumor","beta.fit",10.778,0.5775,1.71,0.117,0.1429,40.93
+"Tumor","loo.quantile",10.778,0.5224,1.01,0.116,0.0928,51.97
+"Tumor","mad.mvalue",10.778,0.4738,1.24,0.114,0.1036,49.09
