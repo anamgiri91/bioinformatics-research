@@ -1,0 +1,1349 @@
+
+R version 4.3.1 (2023-06-16) -- "Beagle Scouts"
+Copyright (C) 2023 The R Foundation for Statistical Computing
+Platform: x86_64-redhat-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # ================================================================
+> # Task 13
+> # Create Sample-Level Flag Summary Excel Workbook
+> #
+> # Input:
+> #   Task13_Normal_selfref_flags.csv
+> #   Task13_Normal_extref_flags.csv
+> #   Task13_Tumor_selfref_flags.csv
+> #   Task13_Tumor_extref_flags.csv
+> #
+> # Output:
+> #   Task13_SampleFlagSummary.xlsx
+> #
+> # For each of the 53 samples:
+> #   - number of -1 flags
+> #   - number of  0 flags
+> #   - number of +1 flags
+> #   - percentage of -1 flags
+> #   - percentage of  0 flags
+> #   - percentage of +1 flags
+> #   - total flagged CpGs (-1 + +1)
+> #   - total flagged percentage
+> # ================================================================
+> 
+> 
+> # ------------------------------------------------
+> # 1. Load package
+> # ------------------------------------------------
+> 
+> if (!requireNamespace("openxlsx", quietly = TRUE)) {
++     stop(
++         "openxlsx is not installed.\n",
++         "Run install.packages('openxlsx') first."
++     )
++ }
+> 
+> library(openxlsx)
+> 
+> 
+> # ------------------------------------------------
+> # 2. Directories
+> # ------------------------------------------------
+> 
+> result_dir <- "/mmfs1/home/wln26/Experiments.Outlier.July31.2026/Results"
+> 
+> output_file <- file.path(
++     result_dir,
++     "Task13_SampleFlagSummary.xlsx"
++ )
+> 
+> 
+> # ------------------------------------------------
+> # 3. Input files
+> # ------------------------------------------------
+> 
+> normal_self_file <- file.path(
++     result_dir,
++     "Task13_Normal_selfref_flags.csv"
++ )
+> 
+> normal_ext_file <- file.path(
++     result_dir,
++     "Task13_Normal_extref_flags.csv"
++ )
+> 
+> tumor_self_file <- file.path(
++     result_dir,
++     "Task13_Tumor_selfref_flags.csv"
++ )
+> 
+> tumor_ext_file <- file.path(
++     result_dir,
++     "Task13_Tumor_extref_flags.csv"
++ )
+> 
+> 
+> # ------------------------------------------------
+> # 4. Function to process one Task 13 CSV
+> # ------------------------------------------------
+> 
+> get_sample_summary <- function(file, dataset_name) {
++ 
++     cat("\n========================================\n")
++     cat("Processing:", dataset_name, "\n")
++     cat("File:", basename(file), "\n")
++     cat("========================================\n")
++ 
++     if (!file.exists(file)) {
++         stop("File does not exist: ", file)
++     }
++ 
++     # Read CSV
++     dat <- read.csv(
++         file,
++         header = TRUE,
++         check.names = FALSE,
++         stringsAsFactors = FALSE
++     )
++ 
++     cat(
++         "Dimensions:",
++         nrow(dat),
++         "x",
++         ncol(dat),
++         "\n"
++     )
++ 
++     # Expected dimensions
++     if (ncol(dat) != 65) {
++         stop(
++             "Expected 65 columns but found ",
++             ncol(dat),
++             " in ",
++             basename(file)
++         )
++     }
++ 
++     # ------------------------------------------------
++     # Sample columns
++     #
++     # Columns 1-12 = metadata and CpG-level summaries
++     # Columns 13-65 = 53 sample flags
++     # ------------------------------------------------
++ 
++     sample_flags <- dat[, 13:65]
++ 
++     sample_names <- names(sample_flags)
++ 
++     cat(
++         "Number of samples:",
++         length(sample_names),
++         "\n"
++     )
++ 
++     # Convert flags to numeric
++     sample_flags[] <- lapply(
++         sample_flags,
++         function(x) as.numeric(as.character(x))
++     )
++ 
++ 
++     # ------------------------------------------------
++     # Count each flag for each sample
++     # ------------------------------------------------
++ 
++     count_neg1 <- colSums(
++         sample_flags == -1,
++         na.rm = TRUE
++     )
++ 
++     count_zero <- colSums(
++         sample_flags == 0,
++         na.rm = TRUE
++     )
++ 
++     count_pos1 <- colSums(
++         sample_flags == 1,
++         na.rm = TRUE
++     )
++ 
++ 
++     # ------------------------------------------------
++     # Number of usable CpGs
++     #
++     # Important for external reference:
++     # unmatched CpGs are NA.
++     # ------------------------------------------------
++ 
++     usable_cpgs <- colSums(
++         !is.na(sample_flags)
++     )
++ 
++ 
++     # ------------------------------------------------
++     # Percentages
++     # ------------------------------------------------
++ 
++     pct_neg1 <- 100 * count_neg1 / usable_cpgs
++ 
++     pct_zero <- 100 * count_zero / usable_cpgs
++ 
++     pct_pos1 <- 100 * count_pos1 / usable_cpgs
++ 
++ 
++     # ------------------------------------------------
++     # Total flagged
++     #
++     # A flag is considered an outlier if:
++     #     flag == -1 OR flag == +1
++     # ------------------------------------------------
++ 
++     total_flagged <- count_neg1 + count_pos1
++ 
++     total_flagged_pct <- (
++         100 * total_flagged / usable_cpgs
++     )
++ 
++ 
++     # ------------------------------------------------
++     # Create summary table
++     # ------------------------------------------------
++ 
++     result <- data.frame(
++ 
++         Sample = sample_names,
++ 
++         Dataset = dataset_name,
++ 
++         Usable_CpGs = usable_cpgs,
++ 
++         Flag_neg1_Count = count_neg1,
++ 
++         Flag_0_Count = count_zero,
++ 
++         Flag_pos1_Count = count_pos1,
++ 
++         Flag_neg1_Pct = round(pct_neg1, 3),
++ 
++         Flag_0_Pct = round(pct_zero, 3),
++ 
++         Flag_pos1_Pct = round(pct_pos1, 3),
++ 
++         Total_Flagged = total_flagged,
++ 
++         Total_Flagged_Pct =
++             round(total_flagged_pct, 3),
++ 
++         stringsAsFactors = FALSE
++     )
++ 
++     return(result)
++ }
+> 
+> 
+> # ------------------------------------------------
+> # 5. Process all four datasets
+> # ------------------------------------------------
+> 
+> normal_self <- get_sample_summary(
++     normal_self_file,
++     "Normal - Self Reference"
++ )
+
+========================================
+Processing: Normal - Self Reference 
+File: Task13_Normal_selfref_flags.csv 
+========================================
+Dimensions: 380355 x 65 
+Number of samples: 53 
+> 
+> normal_ext <- get_sample_summary(
++     normal_ext_file,
++     "Normal - External Reference"
++ )
+
+========================================
+Processing: Normal - External Reference 
+File: Task13_Normal_extref_flags.csv 
+========================================
+Dimensions: 380355 x 65 
+Number of samples: 53 
+> 
+> tumor_self <- get_sample_summary(
++     tumor_self_file,
++     "Tumor - Self Reference"
++ )
+
+========================================
+Processing: Tumor - Self Reference 
+File: Task13_Tumor_selfref_flags.csv 
+========================================
+Dimensions: 380355 x 65 
+Number of samples: 53 
+> 
+> tumor_ext <- get_sample_summary(
++     tumor_ext_file,
++     "Tumor - External Reference"
++ )
+
+========================================
+Processing: Tumor - External Reference 
+File: Task13_Tumor_extref_flags.csv 
+========================================
+Dimensions: 380355 x 65 
+Number of samples: 53 
+> 
+> 
+> # ------------------------------------------------
+> # 6. Print sample summaries
+> # ------------------------------------------------
+> 
+> cat("\n\n========== NORMAL SELF ==========\n")
+
+
+========== NORMAL SELF ==========
+> print(normal_self)
+    Sample                 Dataset Usable_CpGs Flag_neg1_Count Flag_0_Count
+N1      N1 Normal - Self Reference      380355            4423       374298
+N2      N2 Normal - Self Reference      380355            4600       373838
+N3      N3 Normal - Self Reference      380355            9328       368487
+N4      N4 Normal - Self Reference      380355            7687       368327
+N5      N5 Normal - Self Reference      380355            6476       372226
+N6      N6 Normal - Self Reference      380355            6261       372633
+N7      N7 Normal - Self Reference      380355            2395       375443
+N8      N8 Normal - Self Reference      380355            7618       370930
+N9      N9 Normal - Self Reference      380355            9216       368310
+N10    N10 Normal - Self Reference      380355           11248       367525
+N11    N11 Normal - Self Reference      380355           13581       366460
+N12    N12 Normal - Self Reference      380355            4262       375383
+N13    N13 Normal - Self Reference      380355            8934       366018
+N14    N14 Normal - Self Reference      380355            9505       335822
+N15    N15 Normal - Self Reference      380355            7527       309089
+N16    N16 Normal - Self Reference      380355            4738       375160
+N17    N17 Normal - Self Reference      380355            8839       316504
+N18    N18 Normal - Self Reference      380355            5264       372252
+N19    N19 Normal - Self Reference      380355            6453       371432
+N20    N20 Normal - Self Reference      380355             773       375991
+N21    N21 Normal - Self Reference      380355            6789       371473
+N22    N22 Normal - Self Reference      380355            3693       371102
+N23    N23 Normal - Self Reference      380355           20704       350914
+N24    N24 Normal - Self Reference      380355            5861       367283
+N25    N25 Normal - Self Reference      380355            9542       368778
+N26    N26 Normal - Self Reference      380355            6994       368561
+N27    N27 Normal - Self Reference      380355            6111       366383
+N28    N28 Normal - Self Reference      380355            7676       369892
+N29    N29 Normal - Self Reference      380355            1897       374397
+N30    N30 Normal - Self Reference      380355            2886       364870
+N31    N31 Normal - Self Reference      380355            7598       343123
+N32    N32 Normal - Self Reference      380355            6325       370200
+N33    N33 Normal - Self Reference      380355            4024       372174
+N34    N34 Normal - Self Reference      380355            9654       356743
+N35    N35 Normal - Self Reference      380355           15394       361569
+N36    N36 Normal - Self Reference      380355            2051       376256
+N37    N37 Normal - Self Reference      380355            3343       374158
+N38    N38 Normal - Self Reference      380355            4008       367763
+N39    N39 Normal - Self Reference      380355            5010       371453
+N40    N40 Normal - Self Reference      380355            1322       378016
+N41    N41 Normal - Self Reference      380355            1397       377544
+N42    N42 Normal - Self Reference      380355            5049       374584
+N43    N43 Normal - Self Reference      380355             829       378449
+N44    N44 Normal - Self Reference      380355            2845       376583
+N45    N45 Normal - Self Reference      380355             860       378175
+N46    N46 Normal - Self Reference      380355            8620       362897
+N47    N47 Normal - Self Reference      380355            1502       375416
+N48    N48 Normal - Self Reference      380355           28694       332609
+N49    N49 Normal - Self Reference      380355           23684       345596
+N50    N50 Normal - Self Reference      380355            4339       374142
+N51    N51 Normal - Self Reference      380355            1471       378283
+N52    N52 Normal - Self Reference      380355           18270       360677
+N53    N53 Normal - Self Reference      380355           12780       361921
+    Flag_pos1_Count Flag_neg1_Pct Flag_0_Pct Flag_pos1_Pct Total_Flagged
+N1             1634         1.163     98.408         0.430          6057
+N2             1917         1.209     98.287         0.504          6517
+N3             2540         2.452     96.880         0.668         11868
+N4             4341         2.021     96.838         1.141         12028
+N5             1653         1.703     97.863         0.435          8129
+N6             1461         1.646     97.970         0.384          7722
+N7             2517         0.630     98.709         0.662          4912
+N8             1807         2.003     97.522         0.475          9425
+N9             2829         2.423     96.833         0.744         12045
+N10            1582         2.957     96.627         0.416         12830
+N11             314         3.571     96.347         0.083         13895
+N12             710         1.121     98.693         0.187          4972
+N13            5403         2.349     96.231         1.421         14337
+N14           35028         2.499     88.292         9.209         44533
+N15           63739         1.979     81.263        16.758         71266
+N16             457         1.246     98.634         0.120          5195
+N17           55012         2.324     83.213        14.463         63851
+N18            2839         1.384     97.870         0.746          8103
+N19            2470         1.697     97.654         0.649          8923
+N20            3591         0.203     98.853         0.944          4364
+N21            2093         1.785     97.665         0.550          8882
+N22            5560         0.971     97.567         1.462          9253
+N23            8737         5.443     92.260         2.297         29441
+N24            7211         1.541     96.563         1.896         13072
+N25            2035         2.509     96.956         0.535         11577
+N26            4800         1.839     96.899         1.262         11794
+N27            7861         1.607     96.327         2.067         13972
+N28            2787         2.018     97.249         0.733         10463
+N29            4061         0.499     98.434         1.068          5958
+N30           12599         0.759     95.929         3.312         15485
+N31           29634         1.998     90.211         7.791         37232
+N32            3830         1.663     97.330         1.007         10155
+N33            4157         1.058     97.849         1.093          8181
+N34           13958         2.538     93.792         3.670         23612
+N35            3392         4.047     95.061         0.892         18786
+N36            2048         0.539     98.922         0.538          4099
+N37            2854         0.879     98.371         0.750          6197
+N38            8584         1.054     96.689         2.257         12592
+N39            3892         1.317     97.660         1.023          8902
+N40            1017         0.348     99.385         0.267          2339
+N41            1414         0.367     99.261         0.372          2811
+N42             722         1.327     98.483         0.190          5771
+N43            1077         0.218     99.499         0.283          1906
+N44             927         0.748     99.008         0.244          3772
+N45            1320         0.226     99.427         0.347          2180
+N46            8838         2.266     95.410         2.324         17458
+N47            3437         0.395     98.701         0.904          4939
+N48           19052         7.544     87.447         5.009         47746
+N49           11075         6.227     90.861         2.912         34759
+N50            1874         1.141     98.367         0.493          6213
+N51             601         0.387     99.455         0.158          2072
+N52            1408         4.803     94.826         0.370         19678
+N53            5654         3.360     95.153         1.487         18434
+    Total_Flagged_Pct
+N1              1.592
+N2              1.713
+N3              3.120
+N4              3.162
+N5              2.137
+N6              2.030
+N7              1.291
+N8              2.478
+N9              3.167
+N10             3.373
+N11             3.653
+N12             1.307
+N13             3.769
+N14            11.708
+N15            18.737
+N16             1.366
+N17            16.787
+N18             2.130
+N19             2.346
+N20             1.147
+N21             2.335
+N22             2.433
+N23             7.740
+N24             3.437
+N25             3.044
+N26             3.101
+N27             3.673
+N28             2.751
+N29             1.566
+N30             4.071
+N31             9.789
+N32             2.670
+N33             2.151
+N34             6.208
+N35             4.939
+N36             1.078
+N37             1.629
+N38             3.311
+N39             2.340
+N40             0.615
+N41             0.739
+N42             1.517
+N43             0.501
+N44             0.992
+N45             0.573
+N46             4.590
+N47             1.299
+N48            12.553
+N49             9.139
+N50             1.633
+N51             0.545
+N52             5.174
+N53             4.847
+> 
+> cat("\n\n========== NORMAL EXTERNAL ==========\n")
+
+
+========== NORMAL EXTERNAL ==========
+> print(normal_ext)
+    Sample                     Dataset Usable_CpGs Flag_neg1_Count Flag_0_Count
+N1      N1 Normal - External Reference      357197            1317       355466
+N2      N2 Normal - External Reference      357197            1172       355555
+N3      N3 Normal - External Reference      357197            1663       355011
+N4      N4 Normal - External Reference      357197            1715       354598
+N5      N5 Normal - External Reference      357197            2391       354407
+N6      N6 Normal - External Reference      357197            1802       354984
+N7      N7 Normal - External Reference      357197             415       356177
+N8      N8 Normal - External Reference      357197            1806       354927
+N9      N9 Normal - External Reference      357197            3425       352876
+N10    N10 Normal - External Reference      357197            4299       352371
+N11    N11 Normal - External Reference      357197            6815       350301
+N12    N12 Normal - External Reference      357197            1144       355832
+N13    N13 Normal - External Reference      357197             281       356495
+N14    N14 Normal - External Reference      357197            7391       304757
+N15    N15 Normal - External Reference      357197            6357       291729
+N16    N16 Normal - External Reference      357197             577       356555
+N17    N17 Normal - External Reference      357197            7221       293260
+N18    N18 Normal - External Reference      357197            1802       354655
+N19    N19 Normal - External Reference      357197            2059       353667
+N20    N20 Normal - External Reference      357197             214       355876
+N21    N21 Normal - External Reference      357197            1900       354778
+N22    N22 Normal - External Reference      357197            1511       354451
+N23    N23 Normal - External Reference      357197            9080       345374
+N24    N24 Normal - External Reference      357197            3919       345215
+N25    N25 Normal - External Reference      357197            5776       350205
+N26    N26 Normal - External Reference      357197            6451       344104
+N27    N27 Normal - External Reference      357197            5356       342421
+N28    N28 Normal - External Reference      357197            4787       349781
+N29    N29 Normal - External Reference      357197            1999       350183
+N30    N30 Normal - External Reference      357197            2512       343203
+N31    N31 Normal - External Reference      357197            5115       334201
+N32    N32 Normal - External Reference      357197            6157       345698
+N33    N33 Normal - External Reference      357197            4394       348146
+N34    N34 Normal - External Reference      357197            5519       340864
+N35    N35 Normal - External Reference      357197            5674       349945
+N36    N36 Normal - External Reference      357197            2075       352741
+N37    N37 Normal - External Reference      357197            3064       351748
+N38    N38 Normal - External Reference      357197            3694       343837
+N39    N39 Normal - External Reference      357197            4208       348702
+N40    N40 Normal - External Reference      357197             936       355765
+N41    N41 Normal - External Reference      357197            1565       354653
+N42    N42 Normal - External Reference      357197            4862       351685
+N43    N43 Normal - External Reference      357197             569       356181
+N44    N44 Normal - External Reference      357197            2801       353715
+N45    N45 Normal - External Reference      357197             448       356292
+N46    N46 Normal - External Reference      357197            7978       347363
+N47    N47 Normal - External Reference      357197            1165       353830
+N48    N48 Normal - External Reference      357197           15706       330260
+N49    N49 Normal - External Reference      357197           12348       342739
+N50    N50 Normal - External Reference      357197            4662       351030
+N51    N51 Normal - External Reference      357197            1130       355645
+N52    N52 Normal - External Reference      357197            8048       348528
+N53    N53 Normal - External Reference      357197            8057       344649
+    Flag_pos1_Count Flag_neg1_Pct Flag_0_Pct Flag_pos1_Pct Total_Flagged
+N1              414         0.369     99.515         0.116          1731
+N2              470         0.328     99.540         0.132          1642
+N3              523         0.466     99.388         0.146          2186
+N4              884         0.480     99.272         0.247          2599
+N5              399         0.669     99.219         0.112          2790
+N6              411         0.504     99.380         0.115          2213
+N7              605         0.116     99.714         0.169          1020
+N8              464         0.506     99.364         0.130          2270
+N9              896         0.959     98.790         0.251          4321
+N10             527         1.204     98.649         0.148          4826
+N11              81         1.908     98.069         0.023          6896
+N12             221         0.320     99.618         0.062          1365
+N13             421         0.079     99.803         0.118           702
+N14           45049         2.069     85.319        12.612         52440
+N15           59111         1.780     81.672        16.549         65468
+N16              65         0.162     99.820         0.018           642
+N17           56716         2.022     82.100        15.878         63937
+N18             740         0.504     99.288         0.207          2542
+N19            1471         0.576     99.012         0.412          3530
+N20            1107         0.060     99.630         0.310          1321
+N21             519         0.532     99.323         0.145          2419
+N22            1235         0.423     99.231         0.346          2746
+N23            2743         2.542     96.690         0.768         11823
+N24            8063         1.097     96.646         2.257         11982
+N25            1216         1.617     98.043         0.340          6992
+N26            6642         1.806     96.335         1.859         13093
+N27            9420         1.499     95.863         2.637         14776
+N28            2629         1.340     97.924         0.736          7416
+N29            5015         0.560     98.036         1.404          7014
+N30           11482         0.703     96.082         3.214         13994
+N31           17881         1.432     93.562         5.006         22996
+N32            5342         1.724     96.781         1.496         11499
+N33            4657         1.230     97.466         1.304          9051
+N34           10814         1.545     95.427         3.027         16333
+N35            1578         1.588     97.970         0.442          7252
+N36            2381         0.581     98.753         0.667          4456
+N37            2385         0.858     98.475         0.668          5449
+N38            9666         1.034     96.260         2.706         13360
+N39            4287         1.178     97.622         1.200          8495
+N40             496         0.262     99.599         0.139          1432
+N41             979         0.438     99.288         0.274          2544
+N42             650         1.361     98.457         0.182          5512
+N43             447         0.159     99.716         0.125          1016
+N44             681         0.784     99.025         0.191          3482
+N45             457         0.125     99.747         0.128           905
+N46            1856         2.234     97.247         0.520          9834
+N47            2202         0.326     99.057         0.616          3367
+N48           11231         4.397     92.459         3.144         26937
+N49            2110         3.457     95.952         0.591         14458
+N50            1505         1.305     98.274         0.421          6167
+N51             422         0.316     99.566         0.118          1552
+N52             621         2.253     97.573         0.174          8669
+N53            4491         2.256     96.487         1.257         12548
+    Total_Flagged_Pct
+N1              0.485
+N2              0.460
+N3              0.612
+N4              0.728
+N5              0.781
+N6              0.620
+N7              0.286
+N8              0.636
+N9              1.210
+N10             1.351
+N11             1.931
+N12             0.382
+N13             0.197
+N14            14.681
+N15            18.328
+N16             0.180
+N17            17.900
+N18             0.712
+N19             0.988
+N20             0.370
+N21             0.677
+N22             0.769
+N23             3.310
+N24             3.354
+N25             1.957
+N26             3.665
+N27             4.137
+N28             2.076
+N29             1.964
+N30             3.918
+N31             6.438
+N32             3.219
+N33             2.534
+N34             4.573
+N35             2.030
+N36             1.247
+N37             1.525
+N38             3.740
+N39             2.378
+N40             0.401
+N41             0.712
+N42             1.543
+N43             0.284
+N44             0.975
+N45             0.253
+N46             2.753
+N47             0.943
+N48             7.541
+N49             4.048
+N50             1.726
+N51             0.434
+N52             2.427
+N53             3.513
+> 
+> cat("\n\n========== TUMOR SELF ==========\n")
+
+
+========== TUMOR SELF ==========
+> print(tumor_self)
+    Sample                Dataset Usable_CpGs Flag_neg1_Count Flag_0_Count
+T1      T1 Tumor - Self Reference      380355            3026       376971
+T2      T2 Tumor - Self Reference      380355            7508       370672
+T3      T3 Tumor - Self Reference      380355            5843       373865
+T4      T4 Tumor - Self Reference      380355            3042       367397
+T5      T5 Tumor - Self Reference      380355           17987       359343
+T6      T6 Tumor - Self Reference      380355           44824       319277
+T7      T7 Tumor - Self Reference      380355            5216       362781
+T8      T8 Tumor - Self Reference      380355            5254       371932
+T9      T9 Tumor - Self Reference      380355            1559       377496
+T10    T10 Tumor - Self Reference      380355           19502       360386
+T11    T11 Tumor - Self Reference      380355            4990       374840
+T12    T12 Tumor - Self Reference      380355            8092       370869
+T13    T13 Tumor - Self Reference      380355            4582       374188
+T14    T14 Tumor - Self Reference      380355           16558       327999
+T15    T15 Tumor - Self Reference      380355            6712       318817
+T16    T16 Tumor - Self Reference      380355            4076       348457
+T17    T17 Tumor - Self Reference      380355            4376       340263
+T18    T18 Tumor - Self Reference      380355           10493       366733
+T19    T19 Tumor - Self Reference      380355             990       371884
+T20    T20 Tumor - Self Reference      380355            1404       376385
+T21    T21 Tumor - Self Reference      380355            1368       376240
+T22    T22 Tumor - Self Reference      380355            5052       373143
+T23    T23 Tumor - Self Reference      380355            7427       360879
+T24    T24 Tumor - Self Reference      380355            3002       375546
+T25    T25 Tumor - Self Reference      380355           14275       349689
+T26    T26 Tumor - Self Reference      380355            2015       368248
+T27    T27 Tumor - Self Reference      380355            1762       376115
+T28    T28 Tumor - Self Reference      380355           11255       365931
+T29    T29 Tumor - Self Reference      380355            3119       373468
+T30    T30 Tumor - Self Reference      380355             687       376310
+T31    T31 Tumor - Self Reference      380355             522       378082
+T32    T32 Tumor - Self Reference      380355           16560       358299
+T33    T33 Tumor - Self Reference      380355            9378       358601
+T34    T34 Tumor - Self Reference      380355           15741       353894
+T35    T35 Tumor - Self Reference      380355           19545       359945
+T36    T36 Tumor - Self Reference      380355           10114       356443
+T37    T37 Tumor - Self Reference      380355             672       378425
+T38    T38 Tumor - Self Reference      380355            6837       360758
+T39    T39 Tumor - Self Reference      380355            6043       374009
+T40    T40 Tumor - Self Reference      380355            5861       367695
+T41    T41 Tumor - Self Reference      380355            1277       378279
+T42    T42 Tumor - Self Reference      380355            2714       376259
+T43    T43 Tumor - Self Reference      380355           10635       368963
+T44    T44 Tumor - Self Reference      380355           24381       347403
+T45    T45 Tumor - Self Reference      380355            2973       374643
+T46    T46 Tumor - Self Reference      380355            2367       376889
+T47    T47 Tumor - Self Reference      380355            1119       378328
+T48    T48 Tumor - Self Reference      380355            1129       378656
+T49    T49 Tumor - Self Reference      380355            1058       378481
+T50    T50 Tumor - Self Reference      380355            2083       376445
+T51    T51 Tumor - Self Reference      380355            5826       362330
+T52    T52 Tumor - Self Reference      380355            3121       374432
+T53    T53 Tumor - Self Reference      380355            4402       374723
+    Flag_pos1_Count Flag_neg1_Pct Flag_0_Pct Flag_pos1_Pct Total_Flagged
+T1              358         0.796     99.110         0.094          3384
+T2             2175         1.974     97.454         0.572          9683
+T3              647         1.536     98.294         0.170          6490
+T4             9916         0.800     96.593         2.607         12958
+T5             3025         4.729     94.476         0.795         21012
+T6            16254        11.785     83.942         4.273         61078
+T7            12358         1.371     95.380         3.249         17574
+T8             3169         1.381     97.785         0.833          8423
+T9             1300         0.410     99.248         0.342          2859
+T10             467         5.127     94.750         0.123         19969
+T11             525         1.312     98.550         0.138          5515
+T12            1394         2.127     97.506         0.366          9486
+T13            1585         1.205     98.379         0.417          6167
+T14           35798         4.353     86.235         9.412         52356
+T15           54826         1.765     83.821        14.414         61538
+T16           27822         1.072     91.614         7.315         31898
+T17           35716         1.151     89.459         9.390         40092
+T18            3129         2.759     96.419         0.823         13622
+T19            7481         0.260     97.773         1.967          8471
+T20            2566         0.369     98.956         0.675          3970
+T21            2747         0.360     98.918         0.722          4115
+T22            2160         1.328     98.104         0.568          7212
+T23           12049         1.953     94.880         3.168         19476
+T24            1807         0.789     98.736         0.475          4809
+T25           16391         3.753     91.938         4.309         30666
+T26           10092         0.530     96.817         2.653         12107
+T27            2478         0.463     98.885         0.651          4240
+T28            3169         2.959     96.208         0.833         14424
+T29            3768         0.820     98.189         0.991          6887
+T30            3358         0.181     98.937         0.883          4045
+T31            1751         0.137     99.402         0.460          2273
+T32            5496         4.354     94.201         1.445         22056
+T33           12376         2.466     94.281         3.254         21754
+T34           10720         4.139     93.043         2.818         26461
+T35             865         5.139     94.634         0.227         20410
+T36           13798         2.659     93.713         3.628         23912
+T37            1258         0.177     99.493         0.331          1930
+T38           12760         1.798     94.848         3.355         19597
+T39             303         1.589     98.332         0.080          6346
+T40            6799         1.541     96.672         1.788         12660
+T41             799         0.336     99.454         0.210          2076
+T42            1382         0.714     98.923         0.363          4096
+T43             757         2.796     97.005         0.199         11392
+T44            8571         6.410     91.337         2.253         32952
+T45            2739         0.782     98.498         0.720          5712
+T46            1099         0.622     99.089         0.289          3466
+T47             908         0.294     99.467         0.239          2027
+T48             570         0.297     99.553         0.150          1699
+T49             816         0.278     99.507         0.215          1874
+T50            1827         0.548     98.972         0.480          3910
+T51           12199         1.532     95.261         3.207         18025
+T52            2802         0.821     98.443         0.737          5923
+T53            1230         1.157     98.519         0.323          5632
+    Total_Flagged_Pct
+T1              0.890
+T2              2.546
+T3              1.706
+T4              3.407
+T5              5.524
+T6             16.058
+T7              4.620
+T8              2.215
+T9              0.752
+T10             5.250
+T11             1.450
+T12             2.494
+T13             1.621
+T14            13.765
+T15            16.179
+T16             8.386
+T17            10.541
+T18             3.581
+T19             2.227
+T20             1.044
+T21             1.082
+T22             1.896
+T23             5.120
+T24             1.264
+T25             8.062
+T26             3.183
+T27             1.115
+T28             3.792
+T29             1.811
+T30             1.063
+T31             0.598
+T32             5.799
+T33             5.719
+T34             6.957
+T35             5.366
+T36             6.287
+T37             0.507
+T38             5.152
+T39             1.668
+T40             3.328
+T41             0.546
+T42             1.077
+T43             2.995
+T44             8.663
+T45             1.502
+T46             0.911
+T47             0.533
+T48             0.447
+T49             0.493
+T50             1.028
+T51             4.739
+T52             1.557
+T53             1.481
+> 
+> cat("\n\n========== TUMOR EXTERNAL ==========\n")
+
+
+========== TUMOR EXTERNAL ==========
+> print(tumor_ext)
+    Sample                    Dataset Usable_CpGs Flag_neg1_Count Flag_0_Count
+T1      T1 Tumor - External Reference      357197           11557       343552
+T2      T2 Tumor - External Reference      357197           15381       332757
+T3      T3 Tumor - External Reference      357197           20261       330617
+T4      T4 Tumor - External Reference      357197            7273       306919
+T5      T5 Tumor - External Reference      357197           21864       317683
+T6      T6 Tumor - External Reference      357197           47028       279014
+T7      T7 Tumor - External Reference      357197           14828       289230
+T8      T8 Tumor - External Reference      357197           13624       329954
+T9      T9 Tumor - External Reference      357197           11491       331558
+T10    T10 Tumor - External Reference      357197           48947       302451
+T11    T11 Tumor - External Reference      357197            5588       347071
+T12    T12 Tumor - External Reference      357197           23679       310968
+T13    T13 Tumor - External Reference      357197           16808       331498
+T14    T14 Tumor - External Reference      357197           31037       252696
+T15    T15 Tumor - External Reference      357197           13583       235971
+T16    T16 Tumor - External Reference      357197           12977       264279
+T17    T17 Tumor - External Reference      357197           15223       252172
+T18    T18 Tumor - External Reference      357197           36866       303964
+T19    T19 Tumor - External Reference      357197            5971       332371
+T20    T20 Tumor - External Reference      357197            2143       348238
+T21    T21 Tumor - External Reference      357197             728       353156
+T22    T22 Tumor - External Reference      357197           28321       319788
+T23    T23 Tumor - External Reference      357197           23207       290189
+T24    T24 Tumor - External Reference      357197           15744       330087
+T25    T25 Tumor - External Reference      357197           36524       271136
+T26    T26 Tumor - External Reference      357197           22504       290404
+T27    T27 Tumor - External Reference      357197            6225       342536
+T28    T28 Tumor - External Reference      357197           25519       314295
+T29    T29 Tumor - External Reference      357197            6411       327451
+T30    T30 Tumor - External Reference      357197            7064       312872
+T31    T31 Tumor - External Reference      357197           10660       321264
+T32    T32 Tumor - External Reference      357197           35321       299825
+T33    T33 Tumor - External Reference      357197           22526       294396
+T34    T34 Tumor - External Reference      357197           43636       271838
+T35    T35 Tumor - External Reference      357197           52398       300096
+T36    T36 Tumor - External Reference      357197           28746       279147
+T37    T37 Tumor - External Reference      357197           10304       331554
+T38    T38 Tumor - External Reference      357197           36064       268790
+T39    T39 Tumor - External Reference      357197           42241       306518
+T40    T40 Tumor - External Reference      357197           29870       282883
+T41    T41 Tumor - External Reference      357197           13992       328607
+T42    T42 Tumor - External Reference      357197           20003       327801
+T43    T43 Tumor - External Reference      357197           38760       305404
+T44    T44 Tumor - External Reference      357197           53437       277225
+T45    T45 Tumor - External Reference      357197           20837       304310
+T46    T46 Tumor - External Reference      357197           12413       337381
+T47    T47 Tumor - External Reference      357197            5168       340157
+T48    T48 Tumor - External Reference      357197            1907       340908
+T49    T49 Tumor - External Reference      357197            4135       349028
+T50    T50 Tumor - External Reference      357197           15769       319127
+T51    T51 Tumor - External Reference      357197            5948       331821
+T52    T52 Tumor - External Reference      357197           14261       330449
+T53    T53 Tumor - External Reference      357197           37300       313809
+    Flag_pos1_Count Flag_neg1_Pct Flag_0_Pct Flag_pos1_Pct Total_Flagged
+T1             2088         3.235     96.180         0.585         13645
+T2             9059         4.306     93.158         2.536         24440
+T3             6319         5.672     92.559         1.769         26580
+T4            43005         2.036     85.924        12.040         50278
+T5            17650         6.121     88.938         4.941         39514
+T6            31155        13.166     78.112         8.722         78183
+T7            53139         4.151     80.972        14.877         67967
+T8            13619         3.814     92.373         3.813         27243
+T9            14148         3.217     92.822         3.961         25639
+T10            5799        13.703     84.673         1.623         54746
+T11            4538         1.564     97.165         1.270         10126
+T12           22550         6.629     87.058         6.313         46229
+T13            8891         4.706     92.805         2.489         25699
+T14           73464         8.689     70.744        20.567        104501
+T15          107643         3.803     66.062        30.135        121226
+T16           79941         3.633     73.987        22.380         92918
+T17           89802         4.262     70.597        25.141        105025
+T18           16367        10.321     85.097         4.582         53233
+T19           18855         1.672     93.050         5.279         24826
+T20            6816         0.600     97.492         1.908          8959
+T21            3313         0.204     98.869         0.927          4041
+T22            9088         7.929     89.527         2.544         37409
+T23           43801         6.497     81.241        12.262         67008
+T24           11366         4.408     92.410         3.182         27110
+T25           49537        10.225     75.907        13.868         86061
+T26           44289         6.300     81.301        12.399         66793
+T27            8436         1.743     95.896         2.362         14661
+T28           17383         7.144     87.989         4.867         42902
+T29           23335         1.795     91.672         6.533         29746
+T30           37261         1.978     87.591        10.431         44325
+T31           25273         2.984     89.940         7.075         35933
+T32           22051         9.888     83.938         6.173         57372
+T33           40275         6.306     82.418        11.275         62801
+T34           41723        12.216     76.103        11.681         85359
+T35            4703        14.669     84.014         1.317         57101
+T36           49304         8.048     78.149        13.803         78050
+T37           15339         2.885     92.821         4.294         25643
+T38           52343        10.096     75.250        14.654         88407
+T39            8438        11.826     85.812         2.362         50679
+T40           44444         8.362     79.195        12.442         74314
+T41           14598         3.917     91.996         4.087         28590
+T42            9393         5.600     91.770         2.630         29396
+T43           13033        10.851     85.500         3.649         51793
+T44           26535        14.960     77.611         7.429         79972
+T45           32050         5.833     85.194         8.973         52887
+T46            7403         3.475     94.452         2.073         19816
+T47           11872         1.447     95.230         3.324         17040
+T48           14382         0.534     95.440         4.026         16289
+T49            4034         1.158     97.713         1.129          8169
+T50           22301         4.415     89.342         6.243         38070
+T51           19428         1.665     92.896         5.439         25376
+T52           12487         3.992     92.512         3.496         26748
+T53            6088        10.442     87.853         1.704         43388
+    Total_Flagged_Pct
+T1              3.820
+T2              6.842
+T3              7.441
+T4             14.076
+T5             11.062
+T6             21.888
+T7             19.028
+T8              7.627
+T9              7.178
+T10            15.327
+T11             2.835
+T12            12.942
+T13             7.195
+T14            29.256
+T15            33.938
+T16            26.013
+T17            29.403
+T18            14.903
+T19             6.950
+T20             2.508
+T21             1.131
+T22            10.473
+T23            18.759
+T24             7.590
+T25            24.093
+T26            18.699
+T27             4.104
+T28            12.011
+T29             8.328
+T30            12.409
+T31            10.060
+T32            16.062
+T33            17.582
+T34            23.897
+T35            15.986
+T36            21.851
+T37             7.179
+T38            24.750
+T39            14.188
+T40            20.805
+T41             8.004
+T42             8.230
+T43            14.500
+T44            22.389
+T45            14.806
+T46             5.548
+T47             4.770
+T48             4.560
+T49             2.287
+T50            10.658
+T51             7.104
+T52             7.488
+T53            12.147
+> 
+> 
+> # ------------------------------------------------
+> # 7. Create combined long-format table
+> # ------------------------------------------------
+> 
+> all_results <- rbind(
++     normal_self,
++     normal_ext,
++     tumor_self,
++     tumor_ext
++ )
+> 
+> 
+> # ------------------------------------------------
+> # 8. Sort samples naturally
+> # ------------------------------------------------
+> 
+> sort_samples <- function(x) {
++ 
++     sample_num <- as.numeric(
++         gsub("[^0-9]", "", x$Sample)
++     )
++ 
++     x[
++         order(sample_num),
++         ,
++         drop = FALSE
++     ]
++ }
+> 
+> 
+> normal_self <- sort_samples(normal_self)
+> normal_ext  <- sort_samples(normal_ext)
+> 
+> tumor_self <- sort_samples(tumor_self)
+> tumor_ext  <- sort_samples(tumor_ext)
+> 
+> all_results <- rbind(
++     normal_self,
++     normal_ext,
++     tumor_self,
++     tumor_ext
++ )
+> 
+> 
+> # ------------------------------------------------
+> # 9. Create wide comparison table
+> # ------------------------------------------------
+> 
+> make_wide <- function(data, prefix) {
++ 
++     output <- data[, c(
++         "Sample",
++         "Flag_neg1_Count",
++         "Flag_0_Count",
++         "Flag_pos1_Count",
++         "Flag_neg1_Pct",
++         "Flag_0_Pct",
++         "Flag_pos1_Pct",
++         "Total_Flagged",
++         "Total_Flagged_Pct"
++     )]
++ 
++     names(output)[-1] <- paste0(
++         prefix,
++         "_",
++         names(output)[-1]
++     )
++ 
++     output
++ }
+> 
+> 
+> normal_wide <- merge(
++     make_wide(normal_self, "Self"),
++     make_wide(normal_ext, "External"),
++     by = "Sample"
++ )
+> 
+> tumor_wide <- merge(
++     make_wide(tumor_self, "Self"),
++     make_wide(tumor_ext, "External"),
++     by = "Sample"
++ )
+> 
+> 
+> # Sort N1-N53 / T1-T53
+> normal_wide <- normal_wide[
++     order(
++         as.numeric(
++             gsub("[^0-9]", "", normal_wide$Sample)
++         )
++     ),
++ ]
+> 
+> tumor_wide <- tumor_wide[
++     order(
++         as.numeric(
++             gsub("[^0-9]", "", tumor_wide$Sample)
++         )
++     ),
++ ]
+> 
+> 
+> # ------------------------------------------------
+> # 10. Create full comparison table
+> # ------------------------------------------------
+> 
+> all_wide <- merge(
++     normal_wide,
++     tumor_wide,
++     by.x = "Sample",
++     by.y = "Sample",
++     all = TRUE
++ )
+> 
+> 
+> # ------------------------------------------------
+> # 11. Create workbook
+> # ------------------------------------------------
+> 
+> wb <- createWorkbook()
+> 
+> 
+> # ------------------------------------------------
+> # 12. Styles
+> # ------------------------------------------------
+> 
+> title_style <- createStyle(
++     fontSize = 14,
++     textDecoration = "bold"
++ )
+> 
+> header_style <- createStyle(
++     fontSize = 11,
++     textDecoration = "bold",
++     halign = "center",
++     valign = "center",
++     border = "Bottom"
++ )
+> 
+> highlight_style <- createStyle(
++     fgFill = "#FFF2CC",
++     textDecoration = "bold"
++ )
+> 
+> 
+> # ------------------------------------------------
+> # 13. Function to add worksheet
+> # ------------------------------------------------
+> 
+> add_table_sheet <- function(
++     wb,
++     sheet_name,
++     data,
++     title = NULL
++ ) {
++ 
++     addWorksheet(
++         wb,
++         sheet_name
++     )
++ 
++     if (!is.null(title)) {
++ 
++         writeData(
++             wb,
++             sheet_name,
++             title,
++             startRow = 1,
++             startCol = 1
++         )
++ 
++         addStyle(
++             wb,
++             sheet_name,
++             title_style,
++             rows = 1,
++             cols = 1
++         )
++ 
++         start_row <- 3
++ 
++     } else {
++ 
++         start_row <- 1
++ 
++     }
++ 
++     writeData(
++         wb,
++         sheet_name,
++         data,
++         startRow = start_row,
++         startCol = 1
++     )
++ 
++     addStyle(
++         wb,
++         sheet_name,
++         header_style,
++         rows = start_row,
++         cols = 1:ncol(data),
++         gridExpand = TRUE
++     )
++ 
++     setColWidths(
++         wb,
++         sheet_name,
++         cols = 1:ncol(data),
++         widths = "auto"
++     )
++ 
++     freezePane(
++         wb,
++         sheet_name,
++         firstActiveRow = start_row + 1,
++         firstActiveCol = 2
++     )
++ 
++     # Highlight N14-N17 or T14-T17
++     standout <- c(
++         "N14", "N15", "N16", "N17",
++         "T14", "T15", "T16", "T17"
++     )
++ 
++     rows_to_highlight <- which(
++         data$Sample %in% standout
++     )
++ 
++     if (length(rows_to_highlight) > 0) {
++ 
++         addStyle(
++             wb,
++             sheet_name,
++             highlight_style,
++             rows = rows_to_highlight + start_row,
++             cols = 1:ncol(data),
++             gridExpand = TRUE,
++             stack = TRUE
++         )
++     }
++ }
+> 
+> 
+> # ------------------------------------------------
+> # 14. Summary sheet
+> # ------------------------------------------------
+> 
+> add_table_sheet(
++     wb,
++     "Summary",
++     all_wide,
++     "Task 13 - Sample-Level Flag Summary"
++ )
+> 
+> 
+> # ------------------------------------------------
+> # 15. Normal sheet
+> # ------------------------------------------------
+> 
+> add_table_sheet(
++     wb,
++     "Normal",
++     normal_wide,
++     "Normal - Self vs External Reference"
++ )
+> 
+> 
+> # ------------------------------------------------
+> # 16. Tumor sheet
+> # ------------------------------------------------
+> 
+> add_table_sheet(
++     wb,
++     "Tumor",
++     tumor_wide,
++     "Tumor - Self vs External Reference"
++ )
+> 
+> 
+> # ------------------------------------------------
+> # 17. Individual analysis sheets
+> # ------------------------------------------------
+> 
+> add_table_sheet(
++     wb,
++     "Normal_Self",
++     normal_self,
++     "Normal - Self Reference"
++ )
+> 
+> add_table_sheet(
++     wb,
++     "Normal_Ext",
++     normal_ext,
++     "Normal - External Reference"
++ )
+> 
+> add_table_sheet(
++     wb,
++     "Tumor_Self",
++     tumor_self,
++     "Tumor - Self Reference"
++ )
+> 
+> add_table_sheet(
++     wb,
++     "Tumor_Ext",
++     tumor_ext,
++     "Tumor - External Reference"
++ )
+> 
+> 
+> # ------------------------------------------------
+> # 18. Save workbook
+> # ------------------------------------------------
+> 
+> saveWorkbook(
++     wb,
++     output_file,
++     overwrite = TRUE
++ )
+> 
+> 
+> # ------------------------------------------------
+> # 19. Final message
+> # ------------------------------------------------
+> 
+> cat("\n\n")
+
+
+> cat("====================================================\n")
+====================================================
+> cat("TASK 13 SAMPLE SUMMARY COMPLETE\n")
+TASK 13 SAMPLE SUMMARY COMPLETE
+> cat("====================================================\n")
+====================================================
+> cat("Output:\n")
+Output:
+> cat(output_file, "\n\n")
+/mmfs1/home/wln26/Experiments.Outlier.July31.2026/Results/Task13_SampleFlagSummary.xlsx 
+
+> 
+> cat("Sheets created:\n")
+Sheets created:
+> cat("  Summary\n")
+  Summary
+> cat("  Normal\n")
+  Normal
+> cat("  Tumor\n")
+  Tumor
+> cat("  Normal_Self\n")
+  Normal_Self
+> cat("  Normal_Ext\n")
+  Normal_Ext
+> cat("  Tumor_Self\n")
+  Tumor_Self
+> cat("  Tumor_Ext\n")
+  Tumor_Ext
+> cat("\n====================================================\n")
+
+====================================================
+> 
+> proc.time()
+   user  system elapsed 
+ 26.534   0.851  31.724 

@@ -1,0 +1,461 @@
+# ================================================================
+# Task 13
+# Convert the four complete Task 13 CSV flag matrices to Excel
+#
+# Each sheet:
+#   380,355 CpGs x 65 columns
+#
+# 65 columns =
+#   12 metadata/summary columns
+#   + 53 sample flag columns
+#
+# Sheets:
+#   Normal_Self
+#   Normal_Ext
+#   Tumor_Self
+#   Tumor_Ext
+# ================================================================
+
+
+# ------------------------------------------------
+# 1. Load package
+# ------------------------------------------------
+
+if (!requireNamespace("openxlsx", quietly = TRUE)) {
+    stop("openxlsx is not installed.")
+}
+
+library(openxlsx)
+
+
+# ------------------------------------------------
+# 2. Directories
+# ------------------------------------------------
+
+result_dir <- "/mmfs1/home/wln26/Experiments.Outlier.July31.2026/Results"
+
+output_file <- file.path(
+    result_dir,
+    "Task13_FullFlagMatrix.xlsx"
+)
+
+
+# ------------------------------------------------
+# 3. Input files
+# ------------------------------------------------
+
+files <- list(
+
+    Normal_Self = file.path(
+        result_dir,
+        "Task13_Normal_selfref_flags.csv"
+    ),
+
+    Normal_Ext = file.path(
+        result_dir,
+        "Task13_Normal_extref_flags.csv"
+    ),
+
+    Tumor_Self = file.path(
+        result_dir,
+        "Task13_Tumor_selfref_flags.csv"
+    ),
+
+    Tumor_Ext = file.path(
+        result_dir,
+        "Task13_Tumor_extref_flags.csv"
+    )
+)
+
+
+# ------------------------------------------------
+# 4. Check input files
+# ------------------------------------------------
+
+cat("\nChecking input files...\n")
+
+for (f in files) {
+
+    if (!file.exists(f)) {
+        stop(
+            "Missing input file:\n",
+            f
+        )
+    }
+
+    cat(
+        "FOUND:",
+        basename(f),
+        "\n"
+    )
+}
+
+
+# ------------------------------------------------
+# 5. Function to import and validate
+# ------------------------------------------------
+
+read_task13 <- function(file, sheet_name) {
+
+    cat("\n--------------------------------------------\n")
+    cat("Reading:", basename(file), "\n")
+    cat("--------------------------------------------\n")
+
+    dat <- read.csv(
+        file,
+        header = TRUE,
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+    )
+
+    cat(
+        "Dimensions:",
+        nrow(dat),
+        "rows x",
+        ncol(dat),
+        "columns\n"
+    )
+
+
+    # ------------------------------------------------
+    # Check expected dimensions
+    # ------------------------------------------------
+
+    if (nrow(dat) != 380355) {
+
+        stop(
+            sheet_name,
+            ": Expected 380,355 rows, found ",
+            nrow(dat)
+        )
+
+    }
+
+
+    if (ncol(dat) != 65) {
+
+        stop(
+            sheet_name,
+            ": Expected 65 columns, found ",
+            ncol(dat)
+        )
+
+    }
+
+
+    # ------------------------------------------------
+    # Check sample columns
+    # ------------------------------------------------
+
+    sample_cols <- names(dat)[13:65]
+
+    expected_normal <- paste0("N", 1:53)
+    expected_tumor  <- paste0("T", 1:53)
+
+
+    if (grepl("Normal", sheet_name)) {
+
+        if (!identical(sample_cols, expected_normal)) {
+
+            stop(
+                sheet_name,
+                ": Sample columns are not N1-N53."
+            )
+
+        }
+
+    }
+
+
+    if (grepl("Tumor", sheet_name)) {
+
+        if (!identical(sample_cols, expected_tumor)) {
+
+            stop(
+                sheet_name,
+                ": Sample columns are not T1-T53."
+            )
+
+        }
+
+    }
+
+
+    # ------------------------------------------------
+    # Print column names
+    # ------------------------------------------------
+
+    cat(
+        "Sample columns:",
+        sample_cols[1],
+        "through",
+        sample_cols[length(sample_cols)],
+        "\n"
+    )
+
+
+    return(dat)
+}
+
+
+# ------------------------------------------------
+# 6. Read all four matrices
+# ------------------------------------------------
+
+normal_self <- read_task13(
+    files$Normal_Self,
+    "Normal_Self"
+)
+
+normal_ext <- read_task13(
+    files$Normal_Ext,
+    "Normal_Ext"
+)
+
+tumor_self <- read_task13(
+    files$Tumor_Self,
+    "Tumor_Self"
+)
+
+tumor_ext <- read_task13(
+    files$Tumor_Ext,
+    "Tumor_Ext"
+)
+
+
+# ------------------------------------------------
+# 7. Create workbook
+# ------------------------------------------------
+
+cat("\nCreating Excel workbook...\n")
+
+wb <- createWorkbook()
+
+
+# ------------------------------------------------
+# 8. Basic header style
+# ------------------------------------------------
+
+header_style <- createStyle(
+    textDecoration = "bold",
+    halign = "center",
+    valign = "center",
+    border = "Bottom"
+)
+
+
+# ------------------------------------------------
+# 9. Add each complete matrix
+# ------------------------------------------------
+
+write_matrix_sheet <- function(
+    wb,
+    sheet_name,
+    dat
+) {
+
+    cat(
+        "\nWriting sheet:",
+        sheet_name,
+        "\n"
+    )
+
+    addWorksheet(
+        wb,
+        sheet_name
+    )
+
+
+    # ------------------------------------------------
+    # Write complete 380K x 65 table
+    # ------------------------------------------------
+
+    writeData(
+        wb,
+        sheet = sheet_name,
+        x = dat,
+        startRow = 1,
+        startCol = 1,
+        colNames = TRUE,
+        rowNames = FALSE
+    )
+
+
+    # ------------------------------------------------
+    # Header formatting
+    # ------------------------------------------------
+
+    addStyle(
+        wb,
+        sheet = sheet_name,
+        style = header_style,
+        rows = 1,
+        cols = 1:ncol(dat),
+        gridExpand = TRUE
+    )
+
+
+    # ------------------------------------------------
+    # Freeze header and first column
+    # ------------------------------------------------
+
+    freezePane(
+        wb,
+        sheet = sheet_name,
+        firstActiveRow = 2,
+        firstActiveCol = 2
+    )
+
+
+    # ------------------------------------------------
+    # Auto filter
+    # ------------------------------------------------
+
+    addFilter(
+        wb,
+        sheet = sheet_name,
+        rows = 1,
+        cols = 1:ncol(dat)
+    )
+
+
+    # ------------------------------------------------
+    # Set reasonable column widths
+    #
+    # Do NOT use "auto" on 380K rows because that can
+    # become unnecessarily expensive.
+    # ------------------------------------------------
+
+    setColWidths(
+        wb,
+        sheet = sheet_name,
+        cols = 1,
+        widths = 15
+    )
+
+    setColWidths(
+        wb,
+        sheet = sheet_name,
+        cols = 2,
+        widths = 10
+    )
+
+    setColWidths(
+        wb,
+        sheet = sheet_name,
+        cols = 3,
+        widths = 12
+    )
+
+    setColWidths(
+        wb,
+        sheet = sheet_name,
+        cols = 4,
+        widths = 14
+    )
+
+    setColWidths(
+        wb,
+        sheet = sheet_name,
+        cols = 5:12,
+        widths = 15
+    )
+
+    setColWidths(
+        wb,
+        sheet = sheet_name,
+        cols = 13:65,
+        widths = 8
+    )
+
+
+    cat(
+        "Finished:",
+        sheet_name,
+        "\n"
+    )
+}
+
+
+# ------------------------------------------------
+# 10. Write four complete sheets
+# ------------------------------------------------
+
+write_matrix_sheet(
+    wb,
+    "Normal_Self",
+    normal_self
+)
+
+write_matrix_sheet(
+    wb,
+    "Normal_Ext",
+    normal_ext
+)
+
+write_matrix_sheet(
+    wb,
+    "Tumor_Self",
+    tumor_self
+)
+
+write_matrix_sheet(
+    wb,
+    "Tumor_Ext",
+    tumor_ext
+)
+
+
+# ------------------------------------------------
+# 11. Save workbook
+# ------------------------------------------------
+
+cat("\nSaving Excel workbook...\n")
+
+saveWorkbook(
+    wb,
+    output_file,
+    overwrite = TRUE
+)
+
+
+# ------------------------------------------------
+# 12. Final validation
+# ------------------------------------------------
+
+cat("\n")
+cat("============================================================\n")
+cat("TASK 13 FULL EXCEL MATRIX COMPLETE\n")
+cat("============================================================\n")
+
+cat(
+    "Output:\n",
+    output_file,
+    "\n\n"
+)
+
+cat(
+    "Each sheet contains:\n",
+    "380,355 rows x 65 columns\n\n"
+)
+
+cat(
+    "Normal_Self  : 380,355 x 65\n",
+    "Normal_Ext   : 380,355 x 65\n",
+    "Tumor_Self   : 380,355 x 65\n",
+    "Tumor_Ext    : 380,355 x 65\n\n"
+)
+
+cat(
+    "Each matrix contains:\n",
+    "12 metadata/summary columns + 53 sample flag columns\n"
+)
+
+cat("============================================================\n")
+
+
+# ------------------------------------------------
+# 13. Timing
+# ------------------------------------------------
+
+print(proc.time())

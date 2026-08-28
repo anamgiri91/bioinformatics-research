@@ -1,36 +1,3 @@
-## ============================================================================
-## Task 13 -- Outlier flag (-1,0,1) bias analysis, NO external reference
-##
-## Follows up on Aug 6, 2026 notes:
-##   1) L-state tends to show more "outliers" under boxplot/normality-based
-##      methods (outlier2) -- check whether the same L/H bias shows up in the
-##      OutlierMeth flag (-1/0/1) system.
-##   2) OutlierMeth does not use local spatial correlation.
-##   3) Top/bottom 1% flagging may not be "proper" across all states.
-##   4) For L-state CpGs low methylation is EXPECTED (not a true outlier);
-##      for H-state CpGs high methylation is EXPECTED. Flagging the "-1" at
-##      L-state sites and "+1" at H-state sites may therefore be mislabeling
-##      biology as an outlier.
-##
-## This script:
-##   Part A - Flag vs methylation state
-##            - contingency table of flag (-1/0/1) x state  (counts + row %)
-##            - per-CpG "outlier rate" (fraction of samples flagged, any
-##              direction) summarized by state using BOTH mean and median,
-##              to see if mean/median diverge (a sign the state's
-##              distribution is skewed / driven by a handful of CpGs)
-##            - same summary split by direction (-1 only, +1 only) since the
-##              L/H "expected extreme" issue is direction-specific
-##   Part B - Flag vs sample (are samples 14-17 unusual?)
-##            - per-sample total |flag| count (Normal, Tumor)
-##            - z-score and rank of samples 14-17 against the other 49
-##              samples
-##            - explicit flag: TRUE if sample falls outside mean +/- 2 SD
-##              (and separately, outside 1.5*IQR) of the *other* samples
-##
-## Data loading / column layout kept identical to Task10 / Task12.
-## ============================================================================
-
 library(OutlierMeth)
 library(dplyr)
 library(tidyr)
@@ -64,11 +31,6 @@ cat("Building self-reference + flags (Tumor) ...\n")
 ref.tumor  <- referenceMeth(tumor.beta)
 flag.tumor <- flagMeth(tumor.beta[rownames(ref.tumor), ], reference = ref.tumor, p = 0.01)
 
-## ---------------------------------------------------------------------
-## Part A: Flag vs methylation state
-## ---------------------------------------------------------------------
-
-# A1: contingency table of flag x state (counts + row %) -- same as Task10
 build_state_flag_table <- function(flag_matrix, methy_state_lookup) {
   flag_df <- as.data.frame(flag_matrix)
   flag_df$cpg <- rownames(flag_matrix)
@@ -85,14 +47,10 @@ build_state_flag_table <- function(flag_matrix, methy_state_lookup) {
   list(counts = tab, percent = pct, flag_long = flag_long)
 }
 
-# A2: per-CpG outlier rate (fraction of samples flagged), by state,
-#     summarized with mean AND median -- overall and by direction
 state_bias_summary <- function(flag_matrix, methy_state_lookup) {
-  n.samples <- ncol(flag_matrix)
-
-  rate.any   <- rowMeans(abs(flag_matrix) == 1, na.rm = TRUE)   # any flag
-  rate.neg1  <- rowMeans(flag_matrix == -1, na.rm = TRUE)       # "-1" only
-  rate.pos1  <- rowMeans(flag_matrix ==  1, na.rm = TRUE)       # "+1" only
+  rate.any   <- rowMeans(abs(flag_matrix) == 1, na.rm = TRUE)
+  rate.neg1  <- rowMeans(flag_matrix == -1, na.rm = TRUE)
+  rate.pos1  <- rowMeans(flag_matrix ==  1, na.rm = TRUE)
 
   df <- data.frame(
     cpg   = rownames(flag_matrix),
@@ -136,14 +94,10 @@ cat("\n===== Part A: mean vs median outlier RATE by state -- Tumor =====\n")
 bias.tumor <- state_bias_summary(flag.tumor, methy_lookup_tumor)
 print(bias.tumor)
 
-write.csv(as.data.frame.matrix(tabA.normal$percent), "task13_stateFlagPct_normal_noExtRef.csv")
-write.csv(as.data.frame.matrix(tabA.tumor$percent),  "task13_stateFlagPct_tumor_noExtRef.csv")
-write.csv(bias.normal, "task13_stateBias_meanMedian_normal_noExtRef.csv", row.names = FALSE)
-write.csv(bias.tumor,  "task13_stateBias_meanMedian_tumor_noExtRef.csv", row.names = FALSE)
-
-## ---------------------------------------------------------------------
-## Part B: Flag vs sample -- are samples 14-17 unusual?
-## ---------------------------------------------------------------------
+write.csv(as.data.frame.matrix(tabA.normal$percent), "/mmfs1/home/wln26/Experiments.Outlier.July31.2026/Results/task13_stateFlagPct_normal_noExtRef.csv")
+write.csv(as.data.frame.matrix(tabA.tumor$percent),  "/mmfs1/home/wln26/Experiments.Outlier.July31.2026/Results/task13_stateFlagPct_tumor_noExtRef.csv")
+write.csv(bias.normal, "/mmfs1/home/wln26/Experiments.Outlier.July31.2026/Results/task13_stateBias_meanMedian_normal_noExtRef.csv", row.names = FALSE)
+write.csv(bias.tumor,  "/mmfs1/home/wln26/Experiments.Outlier.July31.2026/Results/task13_stateBias_meanMedian_tumor_noExtRef.csv", row.names = FALSE)
 
 sample_outlier_check <- function(flag_matrix, target_ids, label) {
   per.sample.total <- colSums(abs(flag_matrix), na.rm = TRUE)
@@ -194,7 +148,7 @@ sampB.normal <- sample_outlier_check(flag.normal, target.normal, "Normal")
 cat("\n===== Part B: sample-level flag summary -- Tumor =====\n")
 sampB.tumor <- sample_outlier_check(flag.tumor, target.tumor, "Tumor")
 
-write.csv(sampB.normal, "task13_sampleFlagSummary_normal_noExtRef.csv", row.names = FALSE)
-write.csv(sampB.tumor,  "task13_sampleFlagSummary_tumor_noExtRef.csv", row.names = FALSE)
+write.csv(sampB.normal, "/mmfs1/home/wln26/Experiments.Outlier.July31.2026/Results/task13_sampleFlagSummary_normal_noExtRef.csv", row.names = FALSE)
+write.csv(sampB.tumor,  "/mmfs1/home/wln26/Experiments.Outlier.July31.2026/Results/task13_sampleFlagSummary_tumor_noExtRef.csv", row.names = FALSE)
 
 cat("\nDONE. Task13 (no external reference) CSVs written to working directory.\n")
