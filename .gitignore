@@ -1,8 +1,54 @@
-Data/*.txt
-Data/*.rda
+# ==============================================================
+# Public / private split for bioinformatics-research
+# See CLASSIFICATION.md for the rationale behind every rule.
+#
+# Rule of thumb: anything that resolves to an INDIVIDUAL SAMPLE
+# (per-sample x per-CpG values) stays private. Aggregates that
+# collapse across samples are public.
+# ==============================================================
+
+# ---------- PRIVATE: individual-level methylation data ----------
+# 380,355 CpGs x 53 samples of per-person flag calls.
+# De-identified as N1..N53 / T1..T53, but still individual-level
+# genomic data derived from controlled TCGA source files.
+Results/Task13_Normal_selfref_flags.csv
+Results/Task13_Normal_extref_flags.csv
+Results/Task13_Tumor_selfref_flags.csv
+Results/Task13_Tumor_extref_flags.csv
+Results/Task13_FullFlagMatrix.xlsx
+Results/Task17_Chr22_BiologicalValidation_Normal_100CpGs.csv
+
+# Reference quantile tables: the P0.00001 / N0.00001 columns are
+# effectively the max/min beta of a single individual per CpG, so
+# these leak individual values despite looking like aggregates.
+Results/experiment7_ref_normal.rds
+Results/experiment7_ref_tumor.rds
+*.rds
+
+# ---------- PRIVATE: source and third-party reference data ----------
+# Not ours to redistribute; lives on leap2 under another lab's home.
+Data/
 *.tar.gz
-Slurm/
+*.rda
+
+# ---------- PRIVATE: R session state ----------
 .RData
 .Rhistory
 .RDataTmp
+.Rproj.user/
+
+# ---------- OS noise ----------
 .DS_Store
+Thumbs.db
+
+# ---------- Third-party vendored package ----------
+# OutlierMeth is GPL-2 code by Downs & Cope (JHMI), cloned from
+# github.com/bdowns4/OutlierMeth. It carries its own .git, which
+# would otherwise land in our history as a broken submodule.
+# Tracked as a documented dependency instead - see CLASSIFICATION.md.
+Packages/OutlierMeth/.git/
+
+# ---------- Safety net ----------
+# Any future per-sample flag matrix should be private by default.
+Results/*_flags.csv
+Results/*FullFlagMatrix*
