@@ -1,0 +1,376 @@
+
+# ================================================================
+# Task 17 — Chromosome 22 Biological Validation
+# Date: Aug 21, 2026
+#
+# Purpose:
+#   1. Select consecutive CpG sites on chromosome 22.
+#   2. Examine local methylation patterns across 53 samples.
+#   3. Incorporate methylation-state information.
+#   4. Identify state-aware biological candidate outliers.
+#   5. Compare with Task 13 external-reference flags.
+#
+# Initial validation:
+#   100 consecutive CpGs on chromosome 22
+#
+# Biological rules discussed:
+#   L / LM -> unusually HIGH methylation (>99th percentile)
+#   H / HM -> unusually LOW methylation (<1st percentile)
+# ================================================================
+
+options(stringsAsFactors = FALSE)
+
+# ------------------------------------------------
+# 1. Paths
+# ------------------------------------------------
+
+input_normal <- "/home/s_s355/research3.data/TCGA/filter.BRCA.UCEC.Aug17.2022/sorted.TCGA.380355cg.files/Sorted.BRCA.53Alive.Normal.380355cg.75col.May28.2026.txt"
+
+input_tumor <- "/home/s_s355/research3.data/TCGA/filter.BRCA.UCEC.Aug17.2022/sorted.TCGA.380355cg.files/Sorted.BRCA.53Alive.Tumor.380355cg.75col.May28.2026.txt"
+
+normal_flags <- "/mmfs1/home/wln26/Experiments.Outlier.July31.2026/Results/Task13_Normal_extref_flags.csv"
+
+tumor_flags <- "/mmfs1/home/wln26/Experiments.Outlier.July31.2026/Results/Task13_Tumor_extref_flags.csv"
+
+out_dir <- "/mmfs1/home/wln26/Experiments.Outlier.July31.2026/Results"
+
+dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
+
+cat("====================================================\n")
+cat("TASK 17 — CHROMOSOME 22 BIOLOGICAL VALIDATION\n")
+cat("====================================================\n\n")
+
+# ------------------------------------------------
+# 2. Load methylation datasets
+# ------------------------------------------------
+
+cat("Loading Normal dataset...\n")
+
+normal <- read.table(
+  input_normal,
+  header = TRUE,
+  sep = "\t",
+  check.names = FALSE
+)
+
+cat("Normal rows:", nrow(normal), "\n")
+cat("Normal columns:", ncol(normal), "\n\n")
+
+cat("Loading Tumor dataset...\n")
+
+tumor <- read.table(
+  input_tumor,
+  header = TRUE,
+  sep = "\t",
+  check.names = FALSE
+)
+
+cat("Tumor rows:", nrow(tumor), "\n")
+cat("Tumor columns:", ncol(tumor), "\n\n")
+
+# ------------------------------------------------
+# 3. Select chromosome 22
+# ------------------------------------------------
+
+normal22 <- normal[normal$Chromosome == "chr22", ]
+
+tumor22 <- tumor[tumor$Chromosome == "chr22", ]
+
+cat("Chromosome 22 Normal CpGs:", nrow(normal22), "\n")
+cat("Chromosome 22 Tumor CpGs:", nrow(tumor22), "\n\n")
+
+# Sort by physical position
+
+normal22 <- normal22[order(normal22$Start), ]
+
+tumor22 <- tumor22[order(tumor22$Start), ]
+
+# ------------------------------------------------
+# 4. Select first 100 consecutive CpGs
+# ------------------------------------------------
+#
+# This is an initial validation region.
+# We record the physical distance so that the
+# selected region can be reviewed later.
+# ------------------------------------------------
+
+n_sites <- min(100, nrow(normal22))
+
+normal22_100 <- normal22[1:n_sites, ]
+
+cat("Selected", nrow(normal22_100),
+    "consecutive chromosome 22 CpGs for Normal.\n")
+
+cat("First CpG:", normal22_100$Composite.Element.REF[1], "\n")
+cat("Last CpG:", normal22_100$Composite.Element.REF[n_sites], "\n")
+
+cat("First position:", normal22_100$Start[1], "\n")
+cat("Last position:", normal22_100$Start[n_sites], "\n")
+
+cat("Physical span:",
+    normal22_100$Start[n_sites] - normal22_100$Start[1],
+    "bp\n\n")
+
+# ------------------------------------------------
+# 5. Save selected CpG region
+# ------------------------------------------------
+
+region_file <- file.path(
+  out_dir,
+  "Task17_Chr22_Selected100CpGs.csv"
+)
+
+write.csv(
+  normal22_100[, c(
+    "Composite.Element.REF",
+    "Chromosome",
+    "Start",
+    "End",
+    "methy.state"
+  )],
+  region_file,
+  row.names = FALSE
+)
+
+cat("Selected CpG region written to:\n")
+cat(region_file, "\n\n")
+
+# ------------------------------------------------
+# 6. Extract methylation values for N1-N53
+# ------------------------------------------------
+
+normal_samples <- paste0("N", 1:53)
+
+normal_meth <- normal22_100[, normal_samples]
+
+# ------------------------------------------------
+# 7. State-aware biological flag calculation
+# ------------------------------------------------
+#
+# L / LM:
+#   candidate outlier if value > 99th percentile
+#
+# H / HM:
+#   candidate outlier if value < 1st percentile
+#
+# Other states:
+#   no biological flag assigned at this stage.
+# ------------------------------------------------
+
+bio_flag <- matrix(
+  0,
+  nrow = nrow(normal22_100),
+  ncol = 53
+)
+
+colnames(bio_flag) <- normal_samples
+
+for (i in seq_len(nrow(normal22_100))) {
+
+  state <- normal22_100$methy.state[i]
+
+  values <- as.numeric(normal_meth[i, ])
+
+  valid <- !is.na(values)
+
+  if (sum(valid) == 0) {
+    bio_flag[i, ] <- NA
+    next
+  }
+
+  if (state %in% c("L", "LM")) {
+
+    threshold <- quantile(
+      values[valid],
+      probs = 0.99,
+      na.rm = TRUE,
+      names = FALSE
+    )
+
+    bio_flag[i, values > threshold] <- 1
+
+  } else if (state %in% c("H", "HM")) {
+
+    threshold <- quantile(
+      values[valid],
+      probs = 0.01,
+      na.rm = TRUE,
+      names = FALSE
+    )
+
+    bio_flag[i, values < threshold] <- -1
+  }
+}
+
+# ------------------------------------------------
+# 8. Build biological validation table
+# ------------------------------------------------
+
+bio_table <- data.frame(
+  cgID = normal22_100$Composite.Element.REF,
+  chr = normal22_100$Chromosome,
+  pos = normal22_100$Start,
+  methy.state = normal22_100$methy.state,
+  bio.flag.count.neg1 =
+    apply(bio_flag, 1, function(x) sum(x == -1, na.rm = TRUE)),
+  bio.flag.count.0 =
+    apply(bio_flag, 1, function(x) sum(x == 0, na.rm = TRUE)),
+  bio.flag.count.1 =
+    apply(bio_flag, 1, function(x) sum(x == 1, na.rm = TRUE)),
+  stringsAsFactors = FALSE
+)
+
+bio_table <- cbind(
+  bio_table,
+  as.data.frame(bio_flag)
+)
+
+bio_file <- file.path(
+  out_dir,
+  "Task17_Chr22_BiologicalValidation_Normal_100CpGs.csv"
+)
+
+write.csv(
+  bio_table,
+  bio_file,
+  row.names = FALSE
+)
+
+cat("Biological validation table written to:\n")
+cat(bio_file, "\n\n")
+
+# ------------------------------------------------
+# 9. Compare with Task 13 external-reference flags
+# ------------------------------------------------
+
+cat("Loading Task 13 Normal external-reference flags...\n")
+
+task13_normal <- read.csv(
+  normal_flags,
+  check.names = FALSE
+)
+
+# Match selected CpGs
+
+idx <- match(
+  normal22_100$Composite.Element.REF,
+  task13_normal$cgID
+)
+
+task13_subset <- task13_normal[idx, ]
+
+# Extract OutlierMeth sample flags
+
+ext_flags <- task13_subset[, normal_samples]
+
+# Compare biological and OutlierMeth flags
+
+comparison <- data.frame(
+  cgID = normal22_100$Composite.Element.REF,
+  chr = normal22_100$Chromosome,
+  pos = normal22_100$Start,
+  methy.state = normal22_100$methy.state,
+  stringsAsFactors = FALSE
+)
+
+# Number of agreements across samples
+
+comparison$flag.agreement.count <- mapply(
+  function(i) {
+    a <- bio_flag[i, ]
+    b <- as.numeric(ext_flags[i, ])
+
+    sum(!is.na(a) & !is.na(b) & a == b)
+  },
+  seq_len(nrow(bio_flag))
+)
+
+comparison$biological.flag.count <- apply(
+  bio_flag,
+  1,
+  function(x) sum(x != 0, na.rm = TRUE)
+)
+
+comparison$external.flag.count <- apply(
+  ext_flags,
+  1,
+  function(x) sum(x != 0, na.rm = TRUE)
+)
+
+comparison_file <- file.path(
+  out_dir,
+  "Task17_Chr22_Biological_vs_External_Normal_100CpGs.csv"
+)
+
+write.csv(
+  comparison,
+  comparison_file,
+  row.names = FALSE
+)
+
+cat("Comparison table written to:\n")
+cat(comparison_file, "\n\n")
+
+# ------------------------------------------------
+# 10. Sample-level biological flag counts
+# ------------------------------------------------
+
+sample_summary <- data.frame(
+  sample = normal_samples,
+  biological_neg1 = sapply(
+    normal_samples,
+    function(s) sum(bio_flag[, s] == -1, na.rm = TRUE)
+  ),
+  biological_pos1 = sapply(
+    normal_samples,
+    function(s) sum(bio_flag[, s] == 1, na.rm = TRUE)
+  )
+)
+
+sample_summary$total_biological_flags <-
+  sample_summary$biological_neg1 +
+  sample_summary$biological_pos1
+
+sample_summary <- sample_summary[
+  order(
+    -sample_summary$total_biological_flags
+  ),
+]
+
+sample_file <- file.path(
+  out_dir,
+  "Task17_Chr22_BiologicalFlag_SampleSummary.csv"
+)
+
+write.csv(
+  sample_summary,
+  sample_file,
+  row.names = FALSE
+)
+
+cat("Sample summary written to:\n")
+cat(sample_file, "\n\n")
+
+# ------------------------------------------------
+# 11. Final report
+# ------------------------------------------------
+
+cat("====================================================\n")
+cat("TASK 17 COMPLETE\n")
+cat("====================================================\n")
+
+cat("Chromosome: chr22\n")
+cat("Number of selected CpGs:", nrow(normal22_100), "\n")
+cat("Number of samples: 53\n")
+cat("Biological rules: L/LM >99th percentile; H/HM <1st percentile\n\n")
+
+cat("Output files:\n")
+cat(region_file, "\n")
+cat(bio_file, "\n")
+cat(comparison_file, "\n")
+cat(sample_file, "\n")
+
+cat("\n====================================================\n")
+cat("End of Task 17\n")
+cat("====================================================\n")
+
