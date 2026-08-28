@@ -1,0 +1,7 @@
+"tissue","methy.state","n.cpgs","cpgs.with.any.flag","median.pct.cohort.flagged","cpgs.ge.25pct","cpgs.ge.50pct","max.samples.flagged","flags.total","pct.flags.in.cpgs.ge.50pct"
+"Tumor","L",1767,1237,5.66,2,0,16,3822,0
+"Tumor","LM",683,648,7.55,33,1,31,3365,0.92
+"Tumor","M",116,109,13.21,23,5,35,1011,15.23
+"Tumor","HM",1380,1294,9.43,119,10,34,8048,3.72
+"Tumor","H",604,469,3.77,4,0,16,1473,0
+"Tumor","R",1908,1879,15.09,514,79,41,19170,12.92

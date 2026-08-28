@@ -1,0 +1,5 @@
+"tissue","noise.sd","n.cpgs.testable","baseline.flags","mean.calls.changed.per.rep","mean.flags.lost","mean.flags.gained","mean.direction.reversed","pct.baseline.flags.lost","flag.churn.ratio","pct.unstable.L","pct.unstable.LM","pct.unstable.M","pct.unstable.HM","pct.unstable.H","pct.unstable.R"
+"Normal",0.005,3939,9648,8320,1486.6,6833.4,0,15.41,0.862,19.93,11.87,5.57,8.64,25.98,3.67
+"Normal",0.01,3939,9648,15530.6,2062.3,13467.1,1.1,21.38,1.61,25.41,16.94,11.23,15.46,34.22,7.52
+"Normal",0.02,3939,9648,25886.2,2692.9,23186.8,6.4,27.91,2.683,31.16,22.81,19.63,24.23,40.6,12.66
+"Normal",0.05,3939,9648,47319.7,3485.3,43726.2,108.2,36.13,4.905,39.75,32.13,32.42,35.76,46.01,23.83

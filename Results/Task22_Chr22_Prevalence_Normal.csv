@@ -1,0 +1,7 @@
+"tissue","methy.state","n.cpgs","cpgs.with.any.flag","median.pct.cohort.flagged","cpgs.ge.25pct","cpgs.ge.50pct","max.samples.flagged","flags.total","pct.flags.in.cpgs.ge.50pct"
+"Normal","L",2158,1388,3.77,0,0,9,3774,0
+"Normal","LM",835,581,3.77,0,0,9,1495,0
+"Normal","M",688,243,3.77,0,0,7,513,0
+"Normal","HM",1606,932,3.77,0,0,11,2019,0
+"Normal","H",899,599,3.77,0,0,7,1283,0
+"Normal","R",272,196,3.77,0,0,10,564,0

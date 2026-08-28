@@ -1,0 +1,5 @@
+"tissue","noise.sd","n.cpgs.testable","baseline.flags","mean.calls.changed.per.rep","mean.flags.lost","mean.flags.gained","mean.direction.reversed","pct.baseline.flags.lost","flag.churn.ratio","pct.unstable.L","pct.unstable.LM","pct.unstable.M","pct.unstable.HM","pct.unstable.H","pct.unstable.R"
+"Tumor",0.005,5636,36889,9042.5,2152.4,6889.8,0.3,5.83,0.245,20.32,7,1.83,6.06,19.85,1.79
+"Tumor",0.01,5636,36889,18174.3,3480.3,14692,2,9.43,0.493,27.25,10.78,4.47,11.2,28.24,3.73
+"Tumor",0.02,5636,36889,32135.3,5272.8,26847.7,14.8,14.29,0.871,34.08,15.87,9.29,17.96,36.6,7.16
+"Tumor",0.05,5636,36889,60603,8243.4,52223.3,136.2,22.35,1.643,41.3,24.14,20.79,28.72,43.86,14.72

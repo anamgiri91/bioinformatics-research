@@ -1,0 +1,7 @@
+"tissue","methy.state","n.flags","pct.hyper","pct.hypo","hyper.zone.width","hypo.zone.width","flags.per.unit.hyper.zone","flags.per.unit.hypo.zone"
+"Tumor","L",3822,48.3,51.7,0.9009,0.0193,2049,102382
+"Tumor","LM",3365,63.8,36.2,0.8082,0.0386,2656,31558
+"Tumor","M",1011,52.8,47.2,0.3307,0.3204,1614,1489
+"Tumor","HM",8048,68,32,0.0785,0.7019,69715,3669
+"Tumor","H",1473,86.8,13.2,0.0388,0.8893,32953,219
+"Tumor","R",19170,58.1,41.9,0.245,0.3194,45460,25148

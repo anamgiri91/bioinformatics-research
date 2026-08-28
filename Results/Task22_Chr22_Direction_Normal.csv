@@ -1,0 +1,7 @@
+"tissue","methy.state","n.flags","pct.hyper","pct.hypo","hyper.zone.width","hypo.zone.width","flags.per.unit.hyper.zone","flags.per.unit.hypo.zone"
+"Normal","L",3774,49.8,50.2,0.8999,0.0205,2089,92417
+"Normal","LM",1495,48.4,51.6,0.7737,0.0489,935,15775
+"Normal","M",513,45,55,0.318,0.36,726,784
+"Normal","HM",2019,65,35,0.0902,0.6767,14549,1044
+"Normal","H",1283,87.8,12.2,0.0371,0.8861,30363,177
+"Normal","R",564,55,45,0.238,0.2693,1303,942
