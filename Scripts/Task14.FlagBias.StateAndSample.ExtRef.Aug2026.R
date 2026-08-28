@@ -21,7 +21,17 @@ rownames(tumor.beta)  <- BRCA.53AT$Composite.Element.REF
 methy_lookup_normal <- setNames(BRCA.53AN$methy.state, BRCA.53AN$Composite.Element.REF)
 methy_lookup_tumor  <- setNames(BRCA.53AT$methy.state, BRCA.53AT$Composite.Element.REF)
 
-state_order <- c("L", "LM", "M", "HM", "H", "Rc")
+state_order <- c("L", "LM", "M", "HM", "H", "R")
+# Guard against the "Rc" typo that silently dropped every R-state CpG
+# from this table (6.2% of Normal, 40.3% of Tumor). Any state present
+# in the data but missing from state_order is a bug, not a filter.
+check_states <- function(x) {
+  missing <- setdiff(unique(stats::na.omit(x)), state_order)
+  if (length(missing))
+    stop("methy.state values absent from state_order: ",
+         paste(missing, collapse = ", "))
+  invisible(TRUE)
+}
 
 cat("\nLoading external TCGA reference panel...\n")
 load("/mmfs1/home/wln26/OutlierMeth_tarball_check/OutlierMeth/data/tcga.rda")
@@ -40,6 +50,7 @@ build_state_flag_table <- function(flag_matrix, methy_state_lookup) {
     pivot_longer(-cpg, names_to = "sample", values_to = "flag")
   flag_long$methy.state <- methy_state_lookup[flag_long$cpg]
 
+  check_states(flag_long$methy.state)
   tab <- table(flag_long$methy.state, flag_long$flag)
   ord <- state_order[state_order %in% rownames(tab)]
   tab <- tab[ord, , drop = FALSE]

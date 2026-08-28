@@ -36,10 +36,19 @@ build_state_flag_table <- function(flag_matrix, methy_state_lookup) {
  
   flag_long$methy.state <- methy_state_lookup[flag_long$cpg]
  
-  tab <- table(flag_long$methy.state, flag_long$flag)
- 
   # enforce a consistent row order; drop any state not present in the data
-  state_order <- c("L", "LM", "M", "HM", "H", "Rc")
+  state_order <- c("L", "LM", "M", "HM", "H", "R")
+
+  # Guard against the "Rc" typo that silently dropped every R-state CpG
+  # from this table (6.2% of Normal, 40.3% of Tumor). Any state present
+  # in the data but missing from state_order is a bug, not a filter.
+  missing_states <- setdiff(unique(stats::na.omit(flag_long$methy.state)),
+                            state_order)
+  if (length(missing_states))
+    stop("methy.state values absent from state_order: ",
+         paste(missing_states, collapse = ", "))
+
+  tab <- table(flag_long$methy.state, flag_long$flag)
   state_order <- state_order[state_order %in% rownames(tab)]
   tab <- tab[state_order, , drop = FALSE]
  
