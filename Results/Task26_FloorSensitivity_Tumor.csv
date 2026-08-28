@@ -1,0 +1,6 @@
+"tissue","floor","flag.rate.pct","flags.retained.pct","stability.jaccard","state.rate.ratio","magnitude.H.vs.R","pct.trivial"
+"Tumor",0,10.222,100,0.6479,4.32,0.144,38.65
+"Tumor",0.05,8.13,79.53,0.8699,20.11,0.302,22.86
+"Tumor",0.1,6.272,61.35,0.9074,117.04,0.463,0
+"Tumor",0.15,4.783,46.79,0.9207,3778.43,0.552,0
+"Tumor",0.2,3.624,35.46,0.9244,92961678.75,NA,0

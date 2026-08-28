@@ -1,0 +1,6 @@
+"tissue","method","flag.rate.pct","stability.jaccard","state.rate.ratio","magnitude.H.vs.R","pct.trivial"
+"Tumor","ext + 0.10 floor",6.272,0.9074,117.04,0.463,0
+"Tumor","mad.beta",6.272,0.6804,5.45,0.128,44.15
+"Tumor","tukey.iqr",6.272,0.6544,2.86,0.123,47.76
+"Tumor","beta.fit",6.272,0.5374,1.44,0.12,39.38
+"Tumor","mad.mvalue",6.272,0.4291,1.83,0.118,45.25

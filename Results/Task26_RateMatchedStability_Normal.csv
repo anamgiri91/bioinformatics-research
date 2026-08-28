@@ -1,0 +1,6 @@
+"tissue","method","flag.rate.pct","stability.jaccard","state.rate.ratio","magnitude.H.vs.R","pct.trivial"
+"Normal","ext + 0.10 floor",1.031,0.7939,54.75,0.492,0
+"Normal","tukey.iqr",1.031,0.4739,26.98,0.172,53.94
+"Normal","mad.beta",1.031,0.4238,33.75,0.158,53.29
+"Normal","beta.fit",1.031,0.2212,2.65,0.164,40.16
+"Normal","mad.mvalue",1.031,0.1909,7.56,0.157,46.68
