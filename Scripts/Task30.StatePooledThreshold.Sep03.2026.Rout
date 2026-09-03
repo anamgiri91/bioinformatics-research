@@ -1,0 +1,583 @@
+
+R version 4.6.0 (2026-04-24) -- "Because it was There"
+Copyright (C) 2026 The R Foundation for Statistical Computing
+Platform: aarch64-apple-darwin23
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # ================================================================
+> # Task 30 - The "bio-stat" rule: one threshold per STATE, not per CpG
+> # Date: Sep 3, 2026
+> #
+> # THE PROPOSAL (2026-09-03 email, "Analysis to-do" item 2)
+> #
+> #   "For the L (8 CG sites), bio-stat flag based on all 'L' state,
+> #    that is, >96% (or lower a bit) percentile of 8*53, similarly
+> #    for other states."
+> #
+> # i.e. stop estimating a threshold from 53 numbers at one CpG, and
+> # estimate it once from every cell in the state - 8 sites x 53
+> # samples = 424 values in the window, 2,211 x 53 = 117,183 on all of
+> # chr22. This is a direct answer to the n = 53 degeneracy: an
+> # empirical quantile over 53 values is an order statistic and admits
+> # exactly one flag per CpG by construction (README, "the
+> # self-reference degeneracy"), while a quantile over 424 or 117,183
+> # values is an actual estimate.
+> #
+> # ---------------------------------------------------------------
+> # TWO WAYS TO POOL, AND THE DIFFERENCE MATTERS
+> #
+> #   bio.stat.abs   pool the raw beta values of the state and cut at
+> #                  the q-th percentile. This is the email's version
+> #                  literally. The threshold is ONE absolute beta
+> #                  value for the whole state.
+> #
+> #   bio.stat.dev   pool (beta - that site's cohort median) and cut
+> #                  the deviation at the q-th percentile. The
+> #                  threshold is one EFFECT SIZE for the whole state,
+> #                  re-centred at each site.
+> #
+> # They behave very differently and the difference is the point.
+> # States are broad: "L" spans beta 0.005 to 0.10. Under the absolute
+> # rule the top of the pooled tail is dominated by whichever SITES sit
+> # highest within the state, so the rule flags whole sites rather than
+> # unusual samples - every sample at a high-ish L site clears the bar
+> # and no sample at a low L site ever can. The deviation rule removes
+> # the site's own level first, so it asks the intended question: is
+> # this sample unusual FOR THIS SITE, by an amount large enough to
+> # matter across the state?
+> #
+> # bio.stat.dev is also, precisely, a data-calibrated version of the
+> # "|beta - median| > 0.05" floor proposed in the same email: instead
+> # of guessing 0.05, it reads the number off the state's own
+> # deviation distribution. Both are reported so the guess can be
+> # checked against the estimate.
+> #
+> # ---------------------------------------------------------------
+> # DIRECTION
+> #
+> # For each state only the informative tail is used, matching the
+> # existing `bio` rule:  L, LM -> upper tail (+1 only)
+> #                      H, HM -> lower tail (-1 only)
+> #                      M, R  -> both tails, q/2 in each
+> #
+> # ---------------------------------------------------------------
+> # SCOPES
+> #   window   the 100 chr22 CpGs from the email (state pools of
+> #            53 x {8,14,24,38,11,5} cells)
+> #   chr22    all 6,809 chr22 CpGs, where the pooled quantile is
+> #            estimated from tens of thousands of values
+> #
+> # The window numbers answer the question as asked; the chr22 numbers
+> # say whether the answer was an artefact of pooling only 424 values.
+> #
+> # SCORING mirrors Task 24 so the new rule can be dropped straight
+> # into that table: flag rate, stability under N(0, 0.01) with full
+> # re-estimation, magnitude, and concentration over sites and samples.
+> # ================================================================
+> 
+> options(stringsAsFactors = FALSE)
+> set.seed(20260903)
+> 
+> pick_dir <- function(...) { for (d in c(...)) if (dir.exists(d)) return(d)
++   stop("no candidate directory exists") }
+> src_dir <- pick_dir(
++   "/home/s_s355/research3.data/TCGA/filter.BRCA.UCEC.Aug17.2022/sorted.TCGA.380355cg.files",
++   path.expand("~/Downloads/tcga_brca_380355cg"))
+> repo_dir <- pick_dir("/mmfs1/home/wln26/Experiments.Outlier.July31.2026",
++                      path.expand("~/Desktop/bioinformatics-research"))
+> out_dir <- file.path(repo_dir, "Results")
+> 
+> inputs <- list(
++   Normal = file.path(src_dir, "Sorted.BRCA.53Alive.Normal.380355cg.75col.May28.2026.txt"),
++   Tumor  = file.path(src_dir, "Sorted.BRCA.53Alive.Tumor.380355cg.75col.May28.2026.txt"))
+> flag_ext <- list(
++   Normal = file.path(out_dir, "Task13_Normal_extref_flags.csv"),
++   Tumor  = file.path(out_dir, "Task13_Tumor_extref_flags.csv"))
+> 
+> N_WINDOW <- 100
+> STATE_ORDER <- c("L", "LM", "M", "HM", "H", "R")
+> QGRID  <- c(0.90, 0.92, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99)
+> Q_MAIN <- 0.96                       # the email's number
+> NOISE_SD <- 0.01
+> N_REPS   <- 10
+> 
+> # informative tail per state
+> TAIL <- c(L = "upper", LM = "upper", M = "both",
++           HM = "lower", H = "lower", R = "both")
+> 
+> has_dt <- requireNamespace("data.table", quietly = TRUE)
+> read_any <- function(p, tab = FALSE) {
++   if (has_dt) as.data.frame(data.table::fread(p, showProgress = FALSE,
++       sep = if (tab) "\t" else ",", header = TRUE, check.names = FALSE))
++   else if (tab) read.table(p, header = TRUE, sep = "\t", check.names = FALSE)
++   else read.csv(p, check.names = FALSE)
++ }
+> write_out <- function(tbl, f) {
++   p <- file.path(out_dir, f); write.csv(tbl, p, row.names = FALSE)
++   cat("  written: ", p, "  (", nrow(tbl), " rows)\n", sep = "")
++ }
+> gini <- function(x) {
++   if (!length(x) || sum(x) == 0) return(NA_real_)
++   x <- sort(as.numeric(x)); n <- length(x)
++   sum((2 * seq_len(n) - n - 1) * x) / (n * sum(x))
++ }
+> jaccard <- function(a, b) {
++   ok <- !is.na(a) & !is.na(b)
++   A <- a[ok] != 0; B2 <- b[ok] != 0
++   u <- sum(A | B2); if (!u) return(NA_real_)
++   sum(A & B2 & a[ok] == b[ok]) / u
++ }
+> 
+> # ---------------------------------------------------------------
+> # The rule. X is the matrix the pool is taken over: raw beta for
+> # "abs", beta minus the row median for "dev". Thresholds are fitted
+> # on X and applied to X, so passing a perturbed X re-estimates
+> # everything - which is what the stability test needs.
+> # ---------------------------------------------------------------
+> state_pooled_flags <- function(X, st, q, states = STATE_ORDER) {
++   o <- matrix(0L, nrow(X), ncol(X), dimnames = dimnames(X))
++   thr <- list()
++   for (s in states) {
++     k <- which(st == s); if (!length(k)) next
++     pool <- as.vector(X[k, , drop = FALSE]); pool <- pool[!is.na(pool)]
++     if (length(pool) < 20) next
++     tl <- TAIL[[s]]
++     hi <- lo <- NA_real_
++     if (tl == "upper") hi <- quantile(pool, q, names = FALSE)
++     if (tl == "lower") lo <- quantile(pool, 1 - q, names = FALSE)
++     if (tl == "both") { hi <- quantile(pool, 1 - (1 - q) / 2, names = FALSE)
++                         lo <- quantile(pool, (1 - q) / 2, names = FALSE) }
++     Xs <- X[k, , drop = FALSE]
++     os <- matrix(0L, nrow(Xs), ncol(Xs))
++     if (is.finite(hi)) os[!is.na(Xs) & Xs > hi] <-  1L
++     if (is.finite(lo)) os[!is.na(Xs) & Xs < lo] <- -1L
++     o[k, ] <- os
++     thr[[s]] <- c(n.pool = length(pool), hi = hi, lo = lo)
++   }
++   o[is.na(X)] <- NA
++   attr(o, "thr") <- thr
++   o
++ }
+> 
+> cat("=========================================================\n")
+=========================================================
+> cat("TASK 30 - STATE-POOLED (\"bio-stat\") THRESHOLDS\n")
+TASK 30 - STATE-POOLED ("bio-stat") THRESHOLDS
+> cat("=========================================================\n\n")
+=========================================================
+
+> 
+> thr_rows <- list(); score_rows <- list(); sweep_rows <- list()
+> site_rows <- list(); sample_rows <- list()
+> 
+> for (tissue in c("Normal", "Tumor")) {
++ 
++   cat("#########################################################\n")
++   cat("### ", tissue, "\n", sep = "")
++   cat("#########################################################\n\n")
++ 
++   cols <- paste0(substr(tissue, 1, 1), 1:53)
++ 
++   nrm <- read_any(inputs$Normal, tab = TRUE)
++   n22 <- nrm[nrm$Chromosome == "chr22", ]; n22 <- n22[order(n22$Start), ]
++   win_ids <- n22$Composite.Element.REF[seq_len(N_WINDOW)]
++   rm(nrm, n22); invisible(gc())
++ 
++   d <- read_any(inputs[[tissue]], tab = TRUE)
++   d <- d[d$Chromosome == "chr22", ]; d <- d[order(d$Start), ]
++   ids_all <- d$Composite.Element.REF
++   B_all <- as.matrix(d[, cols, drop = FALSE]); storage.mode(B_all) <- "numeric"
++   rownames(B_all) <- ids_all
++   st_all <- d$methy.state
++   pos_all <- d$Start
++   rm(d); invisible(gc())
++ 
++   fx <- read_any(flag_ext[[tissue]])
++   F_all <- as.matrix(fx[match(ids_all, fx$cgID), cols, drop = FALSE])
++   storage.mode(F_all) <- "numeric"; rownames(F_all) <- ids_all
++   rm(fx); invisible(gc())
++ 
++   for (scope in c("window", "chr22")) {
++     idx <- if (scope == "window") match(win_ids, ids_all) else seq_along(ids_all)
++     idx <- idx[!is.na(idx)]
++     B <- B_all[idx, , drop = FALSE]; F <- F_all[idx, , drop = FALSE]
++     st <- st_all[idx]; pos <- pos_all[idx]
++     med <- apply(B, 1, median, na.rm = TRUE)
++     D <- B - med                     # signed deviation from the site median
++     dev <- abs(D)
++ 
++     cat("--------------------------------------------------\n")
++     cat("scope = ", scope, "   sites = ", nrow(B), "\n", sep = "")
++     cat("--------------------------------------------------\n")
++ 
++     variants <- list(bio.stat.abs = B, bio.stat.dev = D)
++ 
++     # ---- thresholds and per-state behaviour at the email's q ----
++     for (vn in names(variants)) {
++       O <- state_pooled_flags(variants[[vn]], st, Q_MAIN)
++       th <- attr(O, "thr")
++       cat("\n", vn, "  at q = ", Q_MAIN, "\n", sep = "")
++       for (s in STATE_ORDER) {
++         k <- which(st == s); if (!length(k)) next
++         t_s <- th[[s]]
++         Os <- O[k, , drop = FALSE]
++         nf <- sum(Os != 0, na.rm = TRUE)
++         per_site <- rowSums(Os != 0, na.rm = TRUE)
++         per_samp <- colSums(Os != 0, na.rm = TRUE)
++         mg <- dev[k, , drop = FALSE][!is.na(Os) & Os != 0]
++         cat(sprintf("   %-3s pool=%7d  thr(lo,hi)=(%s,%s)  flags=%5d (%5.2f%%)  sites>=1=%4d/%-4d  samples>=1=%2d/53  med|db|=%.4f\n",
++             s, if (is.null(t_s)) 0L else as.integer(t_s[["n.pool"]]),
++             if (is.null(t_s) || !is.finite(t_s[["lo"]])) "  -  " else sprintf("%.4f", t_s[["lo"]]),
++             if (is.null(t_s) || !is.finite(t_s[["hi"]])) "  -  " else sprintf("%.4f", t_s[["hi"]]),
++             nf, 100 * nf / max(1, sum(!is.na(Os))),
++             sum(per_site > 0), length(k), sum(per_samp > 0),
++             if (length(mg)) median(mg) else NA_real_))
++         thr_rows[[length(thr_rows) + 1]] <- data.frame(
++           tissue = tissue, scope = scope, variant = vn, q = Q_MAIN,
++           methy.state = s, tail = TAIL[[s]],
++           sites = length(k),
++           pool.n = if (is.null(t_s)) NA_integer_ else as.integer(t_s[["n.pool"]]),
++           thr.lower = if (is.null(t_s)) NA_real_ else round(t_s[["lo"]], 4),
++           thr.upper = if (is.null(t_s)) NA_real_ else round(t_s[["hi"]], 4),
++           flags = nf,
++           flag.rate.pct = round(100 * nf / max(1, sum(!is.na(Os))), 3),
++           sites.with.flag = sum(per_site > 0),
++           pct.sites.with.flag = round(100 * sum(per_site > 0) / length(k), 1),
++           max.per.site = if (nf) max(per_site) else 0L,
++           gini.sites = round(gini(per_site), 3),
++           samples.with.flag = sum(per_samp > 0),
++           max.per.sample = if (nf) max(per_samp) else 0L,
++           gini.samples = round(gini(per_samp), 3),
++           median.abs.dbeta = if (length(mg)) round(median(mg), 4) else NA_real_,
++           pct.under.0.05 = if (length(mg)) round(100 * mean(mg < 0.05), 1) else NA_real_,
++           pct.under.0.10 = if (length(mg)) round(100 * mean(mg < 0.10), 1) else NA_real_)
++       }
++     }
++ 
++     # ---- percentile sweep: "or lower a bit" ----
++     for (vn in names(variants)) for (q in QGRID) {
++       O <- state_pooled_flags(variants[[vn]], st, q)
++       mg <- dev[!is.na(O) & O != 0]
++       sweep_rows[[length(sweep_rows) + 1]] <- data.frame(
++         tissue = tissue, scope = scope, variant = vn, q = q,
++         flags = sum(O != 0, na.rm = TRUE),
++         flag.rate.pct = round(100 * mean(O != 0, na.rm = TRUE), 3),
++         sites.with.flag = sum(rowSums(O != 0, na.rm = TRUE) > 0),
++         pct.sites.with.flag = round(100 * mean(rowSums(O != 0, na.rm = TRUE) > 0), 1),
++         samples.with.flag = sum(colSums(O != 0, na.rm = TRUE) > 0),
++         median.abs.dbeta = if (length(mg)) round(median(mg), 4) else NA_real_,
++         pct.under.0.05 = if (length(mg)) round(100 * mean(mg < 0.05), 1) else NA_real_,
++         pct.under.0.10 = if (length(mg)) round(100 * mean(mg < 0.10), 1) else NA_real_,
++         jaccard.vs.ext = round(jaccard(O, F), 4))
++     }
++ 
++     # ---- headline scoring at Q_MAIN, incl. stability ----
++     for (vn in names(variants)) {
++       O <- state_pooled_flags(variants[[vn]], st, Q_MAIN)
++       s_acc <- 0
++       for (r in seq_len(N_REPS)) {
++         Bn <- B + matrix(rnorm(length(B), 0, NOISE_SD), nrow(B))
++         Bn[Bn < 0] <- 0; Bn[Bn > 1] <- 1; Bn[is.na(B)] <- NA
++         Xn <- if (vn == "bio.stat.abs") Bn else Bn - apply(Bn, 1, median, na.rm = TRUE)
++         s_acc <- s_acc + jaccard(O, state_pooled_flags(Xn, st, Q_MAIN))
++       }
++       mg <- dev[!is.na(O) & O != 0]
++       rate_by_state <- sapply(STATE_ORDER, function(s) {
++         k <- which(st == s); if (!length(k)) return(NA_real_)
++         mean(O[k, ] != 0, na.rm = TRUE) })
++       mag_by_state <- sapply(STATE_ORDER, function(s) {
++         k <- which(st == s); if (!length(k)) return(NA_real_)
++         v <- as.vector(O[k, ]); w <- as.vector(dev[k, ])
++         ok <- !is.na(v) & v != 0 & !is.na(w)
++         if (!any(ok)) return(NA_real_); median(w[ok]) })
++       score_rows[[length(score_rows) + 1]] <- data.frame(
++         tissue = tissue, scope = scope, method = vn, q = Q_MAIN,
++         flag.rate.pct = round(100 * mean(O != 0, na.rm = TRUE), 3),
++         stability.jaccard = round(s_acc / N_REPS, 4),
++         state.rate.ratio = round(max(rate_by_state, na.rm = TRUE) /
++                                  max(1e-9, min(rate_by_state, na.rm = TRUE)), 2),
++         magnitude.H.vs.R = round(mag_by_state[["H"]] / mag_by_state[["R"]], 3),
++         median.abs.dbeta = if (length(mg)) round(median(mg), 4) else NA_real_,
++         pct.trivial = if (length(mg)) round(100 * mean(mg < 0.10), 2) else NA_real_,
++         jaccard.vs.ext = round(jaccard(O, F), 4))
++     }
++ 
++     # ---- the window's L sites, spelled out, since that is the ask ----
++     if (scope == "window") {
++       for (vn in names(variants)) {
++         O <- state_pooled_flags(variants[[vn]], st, Q_MAIN)
++         for (s in STATE_ORDER) {
++           k <- which(st == s); if (!length(k)) next
++           Os <- O[k, , drop = FALSE]
++           site_rows[[length(site_rows) + 1]] <- data.frame(
++             tissue = tissue, variant = vn, q = Q_MAIN, methy.state = s,
++             cgID = rownames(Os), pos = pos[k],
++             cohort.median.beta = round(med[k], 4),
++             biostat.neg1 = rowSums(Os == -1, na.rm = TRUE),
++             biostat.pos1 = rowSums(Os ==  1, na.rm = TRUE),
++             ext.neg1 = rowSums(F[k, , drop = FALSE] == -1, na.rm = TRUE),
++             ext.pos1 = rowSums(F[k, , drop = FALSE] ==  1, na.rm = TRUE))
++           sample_rows[[length(sample_rows) + 1]] <- data.frame(
++             tissue = tissue, variant = vn, q = Q_MAIN, methy.state = s,
++             sample = colnames(Os),
++             biostat.flags = colSums(Os != 0, na.rm = TRUE),
++             ext.flags = colSums(F[k, , drop = FALSE] != 0, na.rm = TRUE))
++         }
++       }
++     }
++     cat("\n")
++   }
++   rm(B_all, F_all); invisible(gc())
++ }
+#########################################################
+### Normal
+#########################################################
+
+--------------------------------------------------
+scope = window   sites = 100
+--------------------------------------------------
+
+bio.stat.abs  at q = 0.96
+   L   pool=    424  thr(lo,hi)=(  -  ,0.0841)  flags=   17 ( 4.01%)  sites>=1=   4/8     samples>=1=10/53  med|db|=0.0466
+   LM  pool=    742  thr(lo,hi)=(  -  ,0.3442)  flags=   30 ( 4.04%)  sites>=1=   9/14    samples>=1=18/53  med|db|=0.1064
+   M   pool=   1272  thr(lo,hi)=(0.3300,0.7340)  flags=   52 ( 4.09%)  sites>=1=  15/24    samples>=1=35/53  med|db|=0.0803
+   HM  pool=   2014  thr(lo,hi)=(0.6160,  -  )  flags=   81 ( 4.02%)  sites>=1=  10/38    samples>=1=48/53  med|db|=0.0796
+   H   pool=    583  thr(lo,hi)=(0.8771,  -  )  flags=   24 ( 4.12%)  sites>=1=   8/11    samples>=1=17/53  med|db|=0.0580
+   R   pool=    265  thr(lo,hi)=(0.1020,0.8884)  flags=   12 ( 4.53%)  sites>=1=   3/5     samples>=1=11/53  med|db|=0.1376
+
+bio.stat.dev  at q = 0.96
+   L   pool=    424  thr(lo,hi)=(  -  ,0.0346)  flags=   17 ( 4.01%)  sites>=1=   4/8     samples>=1=10/53  med|db|=0.0466
+   LM  pool=    742  thr(lo,hi)=(  -  ,0.1342)  flags=   30 ( 4.04%)  sites>=1=  13/14    samples>=1=11/53  med|db|=0.1968
+   M   pool=   1272  thr(lo,hi)=(-0.1126,0.1465)  flags=   52 ( 4.09%)  sites>=1=  18/24    samples>=1=28/53  med|db|=0.1575
+   HM  pool=   2014  thr(lo,hi)=(-0.1072,  -  )  flags=   81 ( 4.02%)  sites>=1=  22/38    samples>=1=41/53  med|db|=0.1406
+   H   pool=    583  thr(lo,hi)=(-0.0487,  -  )  flags=   24 ( 4.12%)  sites>=1=   8/11    samples>=1=16/53  med|db|=0.0668
+   R   pool=    265  thr(lo,hi)=(-0.2694,0.3320)  flags=   12 ( 4.53%)  sites>=1=   4/5     samples>=1= 9/53  med|db|=0.3748
+
+--------------------------------------------------
+scope = chr22   sites = 6809
+--------------------------------------------------
+
+bio.stat.abs  at q = 0.96
+   L   pool= 117183  thr(lo,hi)=(  -  ,0.1020)  flags= 4688 ( 4.00%)  sites>=1=1016/2211  samples>=1=53/53  med|db|=0.0684
+   LM  pool=  51993  thr(lo,hi)=(  -  ,0.3792)  flags= 2080 ( 4.00%)  sites>=1= 375/981   samples>=1=53/53  med|db|=0.1238
+   M   pool=  40386  thr(lo,hi)=(0.2689,0.7412)  flags= 1616 ( 4.00%)  sites>=1= 417/762   samples>=1=53/53  med|db|=0.0901
+   HM  pool=  87344  thr(lo,hi)=(0.5817,  -  )  flags= 3494 ( 4.00%)  sites>=1= 487/1648  samples>=1=53/53  med|db|=0.1044
+   H   pool=  47647  thr(lo,hi)=(0.8577,  -  )  flags= 1906 ( 4.00%)  sites>=1= 368/899   samples>=1=53/53  med|db|=0.0476
+   R   pool=  16324  thr(lo,hi)=(0.0887,0.8736)  flags=  654 ( 4.01%)  sites>=1= 119/308   samples>=1=53/53  med|db|=0.1759
+
+bio.stat.dev  at q = 0.96
+   L   pool= 117183  thr(lo,hi)=(  -  ,0.0368)  flags= 4688 ( 4.00%)  sites>=1=1264/2211  samples>=1=53/53  med|db|=0.0705
+   LM  pool=  51993  thr(lo,hi)=(  -  ,0.1422)  flags= 2080 ( 4.00%)  sites>=1= 794/981   samples>=1=53/53  med|db|=0.1874
+   M   pool=  40386  thr(lo,hi)=(-0.1444,0.1791)  flags= 1616 ( 4.00%)  sites>=1= 478/762   samples>=1=51/53  med|db|=0.1994
+   HM  pool=  87344  thr(lo,hi)=(-0.1250,  -  )  flags= 3494 ( 4.00%)  sites>=1= 977/1648  samples>=1=53/53  med|db|=0.1574
+   H   pool=  47647  thr(lo,hi)=(-0.0457,  -  )  flags= 1906 ( 4.00%)  sites>=1= 591/899   samples>=1=53/53  med|db|=0.0593
+   R   pool=  16324  thr(lo,hi)=(-0.3055,0.3411)  flags=  654 ( 4.01%)  sites>=1= 221/308   samples>=1=43/53  med|db|=0.3860
+
+#########################################################
+### Tumor
+#########################################################
+
+--------------------------------------------------
+scope = window   sites = 100
+--------------------------------------------------
+
+bio.stat.abs  at q = 0.96
+   L   pool=    371  thr(lo,hi)=(  -  ,0.0981)  flags=   15 ( 4.04%)  sites>=1=   3/7     samples>=1=11/53  med|db|=0.0700
+   LM  pool=    424  thr(lo,hi)=(  -  ,0.4287)  flags=   17 ( 4.01%)  sites>=1=   5/8     samples>=1=12/53  med|db|=0.2568
+   M   pool=    689  thr(lo,hi)=(0.2793,0.7260)  flags=   28 ( 4.06%)  sites>=1=  10/13    samples>=1=20/53  med|db|=0.2033
+   HM  pool=   1007  thr(lo,hi)=(0.5064,  -  )  flags=   41 ( 4.07%)  sites>=1=  10/19    samples>=1=22/53  med|db|=0.2113
+   H   pool=     53  thr(lo,hi)=(0.8811,  -  )  flags=    3 ( 5.66%)  sites>=1=   1/1     samples>=1= 3/53  med|db|=0.1318
+   R   pool=   2756  thr(lo,hi)=(0.0512,0.9628)  flags=  112 ( 4.06%)  sites>=1=  12/52    samples>=1=49/53  med|db|=0.0858
+
+bio.stat.dev  at q = 0.96
+   L   pool=    371  thr(lo,hi)=(  -  ,0.0335)  flags=   15 ( 4.04%)  sites>=1=   3/7     samples>=1=11/53  med|db|=0.0700
+   LM  pool=    424  thr(lo,hi)=(  -  ,0.3085)  flags=   17 ( 4.01%)  sites>=1=   3/8     samples>=1=13/53  med|db|=0.3496
+   M   pool=    689  thr(lo,hi)=(-0.2000,0.2039)  flags=   28 ( 4.06%)  sites>=1=  11/13    samples>=1=17/53  med|db|=0.2363
+   HM  pool=   1007  thr(lo,hi)=(-0.2631,  -  )  flags=   41 ( 4.07%)  sites>=1=  14/19    samples>=1=19/53  med|db|=0.3289
+   H   pool=     53  thr(lo,hi)=(-0.0834,  -  )  flags=    3 ( 5.66%)  sites>=1=   1/1     samples>=1= 3/53  med|db|=0.1318
+   R   pool=   2756  thr(lo,hi)=(-0.4113,0.3273)  flags=  112 ( 4.06%)  sites>=1=  35/52    samples>=1=35/53  med|db|=0.4396
+
+--------------------------------------------------
+scope = chr22   sites = 6809
+--------------------------------------------------
+
+bio.stat.abs  at q = 0.96
+   L   pool=  95559  thr(lo,hi)=(  -  ,0.0988)  flags= 3823 ( 4.00%)  sites>=1= 798/1803  samples>=1=53/53  med|db|=0.0701
+   LM  pool=  39962  thr(lo,hi)=(  -  ,0.3586)  flags= 1599 ( 4.00%)  sites>=1= 387/754   samples>=1=53/53  med|db|=0.2328
+   M   pool=   6943  thr(lo,hi)=(0.2477,0.7561)  flags=  278 ( 4.00%)  sites>=1=  99/131   samples>=1=40/53  med|db|=0.1873
+   HM  pool=  75313  thr(lo,hi)=(0.6012,  -  )  flags= 3013 ( 4.00%)  sites>=1= 724/1421  samples>=1=53/53  med|db|=0.2080
+   H   pool=  32065  thr(lo,hi)=(0.8666,  -  )  flags= 1283 ( 4.00%)  sites>=1= 265/605   samples>=1=53/53  med|db|=0.0474
+   R   pool= 111035  thr(lo,hi)=(0.0248,0.9416)  flags= 4442 ( 4.00%)  sites>=1= 563/2095  samples>=1=53/53  med|db|=0.0164
+
+bio.stat.dev  at q = 0.96
+   L   pool=  95559  thr(lo,hi)=(  -  ,0.0428)  flags= 3823 ( 4.00%)  sites>=1= 954/1803  samples>=1=53/53  med|db|=0.0708
+   LM  pool=  39962  thr(lo,hi)=(  -  ,0.1874)  flags= 1599 ( 4.00%)  sites>=1= 552/754   samples>=1=53/53  med|db|=0.2703
+   M   pool=   6943  thr(lo,hi)=(-0.2050,0.2362)  flags=  278 ( 4.00%)  sites>=1=  99/131   samples>=1=40/53  med|db|=0.2561
+   HM  pool=  75313  thr(lo,hi)=(-0.1815,  -  )  flags= 3013 ( 4.00%)  sites>=1=1016/1421  samples>=1=53/53  med|db|=0.2461
+   H   pool=  32065  thr(lo,hi)=(-0.0441,  -  )  flags= 1283 ( 4.00%)  sites>=1= 423/605   samples>=1=52/53  med|db|=0.0584
+   R   pool= 111035  thr(lo,hi)=(-0.3717,0.4041)  flags= 4442 ( 4.00%)  sites>=1=1533/2095  samples>=1=53/53  med|db|=0.4653
+
+> 
+> write_out(do.call(rbind, thr_rows),   "Task30_StatePooled_Thresholds.csv")
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task30_StatePooled_Thresholds.csv  (48 rows)
+> write_out(do.call(rbind, sweep_rows), "Task30_StatePooled_QSweep.csv")
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task30_StatePooled_QSweep.csv  (64 rows)
+> write_out(do.call(rbind, score_rows), "Task30_StatePooled_Scores.csv")
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task30_StatePooled_Scores.csv  (8 rows)
+> write_out(do.call(rbind, site_rows),  "Task30_StatePooled_Window_BySite.csv")
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task30_StatePooled_Window_BySite.csv  (400 rows)
+> write_out(do.call(rbind, sample_rows),"Task30_StatePooled_Window_BySample.csv")
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task30_StatePooled_Window_BySample.csv  (1272 rows)
+> 
+> cat("\n---- headline scores (compare against Task24_MethodBenchmark_Scores.csv) ----\n")
+
+---- headline scores (compare against Task24_MethodBenchmark_Scores.csv) ----
+> print(do.call(rbind, score_rows), row.names = FALSE)
+ tissue  scope       method    q flag.rate.pct stability.jaccard
+ Normal window bio.stat.abs 0.96         4.075            0.7943
+ Normal window bio.stat.dev 0.96         4.075            0.8140
+ Normal  chr22 bio.stat.abs 0.96         4.001            0.8230
+ Normal  chr22 bio.stat.dev 0.96         4.001            0.8043
+  Tumor window bio.stat.abs 0.96         4.075            0.7750
+  Tumor window bio.stat.dev 0.96         4.075            0.8793
+  Tumor  chr22 bio.stat.abs 0.96         4.001            0.7791
+  Tumor  chr22 bio.stat.dev 0.96         4.001            0.8654
+ state.rate.ratio magnitude.H.vs.R median.abs.dbeta pct.trivial jaccard.vs.ext
+             1.13            0.422           0.0773       63.43         0.0876
+             1.13            0.178           0.1464       16.67         0.1640
+             1.00            0.270           0.0785       63.85         0.1102
+             1.00            0.154           0.1369       38.60         0.1692
+             1.41            1.536           0.1313       40.74         0.0673
+             1.41            0.300           0.3668        6.94         0.1220
+             1.00            2.879           0.0777       60.38         0.0856
+             1.00            0.125           0.2415       30.18         0.1791
+> 
+> cat("\n---- percentile sweep, chr22 scope ----\n")
+
+---- percentile sweep, chr22 scope ----
+> sw <- do.call(rbind, sweep_rows)
+> print(sw[sw$scope == "chr22", ], row.names = FALSE)
+ tissue scope      variant    q flags flag.rate.pct sites.with.flag
+ Normal chr22 bio.stat.abs 0.90 36093        10.001            3896
+ Normal chr22 bio.stat.abs 0.92 28873         8.001            3593
+ Normal chr22 bio.stat.abs 0.94 21655         6.001            3261
+ Normal chr22 bio.stat.abs 0.95 18049         5.001            3053
+ Normal chr22 bio.stat.abs 0.96 14438         4.001            2782
+ Normal chr22 bio.stat.abs 0.97 10829         3.001            2433
+ Normal chr22 bio.stat.abs 0.98  7220         2.001            2005
+ Normal chr22 bio.stat.abs 0.99  3611         1.001            1361
+ Normal chr22 bio.stat.dev 0.90 36093        10.001            5922
+ Normal chr22 bio.stat.dev 0.92 28873         8.001            5544
+ Normal chr22 bio.stat.dev 0.94 21655         6.001            5049
+ Normal chr22 bio.stat.dev 0.95 18049         5.001            4740
+ Normal chr22 bio.stat.dev 0.96 14438         4.001            4325
+ Normal chr22 bio.stat.dev 0.97 10829         3.001            3795
+ Normal chr22 bio.stat.dev 0.98  7220         2.001            3012
+ Normal chr22 bio.stat.dev 0.99  3611         1.001            1841
+  Tumor chr22 bio.stat.abs 0.90 36092        10.001            4186
+  Tumor chr22 bio.stat.abs 0.92 28873         8.001            3847
+  Tumor chr22 bio.stat.abs 0.94 21657         6.001            3422
+  Tumor chr22 bio.stat.abs 0.95 18047         5.001            3160
+  Tumor chr22 bio.stat.abs 0.96 14438         4.001            2836
+  Tumor chr22 bio.stat.abs 0.97 10830         3.001            2458
+  Tumor chr22 bio.stat.abs 0.98  7223         2.002            1958
+  Tumor chr22 bio.stat.abs 0.99  3613         1.001            1307
+  Tumor chr22 bio.stat.dev 0.90 36092        10.001            6113
+  Tumor chr22 bio.stat.dev 0.92 28873         8.001            5866
+  Tumor chr22 bio.stat.dev 0.94 21657         6.001            5399
+  Tumor chr22 bio.stat.dev 0.95 18047         5.001            5045
+  Tumor chr22 bio.stat.dev 0.96 14438         4.001            4577
+  Tumor chr22 bio.stat.dev 0.97 10830         3.001            3965
+  Tumor chr22 bio.stat.dev 0.98  7223         2.002            3175
+  Tumor chr22 bio.stat.dev 0.99  3613         1.001            2007
+ pct.sites.with.flag samples.with.flag median.abs.dbeta pct.under.0.05
+                57.2                53           0.0498           50.1
+                52.8                53           0.0569           45.3
+                47.9                53           0.0662           38.8
+                44.8                53           0.0718           34.6
+                40.9                53           0.0785           29.9
+                35.7                53           0.0873           25.0
+                29.4                53           0.0981           18.9
+                20.0                53           0.1145           11.0
+                87.0                53           0.0927           31.4
+                81.4                53           0.1032           27.9
+                74.2                53           0.1179           21.9
+                69.6                53           0.1272           17.2
+                63.5                53           0.1369           10.1
+                55.7                53           0.1489            0.0
+                44.2                53           0.1665            0.0
+                27.0                53           0.1985            0.0
+                61.5                53           0.0525           48.7
+                56.5                53           0.0590           45.3
+                50.3                53           0.0668           40.6
+                46.4                53           0.0716           38.1
+                41.7                53           0.0777           35.5
+                36.1                53           0.0849           33.0
+                28.8                53           0.0940           30.0
+                19.2                53           0.1051           27.7
+                89.8                53           0.1553           23.6
+                86.2                53           0.1756           20.7
+                79.3                53           0.2029           15.8
+                74.1                53           0.2202           11.9
+                67.2                53           0.2415            6.0
+                58.2                53           0.2682            0.2
+                46.6                53           0.3036            0.0
+                29.5                53           0.3599            0.0
+ pct.under.0.10 jaccard.vs.ext
+           76.1         0.0736
+           73.5         0.0845
+           69.7         0.0980
+           66.9         0.1054
+           63.8         0.1102
+           59.0         0.1095
+           51.5         0.1034
+           39.2         0.0780
+           55.0         0.1042
+           47.6         0.1206
+           41.0         0.1431
+           40.0         0.1566
+           38.6         0.1692
+           36.2         0.1831
+           31.5         0.1759
+           17.4         0.1280
+           69.1         0.1028
+           67.0         0.1016
+           64.2         0.0974
+           62.5         0.0926
+           60.4         0.0856
+           57.8         0.0749
+           53.3         0.0592
+           47.4         0.0350
+           33.7         0.2239
+           32.8         0.2192
+           31.9         0.2060
+           31.2         0.1946
+           30.2         0.1791
+           28.4         0.1565
+           25.0         0.1213
+           14.6         0.0692
+> 
+> cat("\n=========================================================\n")
+
+=========================================================
+> cat("TASK 30 COMPLETE\n")
+TASK 30 COMPLETE
+> cat("=========================================================\n")
+=========================================================
+> 
+> proc.time()
+   user  system elapsed 
+  8.396   1.401   8.682 

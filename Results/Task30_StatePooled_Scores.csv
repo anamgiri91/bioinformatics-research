@@ -1,0 +1,9 @@
+"tissue","scope","method","q","flag.rate.pct","stability.jaccard","state.rate.ratio","magnitude.H.vs.R","median.abs.dbeta","pct.trivial","jaccard.vs.ext"
+"Normal","window","bio.stat.abs",0.96,4.075,0.7943,1.13,0.422,0.0773,63.43,0.0876
+"Normal","window","bio.stat.dev",0.96,4.075,0.814,1.13,0.178,0.1464,16.67,0.164
+"Normal","chr22","bio.stat.abs",0.96,4.001,0.823,1,0.27,0.0785,63.85,0.1102
+"Normal","chr22","bio.stat.dev",0.96,4.001,0.8043,1,0.154,0.1369,38.6,0.1692
+"Tumor","window","bio.stat.abs",0.96,4.075,0.775,1.41,1.536,0.1313,40.74,0.0673
+"Tumor","window","bio.stat.dev",0.96,4.075,0.8793,1.41,0.3,0.3668,6.94,0.122
+"Tumor","chr22","bio.stat.abs",0.96,4.001,0.7791,1,2.879,0.0777,60.38,0.0856
+"Tumor","chr22","bio.stat.dev",0.96,4.001,0.8654,1,0.125,0.2415,30.18,0.1791
