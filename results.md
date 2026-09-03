@@ -89,6 +89,8 @@ The 2026-09-03 email added four more, answered in §10–§13:
 | 8 | Try a "bio-stat" flag: the >96th percentile of the whole state pool (8 × 53 for `L`) | Works — it removes the n = 53 degeneracy and makes the flag rate exactly state-independent. Pool the *deviations*, not raw beta; 424 cells is too small a pool, use chr22 — §11 |
 | 9 | Can the `ext` parameters be tuned to be less sensitive? | **No.** `p` has two usable settings on this 747-sample panel, and even the strictest leaves 100% of `H`-site hyper flags below \|Δβ\| = 0.10 — §12 |
 | 10 | Does `OutlierMeth` report outlying *samples*? | No. It returns a CpG × sample matrix and nothing else — `LITERATURE.md` §2 |
+| 11 | Do §7 and §12 hold beyond chr22? | **Yes, closely.** Genome-wide, 134 of 154,810 contrary `H`/`L` flags in normal tissue clear a 0.10 floor — 0.087% — against 98.7% at `R` sites — §14 |
+| 12 | Does the per-sample burden ranking survive a magnitude floor? | **In normal tissue, intact** — the top six are unchanged, Spearman 0.910. One sample, N27, collapses from rank 7 to 28. Tumour reshuffles more — §14 |
 
 **Correction carried through this document.** The external reference is the
 `tcga` panel — 747 TCGA normal samples across 21 tissue types — not the
@@ -210,7 +212,8 @@ chr22, and they are the same three in both tissues.
 
 `Results/Task21_Chr22_ContraryDrivers_Normal.csv`
 
-N15, N17 and N14 also lead the burden ranking at every scale in both tissues,
+N15, N17, N14 and N48 also lead the burden ranking at every scale in both
+tissues (N48 was originally missed; see §14),
 and their chr22 external burden tracks their genome-wide burden at Spearman
 0.761 (normal) / 0.843 (tumour). **This is a whole-sample property, not a
 chr22 story** — global hypomethylation, tumour purity, or a technical batch
@@ -718,8 +721,10 @@ cells:
 
 So: a *majority* of samples can and do carry a contrary flag. The lead that
 N15 and N17 hold is real but small — 27% against an expectation of 6% — and
-N48 is new here, not one of the N15/N17/N14 trio §3 identified. This is a mild
-sample gradient, not a two-sample story.
+N48 is new here, not one of the N15/N17/N14 group §3 identified — and §14
+confirms it belongs, ranking 4th of 53 both on chr22 and genome-wide, before
+and after a magnitude floor. This is a mild sample gradient, not a two-sample
+story.
 
 ### Why those sites, then?
 
@@ -1081,16 +1086,212 @@ cells each method actually flags, normalised to raw beta:
 |---|---|---|---|---|
 | Normal | raw beta | 1.00 | **0.429** | **0.1%** |
 | Normal | arcsine | 1.48 | 0.326 | 2.5% |
-| Normal | M-value | 3.25 | **0.192** | **12.1%** |
+| Normal | M-value | 2.26 | **0.192** | **12.1%** |
 | Tumour | raw beta | 1.00 | **0.678** | **1.3%** |
 | Tumour | arcsine | 1.37 | 0.546 | 5.8% |
-| Tumour | M-value | 3.13 | **0.429** | **14.6%** |
+| Tumour | M-value | 2.17 | **0.429** | **14.6%** |
 
-Monotone in both tissues, on both metrics. **The more a transform stretches the
-extremes, the less reproducible its flags and the more of them run against the
-state.** The hypothesis holds, and the practical conclusion is not "use a
+Amplification is `|dT/dβ|` at the flagged cells divided by `|dT/dβ|` at
+β = 0.5, so every transform reads 1 at mid-methylation. Monotone in both
+tissues, on both metrics. **The more a transform stretches the extremes, the
+less reproducible its flags and the more of them run against the state.** The hypothesis holds, and the practical conclusion is not "use a
 gentler transform" — arcsine is gentler and still loses to raw beta — but
 "do not transform; add a magnitude requirement instead."
+
+
+---
+
+## 14. The same results on all 380,355 CpGs
+
+*(plan.md steps 3 and 7b: §7's threshold geometry and stability, and §12's
+ceiling and `p` envelope, were chr22-only. The Task 13 flag matrices already
+cover the whole array, so this is a wider denominator on existing logic.)*
+
+Everything replicates. Where a chr22 number appears below in brackets, it is
+for comparison, not a separate result.
+
+### The effect-size ceiling
+
+| tissue | state | CpGs | median cohort β | room above | cells ≥ 0.05 from their site median | ≥ 0.10 | ≥ 0.15 |
+|---|---|---|---|---|---|---|---|
+| Normal | `H` | 61,845 | 0.934 | **0.067** | 3.74% | **0.225%** | 0.011% |
+| Normal | `L` | 104,540 | 0.030 | 0.970 | 3.58% | **0.835%** | 0.040% |
+| Normal | `R` | 23,455 | 0.499 | 0.501 | 64.1% | **38.4%** | 22.5% |
+| Tumour | `H` | 30,080 | 0.942 | **0.058** | 3.36% | **0.376%** | 0.023% |
+| Tumour | `L` | 76,106 | 0.029 | 0.971 | 3.77% | **0.735%** | 0.034% |
+| Tumour | `R` | 153,479 | 0.559 | 0.441 | 64.8% | **44.8%** | 30.9% |
+
+`Results/Task33_GenomeWide_EffectSizeCeiling.csv`
+(chr22: `H` 0.225% / 0.24%, `L` 0.835% / 0.79%, `R` 38.4% / 36.6%.)
+
+### The `p` envelope — the project's strongest single table
+
+| tissue | cell | setting | flags | median \|Δβ\| | under 0.10 | **survive a 0.10 floor** |
+|---|---|---|---|---|---|---|
+| Normal | `H` `+1` | `p = 0.01`, as run | 68,878 | 0.029 | 99.95% | **36** |
+| Normal | `H` `+1` | strictest reachable | 33,511 | 0.031 | 99.92% | **27** |
+| Normal | `L` `−1` | `p = 0.01`, as run | 85,932 | 0.015 | 99.89% | **98** |
+| Normal | `L` `−1` | strictest reachable | 44,722 | 0.015 | 99.91% | **40** |
+| Normal | `R` `+1` | `p = 0.01`, as run | 22,221 | **0.294** | 1.27% | **21,938** |
+| Tumour | `H` `+1` | `p = 0.01`, as run | 60,218 | 0.026 | 99.97% | **17** |
+| Tumour | `L` `−1` | `p = 0.01`, as run | 81,948 | 0.013 | 99.95% | **39** |
+| Tumour | `R` `+1` | `p = 0.01`, as run | 851,843 | 0.207 | 20.4% | **678,316** |
+
+`Results/Task33_GenomeWide_PEnvelope.csv`
+
+**Of the 154,810 contrary flags the external reference makes at `H` and `L`
+sites in normal tissue across the whole array, 134 — 0.087% — correspond to a
+beta shift of 0.10 or more.** In tumour it is 56 of 142,166, 0.039%. At `R`
+sites in the same run, 98.7% (Normal) and 79.6% (Tumour) clear the same bar.
+
+This is not a chr22 observation and it is not a threshold that could be tuned.
+It is what a scale-free percentile does to a bounded variable at its bounds.
+
+### Threshold geometry
+
+| tissue | state | `P` | hyper zone (1−`P`) | hypo zone (`N`) | `+1` | `−1` | % `+1` | flag density in the constrained direction |
+|---|---|---|---|---|---|---|---|---|
+| Normal | `L` | 0.104 | 0.896 | **0.022** | 88,635 | 85,932 | 50.8% | **39.5×** |
+| Normal | `LM` | 0.226 | 0.774 | 0.048 | 43,097 | 40,294 | 51.7% | 15.0× |
+| Normal | `HM` | 0.918 | 0.082 | 0.678 | 71,257 | 43,318 | 62.2% | 13.7× |
+| Normal | `H` | 0.962 | **0.038** | 0.881 | 68,878 | 9,381 | **88.0%** | **169.8×** |
+| Tumour | `L` | 0.102 | 0.898 | **0.019** | 81,840 | 81,948 | 50.0% | **47.0×** |
+| Tumour | `H` | 0.963 | **0.037** | 0.882 | 60,218 | 7,896 | **88.4%** | **181.8×** |
+
+`Results/Task33_GenomeWide_ThresholdGeometry.csv`
+(chr22 Normal gave 171× at `H`, 87.8% `+1`, and 44× at `L`.)
+
+Worth stating plainly, because it is the whole argument in one line: **at `L`
+sites, where every sample is unmethylated, the external reference calls almost
+exactly as many samples abnormally *low* as abnormally *high* — 85,932 against
+88,635 — inside a hypo zone 0.022 wide.**
+
+### Stability
+
+| tissue | noise sd | flags lost | flags gained | % baseline lost | churn | Jaccard, `ext` | Jaccard, `ext` + 0.10 floor |
+|---|---|---|---|---|---|---|---|
+| Normal | 0.005 | 76,389 | 303,372 | 14.9% | 0.74 | 0.535 | 0.898 |
+| Normal | **0.010** | 107,987 | 621,210 | **21.0%** | **1.42** | **0.358** | **0.799** |
+| Normal | 0.020 | 142,392 | 1,121,009 | 27.7% | 2.46 | 0.227 | 0.632 |
+| Tumour | 0.005 | 111,258 | 348,076 | 4.5% | 0.19 | 0.837 | 0.963 |
+| Tumour | **0.010** | 182,423 | 741,659 | **7.4%** | 0.37 | 0.713 | 0.921 |
+| Tumour | 0.020 | 281,921 | 1,372,480 | 11.4% | 0.67 | 0.570 | 0.839 |
+
+`Results/Task33_GenomeWide_FlagStability.csv` — 5 replicates per level; the
+chr22 runs used 10–20, and at 380k CpGs the Monte Carlo error on a Jaccard is
+already negligible.
+
+Normal reproduces chr22 closely (21.0% lost against 21.4%, churn 1.42 against
+1.61). **Tumour is much more stable genome-wide than chr22 suggested** — 7.4%
+lost against 27.9% — because the genome-wide tumour flag set is dominated by
+`R` sites, which are the states with room to move. That is consistent with
+everything above and is worth saying rather than hiding: the instability is a
+property of the compressed states, so a flag set weighted towards `R` inherits
+less of it.
+
+### Per-sample burden survives the floor
+
+*(plan.md step 4, the half that had never been run. If the ranking survives, the
+burden is real; if the leaders collapse, it was heteroscedasticity.)*
+
+| | Normal | Tumour |
+|---|---|---|
+| flags retained at a 0.10 floor | 41.0% | 67.3% |
+| Spearman, raw rank vs floored rank | **0.910** | **0.973** |
+
+**Normal: the ranking survives intact.** The top six by raw burden are the top
+six by floored burden, in the same order:
+
+| sample | raw flags | rank | floored | rank | retained |
+|---|---|---|---|---|---|
+| N15 | 65,468 | 1 | 33,282 | 1 | 50.8% |
+| N17 | 63,937 | 2 | 33,212 | 2 | 51.9% |
+| N14 | 52,440 | 3 | 23,654 | 3 | 45.1% |
+| N48 | 26,937 | 4 | 11,922 | 4 | 44.3% |
+| N31 | 22,996 | 5 | 10,262 | 5 | 44.6% |
+| N34 | 16,333 | 6 | 7,800 | 6 | 47.8% |
+
+`Results/Task33_GenomeWide_SampleBurdenFloor.csv`
+
+**So N15, N17, N14 and N48 do not owe their position to trivial flags.** Their
+burden is real in the sense that it survives a magnitude requirement — which
+does not make it biological. Batch, detection-p, bisulfite conversion, tumour
+purity and cell composition are all still unexcluded (`plan.md` §6), and this
+result raises the stakes on excluding them rather than lowering them.
+
+One sample does collapse: **N27 falls from rank 7 to rank 28**, retaining only
+10.7% of its flags. Its burden *was* heteroscedasticity. That the floor
+separates N27 from N15 is the clearest evidence available that it is doing
+something other than thinning uniformly.
+
+**Tumour reshuffles more.** T15 and T14 hold, but T17 falls 2 → 8, T16 falls
+4 → 12, while T38 rises 5 → 2 and T25 6 → 3. Part of the tumour lead was
+trivial flags. Report the floored ranking for tumour, not the raw one.
+
+---
+
+## 15. How the methods disagree, direction by direction
+
+*(plan.md step 7b item 3 and `REVIEW.md` Q11: κ is unreliable at >95% zeros, and
+both metrics in §6 collapse a three-way outcome into flagged / not.)*
+
+The full 3 × 3 contingency, for five method pairs, at both scales, in both
+tissues, per state and pooled: `Results/Task35_DirectionalAgreement.csv`.
+
+### The methods never contradict each other about direction
+
+Across every pair, scale, tissue and state, the number of cells where one
+method calls `+1` and another calls `−1` is **zero**.
+
+That is structural, not luck. `bio` only ever flags in the direction its state
+permits. For `self` and `ext` to disagree in direction the entire cohort would
+have to sit past an external threshold at that CpG — and Task 22 established
+that no CpG flags more than 11 of 53 samples. So the disagreement documented in
+§6 is entirely about **which cells get flagged at all**, never about which way.
+
+This is a cleaner statement of §6's result than κ gives, and it is invisible
+under a flagged / not view — which is what the review objected to.
+
+### Precision and recall against `ext` as the designated reference
+
+Direction must match, so a hyper-for-hypo swap would count against both. chr22,
+all states pooled:
+
+| tissue | method | precision vs `ext` | recall vs `ext` | Jaccard on `+1` | Jaccard on `−1` |
+|---|---|---|---|---|---|
+| Normal | `bio` | 0.314 | 0.179 | 0.173 | 0.076 |
+| Normal | `bio.loo` | 0.291 | 0.234 | 0.206 | 0.082 |
+| Normal | `self` | 0.372 | 0.498 | 0.295 | 0.244 |
+| Tumour | `bio` | 0.479 | 0.058 | 0.058 | 0.049 |
+| Tumour | `bio.loo` | 0.458 | 0.074 | 0.073 | 0.061 |
+| Tumour | `self` | 0.619 | 0.217 | 0.186 | 0.199 |
+
+No method recovers even half of `ext`'s calls, and no method is right more than
+62% of the time when it does flag — under the assumption that `ext` is the
+reference, which §12 gives ample reason to doubt. The two arms are close to
+independent, which is what §6 already said; this quantifies it in a form that
+survives the class imbalance.
+
+### Where the disagreement lives, by state
+
+chr22, `bio` against `ext`:
+
+| tissue | state | `bio` `+1` | `bio` `−1` | `ext` `+1` | `ext` `−1` | agree `+1` | agree `−1` |
+|---|---|---|---|---|---|---|---|
+| Normal | `L` | 2,158 | 0 | 1,880 | **1,894** | 903 | — |
+| Normal | `LM` | 835 | 0 | 724 | 771 | 360 | — |
+| Normal | `HM` | 0 | 1,606 | **1,313** | 706 | — | 348 |
+| Normal | `H` | 0 | 899 | **1,127** | 156 | — | 113 |
+| Tumour | `L` | 1,767 | 0 | 1,845 | **1,977** | 806 | — |
+| Tumour | `H` | 0 | 604 | **1,278** | 195 | — | 101 |
+
+The zeros in the `bio` columns are the rule's definition, not a finding. The
+bolded `ext` columns are the finding: at `L` sites `ext` makes slightly *more*
+hypo calls than hyper ones, and at `H` sites it makes seven times more hyper
+than hypo. `bio` cannot agree with those calls because it cannot make them,
+which is exactly why comparing the two measures a definitional difference
+rather than a disagreement about the data — the point `plan.md`'s closing
+question 2 asks the supervisor to settle.
 
 
 ---
@@ -1112,6 +1313,10 @@ gentler transform" — arcsine is gentler and still loses to raw beta — but
 | `Scripts/Task30.*` | state-pooled ("bio-stat") thresholds, absolute and deviation variants |
 | `Scripts/Task31.*` | parameter headroom: effect-size ceiling, `p` envelope, deltMeth vs relMeth, `p`-level resolution |
 | `Scripts/Task32.*` | measured noise from adjacent probes; five candidate fixes scored |
+| `Scripts/Task33.*` | ceiling, `p` envelope, geometry, stability and burden-under-floor, genome-wide |
+| `Scripts/Task34.*` | figures 8-12 |
+| `Scripts/Task35.*` | direction-split agreement and precision/recall |
+| `Results/Fig8-12*.png` | the five new figures |
 | `Results/Fig1–5*.png` | the five figures above |
 | `Slurm/Task2*.sbatch` | batch equivalents |
 
@@ -1128,18 +1333,23 @@ the `OutlierMeth` reference panels, Borealis and epimutacions.
 ## Next, in order
 
 1. **Probe masking** (Chen 2013 / Zhou 2017). Blocks any biological claim,
-   including N37's event.
-2. ~~**Confirm §7 genome-wide.**~~ Partly done — Task 26 repeats the magnitude
-   analysis over all 380,355 CpGs and the chr22 figures reproduce to within a
-   percentage point. The threshold-geometry and stability results in §7 are
-   still chr22-only and remain to be extended.
+   including N37's event. Needs the published mask lists, which are not in this
+   repository — `Data/SNV.all.txt` is a 63k-row subset, not a substitute.
+   §10 predicts masking will *relocate* the contrary flags rather than remove
+   them, so report the before and after.
+2. ~~**Confirm §7 genome-wide.**~~ **Done** — Task 26 covered magnitude, Task 33
+   the threshold geometry, the stability test, the effect-size ceiling and the
+   `p` envelope. Everything reproduces (§14). Nothing in §7 or §12 now rests on
+   one chromosome.
 3. ~~**Measure the noise instead of assuming it.**~~ Done — §13 estimates it
    from adjacent-probe pairs. The assumed sd = 0.01 sits inside the measured
    range (p10 0.003, median 0.014), so §7's stability results stand. Technical
    replicates, if any exist upstream of de-identification, would still be a
    tighter estimate.
-4. **Test what drives N15/N17/N14.** Batch, detection-p, cell composition,
-   purity. Until excluded, per-sample burden cannot be interpreted.
+4. **Test what drives N15/N17/N14/N48.** Batch, detection-p, cell composition,
+   purity. Until excluded, per-sample burden cannot be interpreted — and §14
+   makes this more urgent, not less: the ranking survives a magnitude floor
+   intact, so whatever drives it is not heteroscedasticity.
 5. **Decide between the constant floor and the state-pooled rule.** §13 makes
    `ext` + 0.10 the best rule overall and `bio.stat.dev` the best rule that
    needs no external panel. They answer different questions and the paper

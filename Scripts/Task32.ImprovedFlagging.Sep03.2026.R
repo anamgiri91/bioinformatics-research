@@ -377,18 +377,29 @@ for (tissue in c("Normal", "Tumor")) {
   }
   stab <- stab / N_REPS
 
-  # how much each transform stretches beta where the flags actually are
+  # How much each transform T stretches beta where the flags actually are:
+  # |dT/dbeta| at the flagged cells, divided by |dT/dbeta| at beta = 0.5, so
+  # every transform reads 1 at mid-methylation and the columns are comparable.
+  #
+  #   beta     dT/db = 1                    -> 1 at b = 0.5
+  #   arcsine  dT/db = (b(1-b))^-1/2        -> 2 at b = 0.5
+  #   M-value  dT/db = 1/(ln2 * b(1-b))     -> 4/ln2 = 5.7708 at b = 0.5
+  #
+  # An earlier version divided the M-value derivative by 4 rather than 4/ln2,
+  # which inflated its amplification by 1/ln2 = 1.443x. Ordering and the
+  # monotone conclusion were unaffected; the number was not.
+  AMP_AT_HALF <- c(mad.beta = 1, asin.mad = 2, mad.mvalue = 4 / log(2))
   amp <- function(nm) {
+    if (!nm %in% names(AMP_AT_HALF)) return(NA_real_)
     O <- methods[[nm]]; sel <- !is.na(O) & O != 0
     b <- B[sel]; b <- b[is.finite(b)]
     if (!length(b)) return(NA_real_)
+    bb <- pmax(b * (1 - b), 1e-9)
     g <- switch(nm,
       mad.beta   = rep(1, length(b)),
-      asin.mad   = (1 / sqrt(pmax(b * (1 - b), 1e-9))) / 2,
-      mad.mvalue = (1 / (log(2) * pmax(b * (1 - b), 1e-9))) / 4,
-      NA_real_)
-    if (all(is.na(g))) return(NA_real_)
-    round(median(g), 2)
+      asin.mad   = 1 / sqrt(bb),
+      mad.mvalue = 1 / (log(2) * bb))
+    round(median(g) / AMP_AT_HALF[[nm]], 2)
   }
 
   for (nm in names(methods)) {

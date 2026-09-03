@@ -265,4 +265,4 @@ TASK 34 COMPLETE
 > 
 > proc.time()
    user  system elapsed 
-  0.269   0.049   0.351 
+  0.256   0.049   0.347 

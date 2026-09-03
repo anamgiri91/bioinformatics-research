@@ -566,10 +566,10 @@ k.table(["tissue", "transform", "magnification where the flags are", "stability"
          "contrary flags"],
  [["Normal", "raw beta", "1.00", "**0.429**", "**0.1%**"],
   ["Normal", "angular", "1.48", "0.326", "2.5%"],
-  ["Normal", "M-value", "3.25", "**0.192**", "**12.1%**"],
+  ["Normal", "M-value", "2.26", "**0.192**", "**12.1%**"],
   ["Tumour", "raw beta", "1.00", "**0.678**", "**1.3%**"],
   ["Tumour", "angular", "1.37", "0.546", "5.8%"],
-  ["Tumour", "M-value", "3.13", "**0.429**", "**14.6%**"]],
+  ["Tumour", "M-value", "2.17", "**0.429**", "**14.6%**"]],
  widths=[0.8, 1.1, 2.1, 1.1, 1.1])
 k.para("Monotone in both tissues, on both measures: **the more a transform "
        "stretches the extremes, the less reproducible its flags and the more of "
