@@ -320,7 +320,7 @@ question directly (chr22 Normal):
 
 | state | `L` | `LM` | `M` | `HM` | `H` | `R` |
 |---|---|---|---|---|---|---|
-| calibrated floor | 0.037 | 0.142 | 0.147 | 0.125 | 0.046 | 0.306 |
+| calibrated floor | 0.037 | 0.142 | 0.144 / 0.179 | 0.125 | 0.046 | 0.306 / 0.341 |
 
 **0.05 is about right at `L` and `H` and three to seven times too lenient
 everywhere else.** Benchmarked head to head, a flat 0.10 still beats both 0.05

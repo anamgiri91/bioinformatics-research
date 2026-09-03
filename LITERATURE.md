@@ -264,6 +264,11 @@ of each state's own deviation distribution) come out as:
 |---|---|---|---|---|---|---|
 | floor | 0.040 | 0.154 | 0.162 | 0.148 | 0.049 | 0.327 |
 
+*(These pool `|beta − site median|` across both directions and cut once, which
+is what Task 32's benchmark ran. Cutting each tail of the signed deviation
+separately — `results.md` §11 — gives slightly lower numbers: `L` 0.037,
+`LM` 0.142, `HM` 0.125, `H` 0.046.)*
+
 A single constant of 0.15 is close to right for `LM`, `M` and `HM`, three times
 too strict for `L` and `H`, and half of what `R` needs. So epimutacions' 0.15
 is a reasonable global compromise, and a per-state floor is a refinement of it

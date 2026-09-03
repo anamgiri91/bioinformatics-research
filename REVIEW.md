@@ -187,7 +187,7 @@ difference worth calling real on the 450k platform, not read off this table.
 
 *The floor can be calibrated per state rather than guessed.* Reading it off the
 96th percentile of each state's own `|beta − site median|` distribution (chr22
-Normal) gives `L` 0.037, `LM` 0.142, `M` 0.147, `HM` 0.125, `H` 0.046, `R` 0.306
+Normal) gives `L` 0.037, `LM` 0.142, `M` 0.144/0.179, `HM` 0.125, `H` 0.046, `R` 0.306/0.341
 — so a single constant is necessarily wrong somewhere. The 0.05 proposed in the
 2026-09-03 email is close to the calibrated value at `L` and `H` and three to
 seven times too lenient elsewhere.

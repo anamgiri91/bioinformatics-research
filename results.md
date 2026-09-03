@@ -856,11 +856,20 @@ state's own deviation distribution (chr22 Normal):
 
 | state | `L` | `LM` | `M` | `HM` | `H` | `R` |
 |---|---|---|---|---|---|---|
-| calibrated floor | **0.037** | 0.142 | 0.147 / 0.179 | 0.125 | **0.046** | 0.306 / 0.341 |
+| calibrated floor | **0.037** | 0.142 | 0.144 / 0.179 | 0.125 | **0.046** | 0.306 / 0.341 |
 
 So **0.05 is about right for `L` and `H`, and three to seven times too lenient
 for everything else.** A single constant cannot be right everywhere, which is
 why Task 32 tests a per-state floor against a constant one.
+
+*Two floors, two definitions — they are close but not the same number.* The
+table above pools the **signed** deviation and cuts each tail separately, so a
+one-tailed state gets one threshold and `M`/`R` get two. Task 32's
+`ext.floor.state` instead pools `|beta − site median|` regardless of direction
+and takes one quantile, which mixes both tails and lands slightly higher: `L`
+0.040, `LM` 0.154, `M` 0.162, `HM` 0.148, `H` 0.049, `R` 0.327 at q = 0.961.
+Both are defensible; the signed version is the one to quote when the direction
+matters, the pooled version is what the benchmark actually ran.
 
 ---
 
