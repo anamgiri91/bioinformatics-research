@@ -1,0 +1,233 @@
+# ================================================================
+# Task 34 - Figures for the Tasks 29-32 results
+# Date: Sep 3, 2026
+#
+# Continues Task 25's numbering. Base graphics only, no packages, so
+# this runs wherever R does. Every panel is built from a committed CSV
+# in Results/ and names it in the caption line printed to the console,
+# so no figure can drift from the table it illustrates.
+#
+#   Fig8   the p envelope - tuning p does not move the effect size
+#   Fig9   contrary flags concentrate on sites, spread over samples
+#   Fig10  transform amplification against stability and contrary rate
+#   Fig11  per-state calibrated floors against the constant candidates
+#   Fig12  the method benchmark as one scatter
+# ================================================================
+
+options(stringsAsFactors = FALSE)
+pick_dir <- function(...) { for (d in c(...)) if (dir.exists(d)) return(d); stop("no dir") }
+repo <- pick_dir("/mmfs1/home/wln26/Experiments.Outlier.July31.2026",
+                 path.expand("~/Desktop/bioinformatics-research"))
+R <- file.path(repo, "Results")
+ST  <- c("L","LM","M","HM","H","R")
+PAL <- c(L="#4E79A7", LM="#76B7B2", M="#B0B0B0", HM="#F28E2B", H="#E15759", R="#59A14F")
+
+png_open <- function(f, w=2100, h=1050) {
+  png(file.path(R, f), width=w, height=h, res=190)
+  par(mar=c(4.6,4.9,3.3,1.5), mgp=c(2.9,0.8,0), las=1,
+      cex.axis=0.85, cex.lab=0.95, cex.main=1.02, font.main=1)
+}
+done <- function(f, src) { dev.off(); cat("  written: ", file.path(R,f),
+                                          "\n           from ", src, "\n", sep="") }
+
+# ---------------------------------------------------------------
+# Fig 8 - the p envelope
+#
+# For each state, the median |dbeta| of the flags in the CONTRARY
+# direction, at p = 0.01 as run and at the strictest threshold any p
+# could reach (one flag per CpG per direction). If tuning p helped,
+# the right bar would be taller. At L and H it is not.
+# ---------------------------------------------------------------
+f <- "Fig8_PEnvelope.png"; png_open(f)
+ev <- read.csv(file.path(R, "Task31_PEnvelope.csv"))
+CON <- c(L="-1", LM="-1", M=NA, HM="+1", H="+1", R=NA)
+par(mfrow=c(1,2))
+for (ti in c("Normal","Tumor")) {
+  sts <- names(CON)[!is.na(CON)]
+  a <- sapply(sts, function(s) {
+    r <- ev[ev$tissue==ti & ev$methy.state==s & ev$direction==CON[[s]] &
+            is.na(ev$keep.top.per.cpg),]; if (!nrow(r)) NA else r$median.abs.dbeta[1] })
+  b <- sapply(sts, function(s) {
+    r <- ev[ev$tissue==ti & ev$methy.state==s & ev$direction==CON[[s]] &
+            !is.na(ev$keep.top.per.cpg) & ev$keep.top.per.cpg==1,]
+    if (!nrow(r)) NA else r$median.abs.dbeta[1] })
+  M <- rbind(a, b)
+  bp <- barplot(M, beside=TRUE, names.arg=sprintf("%s %s", sts, CON[sts]),
+    col=c("#B9CDE5","#2E5C8A"), border=NA,
+    ylab=expression("median |"*Delta*beta*"| of contrary flags"),
+    main=paste0(ti, " — chr22: what any setting of p could give"),
+    ylim=c(0, max(c(M,0.13), na.rm=TRUE)*1.25))
+  abline(h=0.10, lty=2, col="grey30")
+  text(par("usr")[1], 0.104, " 0.10 — smallest shift worth calling real",
+       adj=c(0,0), cex=0.7, col="grey30")
+  text(as.vector(bp), as.vector(M)+max(M,na.rm=TRUE)*0.05,
+       sprintf("%.3f", as.vector(M)), cex=0.68)
+  legend("topright", c("p = 0.01, as run","strictest reachable p"),
+         fill=c("#B9CDE5","#2E5C8A"), border=NA, bty="n", cex=0.78)
+}
+done(f, "Task31_PEnvelope.csv")
+
+# ---------------------------------------------------------------
+# Fig 9 - concentration on sites, spread over samples
+#
+# Left: flags per site, sites sorted descending, one line per cell.
+# A steep line means a couple of probes carry the cell. Right: the
+# same flags counted per sample. A flat-ish spread means most samples
+# can and do carry one.
+# ---------------------------------------------------------------
+f <- "Fig9_ContraryConcentration.png"; png_open(f, 2100, 1000)
+bs <- read.csv(file.path(R, "Task29_Window100_ContraryBySite.csv"))
+bp <- read.csv(file.path(R, "Task29_Window100_ContraryBySample.csv"))
+par(mfrow=c(1,2))
+cells <- list(c("Normal","L","-1"), c("Normal","LM","-1"),
+              c("Normal","H","1"),  c("Normal","HM","1"))
+cols <- c("#4E79A7","#76B7B2","#E15759","#F28E2B")
+
+# Only sites that actually carry a flag are drawn. Padding each series
+# out to its full state with zeros would suggest the trailing sites were
+# measured and came back empty, when the point is that they are simply
+# not in the cell at all - the legend carries "carrying / total" instead.
+plot(NA, xlim=c(1,24), ylim=c(0,9.6),
+     xlab="site, ranked by flag count", ylab="contrary flags at that site",
+     main="Normal — sites: a minority carry the cell")
+leg <- character(0)
+for (i in seq_along(cells)) {
+  cc <- cells[[i]]
+  k <- bs$tissue==cc[1] & bs$methy.state==cc[2] & bs$direction==cc[3]
+  v <- sort(bs$contrary.flags[k], decreasing=TRUE)
+  nz <- v[v > 0]
+  lines(seq_along(nz), nz, type="b", pch=19, cex=0.65, lwd=1.9, col=cols[i])
+  leg <- c(leg, sprintf("%s %s  (%d of %d sites)", cc[2],
+                        ifelse(cc[3]=="1","+1","-1"), length(nz), length(v)))
+}
+legend("topright", leg, col=cols, lwd=2, pch=19, bty="n", cex=0.76)
+
+agg <- aggregate(contrary.flags ~ sample, bp[bp$tissue=="Normal",], sum)
+agg <- agg[order(-agg$contrary.flags),]
+bb <- barplot(agg$contrary.flags, border=NA, ylim=c(0, 11),
+  col=ifelse(agg$contrary.flags>0, "#7F9DB9", "grey88"),
+  ylab="contrary flags, all four cells pooled", xlab="sample (53, sorted)",
+  main="Normal — samples: 31 of 53 carry at least one")
+abline(h=sum(agg$contrary.flags)/53, lty=2, col="grey30")
+text(par("usr")[2], sum(agg$contrary.flags)/53, "uniform expectation ",
+     adj=c(1,-0.4), cex=0.72, col="grey30")
+text(bb[1:4], agg$contrary.flags[1:4]+0.4, agg$sample[1:4], cex=0.68, srt=90, adj=0)
+done(f, "Task29_Window100_ContraryBySite.csv / _BySample.csv")
+
+# ---------------------------------------------------------------
+# Fig 10 - the transform result
+#
+# Amplification is the median |dT/dbeta| at the cells each method
+# actually flags, normalised to raw beta. All three run at the same
+# flag rate. Monotone in both tissues, on both axes.
+# ---------------------------------------------------------------
+f <- "Fig10_TransformAmplification.png"; png_open(f, 2100, 1000)
+sc <- read.csv(file.path(R, "Task32_ImprovedMethodScores.csv"))
+tr <- sc[sc$method %in% c("mad.beta","asin.mad","mad.mvalue"),]
+lab <- c(mad.beta="raw beta", asin.mad="arcsine", mad.mvalue="M-value")
+par(mfrow=c(1,2))
+for (yv in c("stability.jaccard","pct.contrary")) {
+  ylb <- if (yv=="stability.jaccard") "flag stability (Jaccard, noise sd 0.01)" else
+         "% of flags running against the state"
+  plot(NA, xlim=range(tr$amplification.at.flags)*c(0.9,1.12),
+       ylim=range(tr[[yv]])*c(0.85,1.15)+c(-0.02,0.02),
+       xlab="noise amplification at the flagged cells (raw beta = 1)",
+       ylab=ylb,
+       main=if (yv=="stability.jaccard")
+              "More stretch at the extremes, less reproducible" else
+              "More stretch at the extremes, more contrary flags")
+  for (ti in c("Normal","Tumor")) {
+    x <- tr[tr$tissue==ti,]; x <- x[order(x$amplification.at.flags),]
+    lines(x$amplification.at.flags, x[[yv]], type="b", pch=19, lwd=2,
+          col=if (ti=="Normal") "#2E5C8A" else "#A82828")
+    text(x$amplification.at.flags, x[[yv]], lab[x$method],
+         pos=if (ti=="Normal") 3 else 1, cex=0.72)
+  }
+  legend("topright", c("Normal","Tumour"), col=c("#2E5C8A","#A82828"),
+         lwd=2, pch=19, bty="n", cex=0.8)
+}
+done(f, "Task32_ImprovedMethodScores.csv")
+
+# ---------------------------------------------------------------
+# Fig 11 - the floors
+#
+# Each bar is the 96th percentile of that state's own
+# |beta - site median| distribution: the floor the data itself picks.
+# The horizontal lines are the constants under discussion.
+# ---------------------------------------------------------------
+f <- "Fig11_StateFloors.png"; png_open(f, 2100, 1000)
+# Thresholds come from Task 30 at a FIXED q = 0.96 in both tissues, not
+# from Task 32's rate-calibrated q, which differs between tissues (0.961
+# Normal, 0.794 Tumour) and would make the two panels incomparable.
+# Each state gets a bar per tail it actually has a rule for: L and LM
+# are upper-tail only, HM and H lower-tail only, M and R both.
+th <- read.csv(file.path(R, "Task30_StatePooled_Thresholds.csv"))
+th <- th[th$variant=="bio.stat.dev" & th$scope=="chr22" & th$q==0.96,]
+par(mfrow=c(1,2))
+for (ti in c("Normal","Tumor")) {
+  d <- th[th$tissue==ti,]; d <- d[match(ST, d$methy.state),]
+  M <- rbind(hypo = abs(d$thr.lower), hyper = d$thr.upper)
+  M[is.na(M)] <- 0
+  bp2 <- barplot(M, beside=TRUE, names.arg=ST, border=NA,
+    col=rbind(rep("#8FAADC", 6), rep("#E8A0A0", 6)),
+    ylab=expression("floor on |"*beta*" − site median| at the 96th percentile"),
+    main=paste0(ti, " — chr22: the floor each state's own data picks"),
+    ylim=c(0, 0.50))
+  for (v in c(0.05, 0.10, 0.15))
+    abline(h=v, lty=c(3,2,4)[match(v, c(0.05,0.10,0.15))], col="grey35")
+  text(par("usr")[2], 0.05, "0.05 proposed ", adj=c(1,-0.35), cex=0.68, col="grey35")
+  text(par("usr")[2], 0.10, "0.10 this project ", adj=c(1,-0.35), cex=0.68, col="grey35")
+  text(par("usr")[2], 0.15, "0.15 epimutacions ", adj=c(1,-0.35), cex=0.68, col="grey35")
+  lab <- ifelse(M > 0, sprintf("%.3f", M), "")
+  text(as.vector(bp2), as.vector(M) + 0.014, as.vector(lab), cex=0.66, srt=90, adj=0)
+  legend("topleft", c("hypo tail", "hyper tail"), fill=c("#8FAADC","#E8A0A0"),
+         border=NA, bty="n", cex=0.78)
+}
+done(f, "Task30_StatePooled_Thresholds.csv")
+
+# ---------------------------------------------------------------
+# Fig 12 - the benchmark on one pair of axes
+#
+# Up and to the right is better: reproducible flags that correspond to
+# a real beta shift. Point area is the share of flags running against
+# the state. All points except the two hollow ones are at one flag rate.
+# ---------------------------------------------------------------
+f <- "Fig12_MethodScores.png"; png_open(f, 2100, 1050)
+par(mfrow=c(1,2))
+SHORT <- c(ext.percentile="ext (as published)", ext.floor.med.0.05="ext + 0.05",
+           ext.floor.med.0.10="ext + 0.10", ext.floor.state="ext + state floor",
+           ext.floor.noise="ext + noise floor", ext.delt="ext + deltMeth",
+           bio.stat.dev="bio-stat (no panel)", mad.beta="MAD on beta",
+           asin.mad="MAD on arcsine", mad.mvalue="MAD on M-value")
+for (ti in c("Normal","Tumor")) {
+  d <- sc[sc$tissue==ti,]
+  target <- d$flag.rate.pct[d$method=="ext.floor.med.0.10"][1]
+  matched <- abs(d$flag.rate.pct - target) < 0.01
+  # Labels are placed left of points in the right third of the panel and
+  # right of everything else, so nothing runs off the plot; ties in y are
+  # nudged apart, since several methods land within 0.01 Jaccard.
+  xr <- c(0, max(sc$median.abs.dbeta)*1.18)
+  plot(d$median.abs.dbeta, d$stability.jaccard, type="n",
+    xlim=xr, ylim=c(0.10, 1.02),
+    xlab=expression("median |"*Delta*beta*"| of the flags it keeps"),
+    ylab="flag stability (Jaccard, noise sd 0.01)",
+    main=paste0(ti, " — chr22; filled points all at ",
+                sprintf("%.2f%%", target), " flag rate"))
+  abline(v=0.10, lty=2, col="grey82"); abline(h=0.75, lty=3, col="grey86")
+  cx <- 0.9 + 2.6*sqrt(pmax(d$pct.contrary,0)/100)
+  points(d$median.abs.dbeta, d$stability.jaccard, pch=ifelse(matched,19,1),
+         cex=cx, col=ifelse(matched,"#2E5C8A","#A82828"))
+  o <- order(d$stability.jaccard)
+  ty <- d$stability.jaccard[o]
+  for (i in seq_along(ty)[-1])
+    if (ty[i] - ty[i-1] < 0.035) ty[i] <- ty[i-1] + 0.035
+  side <- ifelse(d$median.abs.dbeta[o] > xr[2]*0.62, 2, 4)
+  text(d$median.abs.dbeta[o], ty, SHORT[d$method[o]],
+       pos=side, cex=0.63, offset=0.45 + 0.09*cx[o])
+  legend("bottomright", c("rate-matched","at its own higher rate",
+                          "point size = % contrary flags"),
+         pch=c(19,1,NA), col=c("#2E5C8A","#A82828",NA), bty="n", cex=0.7)
+}
+done(f, "Task32_ImprovedMethodScores.csv")
+
+cat("\nTASK 34 COMPLETE\n")
