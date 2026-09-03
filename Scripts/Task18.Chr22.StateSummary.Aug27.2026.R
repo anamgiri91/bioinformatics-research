@@ -23,7 +23,7 @@
 #   self - OutlierMeth flagMeth() against thresholds derived from the
 #          same 53 samples          (Task13_*_selfref_flags.csv)
 #   ext  - OutlierMeth flagMeth() against the external TCGA panel
-#          of ~2,000 independent samples (Task13_*_extref_flags.csv)
+#          of 747 independent samples (Task13_*_extref_flags.csv)
 #
 # A fourth column, bio.loo, repeats the bio rule leave-one-out: the
 # threshold for sample i is computed from the other 52 samples. See

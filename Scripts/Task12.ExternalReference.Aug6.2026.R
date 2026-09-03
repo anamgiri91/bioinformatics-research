@@ -22,7 +22,7 @@ flag.self.tumor <- flagMeth(tumor.beta[rownames(ref.self.tumor), ], reference = 
 cat("Self-referential mean per-CpG count -> Normal:", mean(rowSums(abs(flag.self.normal), na.rm = TRUE)),
     " Tumor:", mean(rowSums(abs(flag.self.tumor), na.rm = TRUE)), "\n")
 
-cat("\n=== External reference (tcga.rda, ~2,000 independent samples) ===\n")
+cat("\n=== External reference (tcga.rda, 747 independent TCGA normals) ===\n")
 flag.ext.normal <- flagMeth(normal.beta, reference = tcga, p = 0.01)
 flag.ext.tumor  <- flagMeth(tumor.beta,  reference = tcga, p = 0.01)
 

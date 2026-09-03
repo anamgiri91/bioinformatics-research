@@ -185,7 +185,7 @@ par(mfrow=c(3,1), mar=c(0.5,5.4,2.0,1.2), mgp=c(3.2,0.7,0), las=1,
 tot <- function(nm) sheet[[paste0(nm,".neg1.N")]] + sheet[[paste0(nm,".pos1.N")]]
 ttl <- c(bio="bio - state-aware rule (0 or 1 per site, by construction)",
          self="self - own 53 samples as reference (exactly 2 per site, always)",
-         ext="ext - external 2,015-sample panel (varies: 0 to 8)")
+         ext="ext - external 747-sample tcga panel (varies: 0 to 8)")
 ymx <- max(sapply(c("bio","self","ext"), function(n) max(tot(n))))
 for (k in seq_along(ttl)) {
   nm <- names(ttl)[k]

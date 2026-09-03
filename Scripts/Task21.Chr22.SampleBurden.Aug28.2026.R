@@ -435,7 +435,7 @@ if (length(hit)) {
 # ------------------------------------------------
 # The external reference is state-blind, so it can flag a sample at an
 # L-state site for a beta difference of 0.01 - statistically past the
-# 1st percentile of 2,015 normals, biologically nothing. Beta values
+# 1st percentile of 747 normals, biologically nothing. Beta values
 # are heteroscedastic: their SD is compressed below 0.2 and above 0.8
 # (Du et al. 2010, BMC Bioinformatics 11:587), which is exactly where
 # the L/LM and H/HM sites live. epimutacions guards against this with

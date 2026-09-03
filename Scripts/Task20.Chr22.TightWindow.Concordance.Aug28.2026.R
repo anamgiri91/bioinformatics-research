@@ -42,7 +42,7 @@
 #   bio.loo - same rule, threshold for sample i from the other 52
 #   self    - OutlierMeth flagMeth() vs thresholds from these 53
 #   ext     - OutlierMeth flagMeth() vs the external TCGA-GEO panel
-#             (2,015 independent normal / tumour-adjacent samples,
+#             (747 independent TCGA normal samples, 21 tissue types,
 #             Downs, Thursby & Cope 2023, Epigenetics 18:2213874)
 #
 # DEGENERACY, restated because it governs how to read every table:

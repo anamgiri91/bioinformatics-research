@@ -15,7 +15,7 @@
 #    this becomes a 66th column.
 #  - "without using references" = self-referential (own 53 samples
 #    build their own threshold table via referenceMeth()).
-#    "with reference" = external tcga.rda panel (~2,000 independent
+#    "with reference" = external tcga.rda panel (747 independent
 #    samples), loaded pre-built, not re-derived from our data.
 #  - Row order is preserved throughout via positional alignment, not
 #    a join: beta's rownames are set directly from meta_df's
@@ -120,7 +120,7 @@ run_and_write <- function(beta, meta_df, label, ref_mode) {
     full_flag[rownames(flag), ] <- flag
     flag <- full_flag
   } else {
-    # tcga is already a pre-built ~2,000-sample reference; flagMeth()
+    # tcga is already a pre-built 747-sample reference; flagMeth()
     # returns a matrix with the same dimnames as beta, in beta's order
     flag <- flagMeth(beta, reference = tcga, p = 0.01)
   }
