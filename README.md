@@ -61,7 +61,7 @@ come from one of two places, and the distinction is the spine of the project:
   *(Corrected 2026-09-03. Earlier drafts described this as "2,015 samples
   across 25 tissue types" — that is `all`, the combined TCGA+GEO panel. Every
   script here loads `tcga.rda` and calls `flagMeth(..., reference = tcga)`, so
-  the reference is the 747-sample one. The distinction matters: see Finding 6.)*
+  the reference is the 747-sample one. The distinction matters: see Finding 3.)*
 - **Self reference** — `referenceMeth()` run on the same 53 samples being
   tested. This is *not* how the package is meant to be used, and at n = 53 it
   is degenerate (see below).
@@ -246,7 +246,7 @@ site — on chr22 (Task 32):
 | + a per-state floor | 14.9% | 21.8% |
 | state-pooled deviation rule | **0%** by construction | **0%** |
 
-### 6. Neither `OutlierMeth` parameter can fix it
+### 3. Neither `OutlierMeth` parameter can fix it
 
 The package has two knobs, `reference` (4 panels) and `p` (4 levels), and
 Task 31 closes off both.
@@ -282,7 +282,7 @@ The package's own `relMeth`, which divides the shift by the remaining head-room
 by contrast, is one comparison away from the magnitude floor this project
 recommends.
 
-### 7. The contrary flags concentrate on sites, not on samples
+### 4. The contrary flags concentrate on sites, not on samples
 
 The 2026-09-03 email asked whether the contrary flags in the 100-CpG window
 come from a couple of CpGs or from all of them, and from a couple of samples or
@@ -302,7 +302,7 @@ distribution, at a median of **1.0–1.9 cohort MADs** from the median. Spearman
 ρ between a site's contrary-flag count and that distance is negative in all six
 testable state × tissue cells (−0.95 to −0.12).
 
-### 8. A state-pooled threshold fixes the degeneracy but not the magnitude
+### 5. A state-pooled threshold fixes the degeneracy but not the magnitude
 
 The email's "bio-stat" proposal — one threshold per *state* from the pooled
 `n_sites × 53` cells, rather than one per CpG from 53 — was tested two ways
@@ -326,9 +326,9 @@ question directly (chr22 Normal):
 everywhere else.** Benchmarked head to head, a flat 0.10 still beats both 0.05
 and the per-state version on stability (`results.md` §13).
 
-### 8b. Genome-wide: 134 contrary flags out of 154,810 clear a 0.10 floor
+### 5b. Genome-wide: 134 contrary flags out of 154,810 clear a 0.10 floor
 
-Everything in Findings 2b, 2c and 6 was measured on chr22. Task 33 repeats it
+Everything in Findings 2b, 2c and 3 was measured on chr22. Task 33 repeats it
 on all 380,355 CpGs and it replicates closely.
 
 | tissue | cell | flags | median \|Δβ\| | under 0.10 | **survive a 0.10 floor** |
@@ -350,7 +350,7 @@ sample is unmethylated, the external reference calls almost exactly as many
 samples abnormally low as abnormally high — 85,932 against 88,635 — inside a
 hypo zone 0.022 of the beta scale wide.**
 
-### 8c. The per-sample burden is not heteroscedasticity
+### 5c. The per-sample burden is not heteroscedasticity
 
 Applying a 0.10 floor genome-wide and re-ranking (Task 33 Part E), normal
 tissue keeps the **same top six in the same order** — N15, N17, N14, N48, N31,
@@ -363,7 +363,7 @@ unexcluded ([plan.md](plan.md) §6) — but it does rule out the cheapest
 explanation, and it raises the stakes on excluding the rest. Tumour reshuffles
 more (T17 2 → 8, T16 4 → 12), so quote the floored ranking there.
 
-### 9. The state-aware rule and the external reference do not agree
+### 6. The state-aware rule and the external reference do not agree
 
 Cohen's kappa and non-zero conditional agreement over the tight window
 (Task 20, Part D) — raw percent agreement is meaningless on matrices that are
@@ -380,7 +380,7 @@ original metric:
 The two methods are close to independent. They are not two views of one
 outlier set; they are two different definitions of outlier.
 
-### 10. N37 tops the Task 17 summary for three separable reasons
+### 7. N37 tops the Task 17 summary for three separable reasons
 
 N37 carried 11 of 71 biological flags in the original 100-CpG window, ~8× the
 uniform expectation of 1.34. Tasks 19 and 21 decompose that:
@@ -417,11 +417,11 @@ acrocentric short arm, which is repetitive and poorly mapped. Cross-reactive
 and polymorphic probe masking has not yet been applied — see
 [plan.md](plan.md) step 2.
 
-### 11. Which samples actually carry burden
+### 8. Which samples actually carry burden
 
 N15, N17, N14 and N48 lead at every scale and in both tissues — N48 was
 originally missed and is confirmed 4th of 53 both on chr22 and genome-wide
-(Finding 8c). Their chr22
+(Finding 5c). Their chr22
 external-reference burden tracks their genome-wide self-referential burden at
 Spearman 0.761 (Normal) and 0.843 (Tumour), so this is a global sample
 property, not a chr22 story — plausibly global hypomethylation, tumour purity,
