@@ -31,6 +31,13 @@ Data/
 *.tar.gz
 *.rda
 
+# ---------- Python bytecode ----------
+# Scripts/docx_kit.py is imported by build_meeting_doc_sep03.py, which
+# makes CPython write a __pycache__ alongside it.
+Scripts/__pycache__/
+__pycache__/
+*.pyc
+
 # ---------- PRIVATE: R session state ----------
 .RData
 .Rhistory
