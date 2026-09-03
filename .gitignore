@@ -58,6 +58,14 @@ Packages/OutlierMeth/.git/
 # genomic coordinates and stay public, consistent with the Task 13/14
 # sample summaries. See CLASSIFICATION.md.
 Results/*ContraryDetail*
+
+# Per-SITE reconstructed external thresholds. flagMeth sets +1 iff
+# beta > P, so bracketing P between the highest unflagged and lowest
+# flagged beta at a named CpG bounds two individuals' values there.
+# Same class as the experiment7_ref_*.rds threshold tables above; the
+# per-STATE aggregate version (Task22_Chr22_ThresholdGeometry_*) stays
+# public because it collapses across sites.
+Results/Task29_Window100_SiteThresholdGeometry.csv
 Results/*ContraryFlagDetail*
 Results/*TopSampleDetail*
 Results/*_Cluster_*

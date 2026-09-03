@@ -1,7 +1,8 @@
 # Public / Private Classification
 
-Last reviewed: 2026-08-28, against the full `Experiments.Outlier.July31.2026`
-tree pulled from `leap2.txstate.edu:/mmfs1/home/wln26/`.
+Last reviewed: 2026-09-03, against the full `Experiments.Outlier.July31.2026`
+tree pulled from `leap2.txstate.edu:/mmfs1/home/wln26/`, plus the Task 29–32
+outputs added that day.
 
 The split is enforced by `.gitignore`, not by moving files. Everything stays
 where the scripts expect it; git simply only ever sees the public half.
@@ -32,6 +33,8 @@ private; anything that collapses across samples is public.**
 | `Results/Task19_Chr22_TopSampleDetail_*.csv` | 41 KB | same |
 | `Results/Task20_Chr22_*_ContraryDetail_*.csv` | 120 KB | same, plus cohort quartiles and MAD-z |
 | `Results/Task21_Chr22_N37_Cluster_Normal.csv` | 2 KB | one named sample's betas across 11 identified sites |
+| `Results/Task29_Window100_ContraryDetail.csv` | 12 KB | same — cgID + position + sample + that sample's beta |
+| `Results/Task29_Window100_SiteThresholdGeometry.csv` | 18 KB | per-site reconstructed external thresholds; see below |
 
 Samples are de-identified (`N1..N53` / `T1..T53`) and carry no TCGA barcodes —
 I grepped the whole tree and found none. That is necessary but not sufficient:
@@ -48,6 +51,20 @@ and is narrower only in count. Their aggregate siblings - `StateSummary`,
 `ContraryDrivers`, `ExtFlagMagnitude` - carry counts per sample with no
 genomic coordinates and stay public, consistent with the treatment of the
 Task 13/14 sample summaries below.
+
+`Task29_Window100_SiteThresholdGeometry.csv` needs its own justification
+because it looks like an aggregate. `flagMeth` sets `+1` iff `beta > P`, so at
+each CpG the threshold is bracketed by the highest unflagged beta and the
+lowest flagged one — the reported midpoint bounds two individuals' values at a
+named genomic position. That is the same disclosure as the
+`experiment7_ref_*.rds` threshold tables below. Its per-**state** sibling,
+`Task22_Chr22_ThresholdGeometry_*.csv`, collapses across thousands of sites and
+stays public.
+
+New public tables from Tasks 29–32 — `Task29_Window100_ContraryDecomposition`,
+`ContraryBySite`, `ContraryBySample`, all of `Task30_*`, `Task31_*` and
+`Task32_*` — are counts, thresholds pooled over a whole methylation state, or
+method scores. None resolves an individual to a value at a site.
 
 `Task13_FullFlagMatrix.xlsx` is independently disqualified — 272 MB exceeds
 GitHub's 100 MB hard per-file limit and would reject the push outright.
