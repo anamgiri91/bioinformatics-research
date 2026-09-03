@@ -107,6 +107,12 @@ CELLS <- list(
   list(state = "R",  dir =  1L, label = "neutral"))
 N_MC <- 20000
 
+# Emitted direction values are "hyper"/"hypo", not "+1"/"-1". A CSV column
+# holding only "+1" and "-1" is read back by read.csv as NUMERIC 1 and -1,
+# so a downstream filter on direction == "+1" silently matches nothing.
+# The tables in results.md keep the +1 / -1 notation; only the machine-read
+# column changes.
+
 has_dt <- requireNamespace("data.table", quietly = TRUE)
 read_any <- function(p, tab = FALSE) {
   if (has_dt) as.data.frame(data.table::fread(p, showProgress = FALSE,
@@ -212,7 +218,7 @@ for (tissue in c("Normal", "Tumor")) {
 
     summary_rows[[length(summary_rows) + 1]] <- data.frame(
       tissue = tissue, methy.state = s,
-      direction = if (dr > 0) "+1" else "-1", cell = cell$label,
+      direction = if (dr > 0) "hyper" else "hypo", cell = cell$label,
       sites.in.state = length(k),
       evaluable.cells = sum(!is.na(Fs)),
       flags = nflag,
@@ -252,19 +258,19 @@ for (tissue in c("Normal", "Tumor")) {
 
       site_rows[[length(site_rows) + 1]] <- data.frame(
         tissue = tissue, methy.state = s,
-        direction = if (dr > 0) "+1" else "-1",
+        direction = if (dr > 0) "hyper" else "hypo",
         cgID = rownames(Fs), pos = pos[k],
         cohort.median.beta = round(med[k], 4),
         contrary.flags = per_site,
         pct.of.cell = round(100 * per_site / nflag, 1))
       sample_rows[[length(sample_rows) + 1]] <- data.frame(
         tissue = tissue, methy.state = s,
-        direction = if (dr > 0) "+1" else "-1",
+        direction = if (dr > 0) "hyper" else "hypo",
         sample = colnames(Fs), contrary.flags = per_sample,
         pct.of.cell = round(100 * per_sample / nflag, 1))
       detail_rows[[length(detail_rows) + 1]] <- data.frame(
         tissue = tissue, methy.state = s,
-        direction = if (dr > 0) "+1" else "-1",
+        direction = if (dr > 0) "hyper" else "hypo",
         cgID = rownames(Fs)[hit[, 1]], pos = pos[k][hit[, 1]],
         sample = colnames(Fs)[hit[, 2]],
         beta = round(Bs[hit], 4),
