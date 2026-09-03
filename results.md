@@ -1,7 +1,7 @@
 # Results
 
-Findings for the week of 2026-08-24, against the four questions set in the
-pre-meeting email. Every number here is reproducible from a script in
+Findings for the weeks of 2026-08-24 and 2026-09-01, against the questions set
+in the pre-meeting emails. Every number here is reproducible from a script in
 `Scripts/` and a CSV in `Results/`; the source table for each is named beneath
 it.
 
@@ -14,7 +14,7 @@ Illumina 450k array. Chromosome 22 carries 6,809 of them.
 |---|---|---|
 | `bio` | state-aware rule: `L`/`LM` flag `+1` above the 99th percentile of the 53 values; `H`/`HM` flag `−1` below the 1st; `M`/`R` no rule | the rule proposed in the meetings |
 | `self` | `referenceMeth()` on the same 53 samples | how the package was run in Tasks 10–15 |
-| `ext` | the packaged TCGA-GEO panel: 2,015 independent normal and tumour-adjacent samples | how the package was **designed** to be run |
+| `ext` | the packaged `tcga` panel: **747** independent TCGA normal samples across 21 tissue types | how the package was **designed** to be run |
 
 ### Two things to fix in your head before reading any table
 
@@ -32,7 +32,7 @@ A sample can have many *flags* and one *event*; a state can have a high *cell*
 rate and few affected *CpGs*. Neither is a contradiction.
 
 **The `ext` denominator differs from the `bio`/`self` denominator, and it
-varies by state.** CpGs missing from the 2,015-sample panel come back all-NA,
+varies by state.** CpGs missing from the 747-sample panel come back all-NA,
 so `ext` is scored on fewer cells at the same sites. Panel coverage is
 systematically uneven:
 
@@ -80,6 +80,19 @@ evaluable-cell totals are printed side by side throughout.
 
 Beyond the four questions, §7–§9 report why the flags behave this way, a
 bug fix that changes a headline number, and a benchmark of seven alternatives.
+
+The 2026-09-03 email added four more, answered in §10–§13:
+
+| # | Question | Answer |
+|---|---|---|
+| 7 | Are the contrary flags from all CG sites, or 1–2? From 1–3 samples, or can every sample? | **Concentrated on sites, spread across samples.** Half the sites of a state carry all of them and the top two hold 57–86%; but 31 of 53 normal samples carry at least one — §10 |
+| 8 | Try a "bio-stat" flag: the >96th percentile of the whole state pool (8 × 53 for `L`) | Works — it removes the n = 53 degeneracy and makes the flag rate exactly state-independent. Pool the *deviations*, not raw beta; 424 cells is too small a pool, use chr22 — §11 |
+| 9 | Can the `ext` parameters be tuned to be less sensitive? | **No.** `p` has two usable settings on this 747-sample panel, and even the strictest leaves 100% of `H`-site hyper flags below \|Δβ\| = 0.10 — §12 |
+| 10 | Does `OutlierMeth` report outlying *samples*? | No. It returns a CpG × sample matrix and nothing else — `LITERATURE.md` §2 |
+
+**Correction carried through this document.** The external reference is the
+`tcga` panel — 747 TCGA normal samples across 21 tissue types — not the
+2,015-sample TCGA-GEO `all` panel described in earlier drafts. See §12.
 
 ---
 
@@ -494,7 +507,7 @@ within 0.03 of each other, something is always in the tail.
 ### What was ruled out
 
 - **Panel miscalibration.** If the BRCA cohort simply sat outside the
-  2,015-sample panel's range, many samples per CpG would flag. At most 11 of 53
+  panel's range, many samples per CpG would flag. At most 11 of 53
   do; zero CpGs reach 50%; 0% of normal flags sit in such CpGs. These are
   genuine per-sample calls.
 - **A join or register error.** Zero bracket violations, as above.
@@ -653,6 +666,426 @@ state. Read it alongside its stability (0.40 / 0.52), which is poor.
 
 ---
 
+## 10. Where the contrary flags come from — sites, or samples?
+
+*(2026-09-03 email, Analysis item 1.)* The email listed the four contrary cells
+in the 100-CpG normal window and asked whether they come "from all CG sites, or
+from 1 or 2 CG sites", and whether "from 1 or 2-3 samples, or if every sample
+can have a chance."
+
+The counts reproduce exactly, with one difference: the `H` `+1` cell is **10**
+flags across **11** `H` sites, not 11 flags.
+
+### Normal — the four cells
+
+| state | dir | flags | sites in state | sites carrying ≥1 | most at one site | top-2 sites hold | samples carrying ≥1 | most in one sample | top-3 samples hold |
+|---|---|---|---|---|---|---|---|---|---|
+| `L` | `−1` | 8 | 8 | **4** | 4 | **75%** | 8 / 53 | 1 | 37.5% |
+| `LM` | `−1` | 21 | 14 | **8** | 8 | 57.1% | 14 / 53 | 3 | 33.3% |
+| `H` | `+1` | 10 | 11 | **4** | 4 | **70%** | 9 / 53 | 2 | 40.0% |
+| `HM` | `+1` | 46 | 38 | 23 | 5 | 21.7% | 19 / 53 | 7 | 34.8% |
+
+### Tumour — the same cells, tumour annotation
+
+| state | dir | flags | sites in state | sites carrying ≥1 | most at one site | top-2 sites hold | samples carrying ≥1 | most in one sample | top-3 samples hold |
+|---|---|---|---|---|---|---|---|---|---|
+| `L` | `−1` | 4 | 7 | 3 | 2 | 75% | 4 / 53 | 1 | 75% |
+| `LM` | `−1` | 29 | 8 | **4** | **19** | **86.2%** | 22 / 53 | 2 | 20.7% |
+| `H` | `+1` | 0 | 1 | — | — | — | — | — | — |
+| `HM` | `+1` | 43 | 19 | 12 | 10 | 39.5% | 22 / 53 | 5 | 30.2% |
+
+`Results/Task29_Window100_ContraryDecomposition.csv`
+
+### The answer
+
+**Concentrated on sites. Spread across samples.**
+
+Half the sites of a state carry every contrary flag it has, and the top two
+sites hold 57–86% of them. A Monte Carlo test against uniform allocation
+rejects at `p = 0.0008` (Normal `LM`) and `p < 0.0001` (Tumour `LM`). One
+probe, `cg15668074` (chr22:15,721,335), carries **19 of the 29** tumour `LM`
+`−1` flags on its own.
+
+Samples show the opposite pattern. No sample holds more than 1–7 flags in any
+one cell, 8–23 of 53 samples appear, and the concentration test is
+non-significant in five of the seven testable cells. Pooling all four contrary
+cells:
+
+| tissue | contrary flags | samples carrying ≥1 | top 3 hold | Gini | leaders |
+|---|---|---|---|---|---|
+| Normal | 85 | **31 / 53** | 27.1% (uniform: 5.7%) | 0.63 | N15 = 9, N48 = 9, N17 = 5 |
+| Tumour | 76 | **37 / 53** | 19.7% | 0.55 | T33 = 6, T36 = 5, T14 = 4 |
+
+So: a *majority* of samples can and do carry a contrary flag. The lead that
+N15 and N17 hold is real but small — 27% against an expectation of 6% — and
+N48 is new here, not one of the N15/N17/N14 trio §3 identified. This is a mild
+sample gradient, not a two-sample story.
+
+### Why those sites, then?
+
+Not because they are biologically interesting. `flagMeth` sets `+1` iff
+`beta > P`, where `P` comes from the external panel and knows nothing about
+this cohort, so the number of samples a site flags is decided by how far `P`
+sits from this cohort's own distribution at that site. Reconstructing `P` and
+`N` per site from the flag matrix (the Task 22 bracket) and measuring that
+distance in cohort-MAD units, against the contrary-flag count, within state:
+
+| tissue | state | sites | contrary flags | Spearman ρ | p | median distance to the contrary-direction threshold |
+|---|---|---|---|---|---|---|
+| Normal | `L` | 4 | 8 | **−0.949** | 0.051 | 1.48 MAD |
+| Normal | `LM` | 8 | 21 | **−0.736** | 0.038 | 1.17 MAD |
+| Normal | `HM` | 23 | 46 | −0.398 | 0.060 | 1.94 MAD |
+| Normal | `H` | 4 | 10 | −0.600 | 0.400 | 1.12 MAD |
+| Tumour | `LM` | 4 | 29 | −0.800 | 0.200 | 1.03 MAD |
+| Tumour | `HM` | 12 | 43 | −0.120 | 0.710 | 1.03 MAD |
+
+`Results/Task29_Window100_SiteThresholdGeometry.csv` *(private — per-site
+reconstructed thresholds bound individual beta values at identified positions)*
+
+Every correlation is negative: the sites that concentrate the contrary flags
+are the sites where the external threshold happens to sit closest to this
+cohort's median. The median distance is **1.0–1.9 MAD** — at an `L` site the
+panel's 1st-percentile hypo threshold sits about one and a half cohort-MADs
+below the median, so of course some samples fall past it. Small n means only
+two of the six correlations reach p < 0.05 individually, but all six point the
+same way.
+
+### And the magnitudes are still trivial
+
+| tissue | cell | median \|Δβ\| | under 0.10 |
+|---|---|---|---|
+| Normal | `L` `−1` | **0.016** | **100%** |
+| Normal | `H` `+1` | **0.025** | **100%** |
+| Normal | `LM` `−1` | 0.040 | 90.5% |
+| Normal | `HM` `+1` | 0.086 | 54.3% |
+| Tumour | `L` `−1` | **0.010** | **100%** |
+| Tumour | `HM` `+1` | 0.074 | 76.7% |
+
+Compare the *concordant* direction at the same sites, chr22-wide (Task 31):
+`L` `+1` has median \|Δβ\| 0.090 against `L` `−1` at 0.014, a 6.6× difference;
+`H` `−1` 0.078 against `H` `+1` 0.028, 2.8×. The direction the state permits
+carries real shifts; the direction it forbids carries noise.
+
+**Practical consequence.** Probe masking (`plan.md` §2) will remove *some* of
+these, since a handful of sites carry most of them — but masking cannot be the
+whole answer, because the sites are concentrated for a geometric reason that
+will simply relocate to the next-closest threshold once they are removed.
+
+---
+
+## 11. One threshold per state instead of one per CpG
+
+*(2026-09-03 email, Analysis item 2: "For the L (8 CG sites), bio-stat flag
+based on all 'L' state, that is, >96% percentile of 8×53, similarly for other
+states.")*
+
+This is a direct answer to the n = 53 degeneracy. An empirical quantile over 53
+values is an order statistic; a quantile over 8 × 53 = 424 values, or over
+2,211 × 53 = 117,183 on all of chr22, is an estimate. Two ways to pool were
+tested:
+
+| | pooled quantity | the threshold is |
+|---|---|---|
+| `bio.stat.abs` | raw beta | one absolute beta value per state — the email's version literally |
+| `bio.stat.dev` | `beta −` that site's cohort median | one **effect size** per state |
+
+Only the informative tail is used per state, matching `bio`: `L`/`LM` upper,
+`H`/`HM` lower, `M`/`R` both.
+
+### The window, at q = 0.96 (Normal)
+
+| state | pool | threshold | flags | sites ≥1 | samples ≥1 | median \|Δβ\| |
+|---|---|---|---|---|---|---|
+| `L` | 424 | β > 0.0841 | 17 | 4 / 8 | 10 / 53 | 0.047 |
+| `LM` | 742 | β > 0.3442 | 30 | 9 / 14 | 18 / 53 | 0.106 |
+| `M` | 1,272 | β < 0.3300 or > 0.7340 | 52 | 15 / 24 | 35 / 53 | 0.080 |
+| `HM` | 2,014 | β < 0.6160 | 81 | 10 / 38 | 48 / 53 | 0.080 |
+| `H` | 583 | β < 0.8771 | 24 | 8 / 11 | 17 / 53 | 0.058 |
+| `R` | 265 | β < 0.1020 or > 0.8884 | 12 | 3 / 5 | 11 / 53 | 0.138 |
+
+`Results/Task30_StatePooled_Thresholds.csv`
+
+**The window pool is too small.** The `L` threshold estimated from 424 cells is
+0.0841; from all 117,183 chr22 `L` cells it is 0.1020 — 18% higher. Report the
+chr22 figure, not the window one.
+
+### The two variants behave very differently
+
+States are wide: `L` spans β 0.005–0.10. Under the **absolute** rule the top of
+the pooled tail is dominated by whichever *sites* sit highest within the state,
+so it flags whole sites rather than unusual samples. Under the **deviation**
+rule each site's own level is removed first, so it asks the intended question.
+chr22, q = 0.96, both at exactly 4.00% by construction:
+
+| tissue | variant | sites carrying a flag | median \|Δβ\| | under 0.10 | stability | state-rate ratio |
+|---|---|---|---|---|---|---|
+| Normal | `bio.stat.abs` | 40.9% | 0.079 | 63.9% | 0.823 | 1.00 |
+| Normal | `bio.stat.dev` | **63.5%** | **0.137** | **38.6%** | 0.804 | 1.00 |
+| Tumour | `bio.stat.abs` | 41.7% | 0.078 | 60.4% | 0.779 | 1.00 |
+| Tumour | `bio.stat.dev` | **89.8%**\* | **0.242** | **30.2%** | **0.865** | 1.00 |
+
+\* at q = 0.90; 63.5% at q = 0.96. `Results/Task30_StatePooled_QSweep.csv`,
+`Results/Task30_StatePooled_Scores.csv`
+
+The clearest case is tumour `R` sites, where the absolute rule gives a median
+\|Δβ\| of **0.016** and the deviation rule **0.465** on the same cells — the
+absolute thresholds (0.025, 0.942) are so extreme that the only cells clearing
+them are at sites whose median already sits near a boundary.
+
+### What it fixes, and what it does not
+
+**Fixes the rate bias completely.** `state.rate.ratio` is 1.00 by construction
+— every state gets exactly `1 − q` of its cells flagged. That is also the
+limitation: the rule *cannot* discover that one state genuinely has more
+outliers than another, because it assumes it does not.
+
+**Fixes the degeneracy.** No fixed count per CpG. Sites can have zero flags
+(36–59% of them do) and sites can have many.
+
+**Does not fix the magnitude problem at `H` and `L`.** At q = 0.96 on chr22
+Normal, the deviation threshold is 0.037 at `L` and 0.046 at `H` — because
+that is genuinely what the 96th percentile of those states' deviations is.
+Flags there still average \|Δβ\| ≈ 0.06. A state-pooled percentile is still a
+percentile; only an absolute floor removes trivial flags.
+
+### The number the email asked for
+
+The `bio.stat.dev` thresholds *are* per-state calibrated versions of the
+proposed `|beta − median| > 0.05` floor. Read off the 96th percentile of each
+state's own deviation distribution (chr22 Normal):
+
+| state | `L` | `LM` | `M` | `HM` | `H` | `R` |
+|---|---|---|---|---|---|---|
+| calibrated floor | **0.037** | 0.142 | 0.147 / 0.179 | 0.125 | **0.046** | 0.306 / 0.341 |
+
+So **0.05 is about right for `L` and `H`, and three to seven times too lenient
+for everything else.** A single constant cannot be right everywhere, which is
+why Task 32 tests a per-state floor against a constant one.
+
+---
+
+## 12. What the parameters can and cannot do
+
+*(2026-09-03 email, Literature item 1: "check to see if you can adjust the
+'parameter' setting". Full detail in `LITERATURE.md`.)*
+
+`OutlierMeth` has two knobs: `reference` (4 panels) and `p` (4 levels). Neither
+helps.
+
+### First, a correction
+
+**The reference used here is `tcga` — 747 normal samples across 21 tissue
+types, not the 2,015-sample TCGA-GEO panel this repo has been describing.**
+2,015 / 25 tissue types is the `all` panel. The code loads `tcga.rda` and calls
+`flagMeth(beta, reference = tcga, p = 0.01)`. Corrected throughout on
+2026-09-03. It matters:
+
+### `p` has two usable settings, not four
+
+`referenceMeth()` uses R's default type-7 quantile, so level `1 − p` sits at
+position `h = (n − 1)(1 − p) + 1` in the sorted reference. Level `p` is a real
+tail estimate only when `n ≳ 1/p + 2`. At n = 747:
+
+| `p` | position in the sorted 747 | rank from top | expected n above |
+|---|---|---|---|
+| 0.01 | 739.54 | 8th | 7.5 |
+| 0.001 | 746.25 | 1st–2nd | 0.75 |
+| 0.0001 | 746.93 | 1st–2nd | 0.075 |
+| 0.00001 | 746.99 | 1st–2nd | 0.007 |
+
+The three strictest levels all land between the two most extreme reference
+samples; `p = 0.0001` and `p = 0.00001` differ by 6% of one inter-sample gap.
+`p = 0.0001` would need n ≥ 10,002 and the largest packaged panel is 2,015, so
+no panel `OutlierMeth` ships supports its own two strictest settings.
+
+**This is the same order-statistic degeneracy the README documents at n = 53,
+and it reaches the external arm too.** `Results/Task31_PLevelResolution.csv`
+
+### And tightening `p` would not help anyway
+
+Thresholds are monotone in `p`, so the flag set is **nested**: any stricter
+setting keeps a prefix of each CpG's current flags ordered by beta. That means
+the entire family of outcomes reachable by tuning `p` can be enumerated from
+the `p = 0.01` matrix — keep the top *r* per CpG per direction, for
+*r* = 5, 3, 2, 1. *r* = 1 is the strictest setting that still flags anything.
+
+chr22 Normal, the two contrary cells:
+
+| cell | setting | flags | median \|Δβ\| | under 0.10 | surviving a 0.10 floor |
+|---|---|---|---|---|---|
+| `H` `+1` | `p = 0.01` as run | 1,127 | 0.028 | **100.0%** | **0** |
+| `H` `+1` | strictest (*r* = 1) | 536 | 0.031 | **100.0%** | **0** |
+| `L` `−1` | `p = 0.01` as run | 1,894 | 0.014 | 99.8% | 4 |
+| `L` `−1` | strictest (*r* = 1) | 977 | 0.013 | 99.8% | **2** |
+
+against `R` `+1`, where the same tightening does what it should:
+0.314 → 0.342 median \|Δβ\|, 309 → 136 flags surviving the floor.
+`Results/Task31_PEnvelope.csv`
+
+The ceiling is structural. At `H` sites the median cohort beta is 0.934, so
+there is 0.066 of beta space above it, and only **0.24%** of all `H` cells sit
+≥ 0.10 from their site median (`L`: 0.79%; `R`: 36.6%).
+`Results/Task31_EffectSizeCeiling.csv`
+
+**`p` changes how many flags you get. It never changes how big they are.**
+
+### The package's own effect-size function points the wrong way
+
+`deltMeth` returns `beta − threshold` — a magnitude floor is one comparison
+away from something already computed. `relMeth` divides that by the remaining
+head-room `1 − P`, which at `H` sites is 0.037. Measured on chr22 Normal:
+
+| state | median `P` | `1 − P` | median `deltMeth` | median `relMeth` | inflation |
+|---|---|---|---|---|---|
+| `L` | 0.100 | 0.900 | 0.024 | 0.027 | 1× |
+| `M` | 0.673 | 0.327 | 0.024 | 0.069 | 3× |
+| `HM` | 0.907 | 0.093 | 0.010 | 0.110 | **11×** |
+| `H` | 0.963 | **0.037** | **0.0022** | **0.075** | **34×** |
+| `R` | 0.750 | 0.250 | 0.040 | 0.205 | 5× |
+
+`Results/Task31_DeltVsRelMeth.csv`
+
+A user reaching for `relMeth` to get an interpretable effect size gets the
+opposite: the flags whose direction the state made inevitable come back looking
+like the largest effects in the dataset.
+
+---
+
+## 13. Five candidate fixes, scored
+
+Task 24 benchmarked seven *existing* outlier definitions. This adds the
+candidates that follow from §10–§12, all tuned by bisection to the same flag
+rate as `ext` + a 0.10 floor (Normal 1.031%, Tumour 6.272%), following the
+rate-matching Task 26 Part C established.
+
+### First: the noise level is now measured, not assumed
+
+Every stability figure in this project perturbs beta by `N(0, 0.01)` because
+that is what the literature says about 450k technical error. Adjacent CpG pairs
+replace that with a measurement. For probes *i*, *j* within 100 bp, the
+systematic difference between the two positions is constant across samples and
+drops out of `sd(beta_i − beta_j)`; what remains bounds technical noise from
+above at `sd / sqrt(2)`.
+
+| pair set | Normal σ̂ (p10) | Normal σ̂ (median) | Tumour σ̂ (p10) | Tumour σ̂ (median) |
+|---|---|---|---|---|
+| ≤ 50 bp | 0.0025 | 0.0129 | 0.0030 | 0.0158 |
+| **≤ 100 bp** | **0.0029** | **0.0142** | **0.0036** | **0.0171** |
+| ≤ 200 bp | 0.0032 | 0.0149 | 0.0038 | 0.0179 |
+| ≤ 500 bp | 0.0035 | 0.0154 | 0.0043 | 0.0187 |
+| > 1 Mb (null) | 0.0081 | 0.0224 | 0.0107 | 0.0789 |
+
+`Results/Task32_MeasuredNoise.csv`
+
+Close pairs are 2.8× (Normal) to 3.0× (Tumour) tighter than distant pairs at
+the 10th percentile, so the bound is measuring probe-level noise rather than
+biology. **The assumed sd = 0.01 sits between the tightest decile (0.003) and
+the median (0.014) of the measured bound — i.e. inside the measured range, and
+conservative relative to the median.** The stability results in §7 and Task 24
+stand. *(Caveat: this bounds technical noise plus any genuine divergence
+between neighbouring probes, so it is an upper bound, and the p10 is the
+tightest available rather than an unbiased estimate.)*
+
+### The scores
+
+Normal, chr22, all at 1.031% except where noted:
+
+| method | rate | stability | state-rate ratio | median \|Δβ\| | trivial | **contrary** |
+|---|---|---|---|---|---|---|
+| `ext.floor.med.0.10` | 1.031 | **0.793** | 54.8 | 0.153 | **0%** | 21.0% |
+| `ext.floor.state` | 1.031 | 0.781 | **3.3** | 0.122 | 38.6% | 14.9% |
+| `bio.stat.dev` | 1.031 | 0.779 | **1.0** | **0.197** | 18.2% | **0%** |
+| `ext.floor.med.0.05` | 1.693 † | 0.748 | 5.9 | 0.115 | 39.1% | 28.0% |
+| `ext.delt` | 1.031 | 0.649 | 11.2 | 0.137 | 25.5% | 17.2% |
+| `ext.floor.noise` | 1.031 | 0.584 | 8.8 | 0.109 | 43.9% | 15.7% |
+| `mad.beta` | 1.031 | 0.429 | 33.7 | 0.096 | 53.3% | 0.1% |
+| `ext.percentile` | 2.673 † | 0.329 | 2.7 | 0.078 | 61.5% | **52.9%** |
+| `asin.mad` | 1.031 | 0.326 | 13.4 | 0.097 | 52.7% | 2.5% |
+| `mad.mvalue` | 1.031 | 0.192 | 7.6 | 0.105 | 46.7% | 12.1% |
+
+Tumour, all at 6.272% except where noted:
+
+| method | rate | stability | state-rate ratio | median \|Δβ\| | trivial | **contrary** |
+|---|---|---|---|---|---|---|
+| `ext.floor.med.0.10` | 6.272 | **0.907** | 117.0 | 0.224 | **0%** | 6.5% |
+| `ext.delt` | 6.272 | 0.880 | 34.6 | 0.210 | 16.9% | 9.4% |
+| `ext.floor.med.0.05` | 8.130 † | 0.871 | 20.1 | 0.180 | 22.9% | 14.6% |
+| `bio.stat.dev` | 6.272 | 0.833 | **1.0** | 0.199 | 32.1% | **0%** |
+| `ext.floor.state` | 6.272 | 0.751 | 3.0 | 0.224 | 23.2% | 21.8% |
+| `ext.floor.noise` | 6.272 | 0.705 | 5.0 | 0.224 | 18.1% | 15.1% |
+| `mad.beta` | 6.272 | 0.678 | 5.5 | 0.121 | 44.2% | 1.3% |
+| `ext.percentile` | 10.222 † | 0.648 | 4.3 | 0.138 | 38.7% | 27.0% |
+| `asin.mad` | 6.271 | 0.546 | 2.8 | 0.120 | 44.7% | 5.8% |
+| `mad.mvalue` | 6.272 | 0.429 | 1.8 | 0.118 | 45.3% | 14.6% |
+
+† not rate-matched — reported at its own, *higher*, rate. Both still lose to
+`ext.floor.med.0.10`, so the constant-0.10 floor's advantage is not a
+sensitivity artifact. `Results/Task32_ImprovedMethodScores.csv`
+
+`pct.contrary` is new: the share of a method's flags that run against the site's
+state (`−1` at `L`/`LM`, `+1` at `H`/`HM`). It is the email's own diagnostic,
+scored directly.
+
+### Five conclusions
+
+**1. Over half of the external reference's Normal flags are contrary.** 52.9%
+of `ext.percentile` flags on chr22 Normal run against the site's state; 27.0%
+in tumour. A 0.10 floor cuts that to 21.0% / 6.5%. That single number is
+probably the clearest statement of the problem the project has.
+
+**2. The plain constant floor still wins.** `|beta − cohort median| ≥ 0.10` on
+top of the external flag is the most stable rule tested in both tissues, and
+the only one with zero trivial flags by construction. The elaborations do not
+beat it.
+
+**3. `0.05` is measurably worse than `0.10`, even with a rate advantage.**
+The email's proposed 0.05 gives 0.748 / 0.871 stability at a *higher* flag rate
+than 0.10's 0.793 / 0.907, and leaves 39% / 23% of flags below \|Δβ\| = 0.10.
+If one constant has to be picked, 0.10 is better; `epimutacions` uses 0.15.
+
+**4. The state-pooled deviation rule is the best reference-free option, by a
+lot.** `bio.stat.dev` reaches 0.779 / 0.833 stability against `mad.beta`'s
+0.429 / 0.678 at the same rate, has a state-rate ratio of 1.0, the highest
+median \|Δβ\| in Normal, and produces **zero** contrary flags by construction.
+It needs no external panel, no `tcga.rda`, and no assumption that a pan-tissue
+reference applies to breast. This is the professor's own suggestion and it is
+the strongest thing in the table after the constant floor.
+
+**5. A noise-scaled floor is worse than a constant one — a negative result.**
+`ext.floor.noise` sets each state's floor at `k ×` the measured σ from Part A.
+Because σ is smallest exactly where the state is most compressed (`L`: 0.0025),
+the floor there ends up at 0.023 and keeps the trivial flags. Stability 0.584 /
+0.705, below every floor variant. **Noise scaling and interpretability are
+different requirements**: a 0.02 shift at an `L` site may be many σ, and it is
+still not a finding.
+
+### The transform story, resolved
+
+Task 24 found M-values the *least* stable method tested, reversing the textbook
+advice, and blamed the logit for amplifying noise at the extremes. That was a
+hypothesis. Adding the **angular transform** `φ = 2·asin(√β)` — variance-
+stabilising like the logit, but bounded on [0, π] and so far less aggressive —
+tests it. Amplification is measured directly as the median `|dT/dβ|` at the
+cells each method actually flags, normalised to raw beta:
+
+| tissue | transform | amplification at flags | stability | contrary flags |
+|---|---|---|---|---|
+| Normal | raw beta | 1.00 | **0.429** | **0.1%** |
+| Normal | arcsine | 1.48 | 0.326 | 2.5% |
+| Normal | M-value | 3.25 | **0.192** | **12.1%** |
+| Tumour | raw beta | 1.00 | **0.678** | **1.3%** |
+| Tumour | arcsine | 1.37 | 0.546 | 5.8% |
+| Tumour | M-value | 3.13 | **0.429** | **14.6%** |
+
+Monotone in both tissues, on both metrics. **The more a transform stretches the
+extremes, the less reproducible its flags and the more of them run against the
+state.** The hypothesis holds, and the practical conclusion is not "use a
+gentler transform" — arcsine is gentler and still loses to raw beta — but
+"do not transform; add a magnitude requirement instead."
+
+
+---
+
 ## Files
 
 | | |
@@ -664,6 +1097,12 @@ state. Read it alongside its stability (0.40 / 0.52), which is poor.
 | `Scripts/Task24.*` | seven-method benchmark |
 | `Scripts/Task25.*` | figures |
 | `Scripts/Task26.*` | review response: denominators, floor sensitivity, rate-matched stability, genome-wide magnitude |
+| `Scripts/Task27.*` | the complete 100-CpG sheet, site by site |
+| `Scripts/Task28.*` | window-selection test: minimise span or maximum gap |
+| `Scripts/Task29.*` | contrary-flag decomposition over sites and samples; per-site threshold geometry |
+| `Scripts/Task30.*` | state-pooled ("bio-stat") thresholds, absolute and deviation variants |
+| `Scripts/Task31.*` | parameter headroom: effect-size ceiling, `p` envelope, deltMeth vs relMeth, `p`-level resolution |
+| `Scripts/Task32.*` | measured noise from adjacent probes; five candidate fixes scored |
 | `Results/Fig1–5*.png` | the five figures above |
 | `Slurm/Task2*.sbatch` | batch equivalents |
 
@@ -672,7 +1111,8 @@ Each script has a matching `.Rout` console transcript. Tables naming a sample
 `CLASSIFICATION.md`.
 
 `README.md` has the project overview and method; `plan.md` has the ordered next
-steps; `REVIEW.md` has the code-level findings.
+steps; `REVIEW.md` has the code-level findings; `LITERATURE.md` has the review of
+the `OutlierMeth` reference panels, Borealis and epimutacions.
 
 ---
 
@@ -684,8 +1124,15 @@ steps; `REVIEW.md` has the code-level findings.
    analysis over all 380,355 CpGs and the chr22 figures reproduce to within a
    percentage point. The threshold-geometry and stability results in §7 are
    still chr22-only and remain to be extended.
-3. **Measure the noise instead of assuming it.** §7's stability result uses a
-   literature range. Technical replicates — or adjacent co-methylated probe
-   pairs — would replace it with this cohort's own value.
+3. ~~**Measure the noise instead of assuming it.**~~ Done — §13 estimates it
+   from adjacent-probe pairs. The assumed sd = 0.01 sits inside the measured
+   range (p10 0.003, median 0.014), so §7's stability results stand. Technical
+   replicates, if any exist upstream of de-identification, would still be a
+   tighter estimate.
 4. **Test what drives N15/N17/N14.** Batch, detection-p, cell composition,
    purity. Until excluded, per-sample burden cannot be interpreted.
+5. **Decide between the constant floor and the state-pooled rule.** §13 makes
+   `ext` + 0.10 the best rule overall and `bio.stat.dev` the best rule that
+   needs no external panel. They answer different questions and the paper
+   probably wants both — one as the recommendation, one as the demonstration
+   that the external panel is not load-bearing.

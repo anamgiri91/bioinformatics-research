@@ -13,7 +13,14 @@ rather than *rate*, and it is not a bug in any one package — it follows from
 thresholding bounded, heteroscedastic beta values on a scale-free statistic.
 At the methylation extremes the decision boundary falls inside the array's own
 noise, and the resulting flags do not survive a perturbation smaller than the
-array's technical error.** See [Findings](#findings).
+array's technical error.**
+
+**Over half the external reference's normal-tissue flags on chr22 run *against*
+the state the CpG sits in, and no setting of the package's parameters removes
+them: the ceiling on effect size at an `H` site is 0.066 of beta space, so even
+the strictest reachable threshold leaves 100% of `H`-site hyper flags below
+|Δβ| = 0.10. The fix has to be a term the package does not have.** See
+[Findings](#findings).
 
 ---
 
@@ -47,9 +54,14 @@ used.
 (hyper) by comparing the beta value against per-CpG thresholds. Thresholds
 come from one of two places, and the distinction is the spine of the project:
 
-- **External reference** — the packaged `tcga.rda` panel: 2,015 normal and
-  tumour-adjacent samples across 25 tissue types, independent of this cohort.
-  This is the design the package was published for.
+- **External reference** — the packaged `tcga.rda` panel: **747 TCGA normal
+  samples across 21 tissue types**, independent of this cohort. This is the
+  design the package was published for.
+
+  *(Corrected 2026-09-03. Earlier drafts described this as "2,015 samples
+  across 25 tissue types" — that is `all`, the combined TCGA+GEO panel. Every
+  script here loads `tcga.rda` and calls `flagMeth(..., reference = tcga)`, so
+  the reference is the 747-sample one. The distinction matters: see Finding 6.)*
 - **Self reference** — `referenceMeth()` run on the same 53 samples being
   tested. This is *not* how the package is meant to be used, and at n = 53 it
   is degenerate (see below).
@@ -221,7 +233,100 @@ scale-free dispersion threshold to bounded, heteroscedastic beta values. Which
 is why the fix — an absolute-difference floor, or M-values — applies to the
 whole class.
 
-### 3. The state-aware rule and the external reference do not agree
+### 2d. Over half the flags run against the state
+
+The sharpest single statement of the problem. Scoring every method on the share
+of its flags that are *contrary* — `−1` at an `L`/`LM` site, `+1` at an `H`/`HM`
+site — on chr22 (Task 32):
+
+| method | contrary share, Normal | Tumour |
+|---|---|---|
+| external reference, as published | **52.9%** | 27.0% |
+| + a 0.10 magnitude floor | 21.0% | 6.5% |
+| + a per-state floor | 14.9% | 21.8% |
+| state-pooled deviation rule | **0%** by construction | **0%** |
+
+### 6. Neither `OutlierMeth` parameter can fix it
+
+The package has two knobs, `reference` (4 panels) and `p` (4 levels), and
+Task 31 closes off both.
+
+`referenceMeth()` builds every threshold with R's default type-7 `quantile()`,
+which places level `1 − p` at position `(n − 1)(1 − p) + 1`. That is a real tail
+estimate only when `n ≳ 1/p + 2`. On the 747-sample `tcga` panel:
+
+| `p` | rank from the top of 747 | expected n above |
+|---|---|---|
+| 0.01 | 8th | 7.5 |
+| 0.001 | 1st–2nd | 0.75 |
+| 0.0001 | 1st–2nd | 0.075 |
+| 0.00001 | 1st–2nd | 0.007 |
+
+The three strictest levels all land between the two most extreme reference
+samples. `p = 0.0001` would need n ≥ 10,002 and the largest packaged panel is
+2,015. **The same order-statistic degeneracy that invalidates the n = 53
+self-reference arm also caps the external arm at two usable settings.**
+
+And tightening `p` would not help. Thresholds are monotone in `p`, so the flag
+set is nested and the whole reachable family can be enumerated from the
+`p = 0.01` matrix. At the strictest reachable setting, chr22 Normal `H`-site
+`+1` flags are still **100% below |Δβ| = 0.10, with 0 of 536 surviving a 0.10
+floor** — identical to `p = 0.01`. The ceiling is structural: only 0.24% of all
+`H` cells sit ≥ 0.10 from their site median.
+
+**`p` changes how many flags you get. It never changes how big they are.**
+
+The package's own `relMeth`, which divides the shift by the remaining head-room
+`1 − P`, points the wrong way: at `H` sites it turns a median `deltMeth` of
+0.0022 into a median `relMeth` of 0.0746, an inflation of **34×**. `deltMeth`,
+by contrast, is one comparison away from the magnitude floor this project
+recommends.
+
+### 7. The contrary flags concentrate on sites, not on samples
+
+The 2026-09-03 email asked whether the contrary flags in the 100-CpG window
+come from a couple of CpGs or from all of them, and from a couple of samples or
+from any of them. Both halves have answers, and they differ (Task 29).
+
+**Sites: concentrated.** Half the sites of a state carry every contrary flag it
+has, and the top two hold 57–86% of them. One probe, `cg15668074`, carries 19
+of the 29 tumour `LM` `−1` flags on its own.
+
+**Samples: spread.** 31 of 53 normal samples and 37 of 53 tumour samples carry
+at least one, with the top three holding 27% against a uniform expectation of
+6%. A mild gradient, not a two-sample story.
+
+And the concentrating sites are not biologically special — they are the sites
+where the external threshold happens to sit closest to this cohort's own
+distribution, at a median of **1.0–1.9 cohort MADs** from the median. Spearman
+ρ between a site's contrary-flag count and that distance is negative in all six
+testable state × tissue cells (−0.95 to −0.12).
+
+### 8. A state-pooled threshold fixes the degeneracy but not the magnitude
+
+The email's "bio-stat" proposal — one threshold per *state* from the pooled
+`n_sites × 53` cells, rather than one per CpG from 53 — was tested two ways
+(Task 30). Pooling the raw beta flags whole sites; pooling the **deviation**
+from each site's own median asks the intended question.
+
+`bio.stat.dev` is the best rule tested that needs no external panel at all:
+stability 0.779 / 0.833 against `mad.beta`'s 0.429 / 0.678 at the same flag
+rate, a state-rate ratio of 1.0, and zero contrary flags by construction.
+
+It does not fix the magnitude problem, because the 96th percentile of the `L`
+and `H` states' own deviation distributions is only 0.037 and 0.046. Read as
+data-calibrated floors, those percentiles answer the "is 0.05 the right number"
+question directly (chr22 Normal):
+
+| state | `L` | `LM` | `M` | `HM` | `H` | `R` |
+|---|---|---|---|---|---|---|
+| calibrated floor | 0.037 | 0.142 | 0.147 | 0.125 | 0.046 | 0.306 |
+
+**0.05 is about right at `L` and `H` and three to seven times too lenient
+everywhere else.** Benchmarked head to head, a flat 0.10 still beats both 0.05
+and the per-state version on stability (`results.md` §13).
+
+### 9. The state-aware rule and the external reference do not agree
 
 Cohen's kappa and non-zero conditional agreement over the tight window
 (Task 20, Part D) — raw percent agreement is meaningless on matrices that are
@@ -238,7 +343,7 @@ original metric:
 The two methods are close to independent. They are not two views of one
 outlier set; they are two different definitions of outlier.
 
-### 4. N37 tops the Task 17 summary for three separable reasons
+### 10. N37 tops the Task 17 summary for three separable reasons
 
 N37 carried 11 of 71 biological flags in the original 100-CpG window, ~8× the
 uniform expectation of 1.34. Tasks 19 and 21 decompose that:
@@ -275,7 +380,7 @@ acrocentric short arm, which is repetitive and poorly mapped. Cross-reactive
 and polymorphic probe masking has not yet been applied — see
 [plan.md](plan.md) step 2.
 
-### 5. Which samples actually carry burden
+### 11. Which samples actually carry burden
 
 N15, N17 and N14 lead at every scale and in both tissues. Their chr22
 external-reference burden tracks their genome-wide self-referential burden at
@@ -306,7 +411,14 @@ or a technical batch effect. None of those have been tested yet.
 | **Task 22** | Threshold geometry, flag stability under noise, percentile vs Tukey | **new** |
 | **Task 23** | Tasks 10/13A/14 regenerated with the `R` state restored | **new** |
 | **Task 24** | Seven-method benchmark at matched flag rates | **new** |
-| **Task 25** | Figures | **new** |
+| **Task 25** | Figures | done |
+| **Task 26** | Supervisor-review response: denominators, floor sensitivity, rate-matched stability, genome-wide magnitude | done |
+| **Task 27** | The complete 100-CpG sheet, site by site | done |
+| **Task 28** | Window selection: minimise span or maximum gap | done |
+| **Task 29** | Contrary-flag decomposition over sites and samples; per-site threshold geometry | **new** |
+| **Task 30** | State-pooled ("bio-stat") thresholds, absolute and deviation variants | **new** |
+| **Task 31** | Parameter headroom: effect-size ceiling, `p` envelope, `deltMeth` vs `relMeth`, `p`-level resolution | **new** |
+| **Task 32** | Measured noise from adjacent probes; five candidate fixes scored | **new** |
 
 [plan.md](plan.md) has the ordered next steps.
 
@@ -352,6 +464,7 @@ Scripts/       all analysis code, each with its matching .Rout transcript
 Slurm/         batch submission scripts
 CLASSIFICATION.md  public/private split and the reasoning
 REVIEW.md          code and methods review; six findings, ordered by impact
+LITERATURE.md      the OutlierMeth reference panels, its parameters, Borealis, epimutacions
 plan.md            what to do next
 ```
 
@@ -380,5 +493,10 @@ plan.md            what to do next
   [PMC7098133](https://pmc.ncbi.nlm.nih.gov/articles/PMC7098133/) —
   3×IQR outlier definition, per-sample burden, and the finding that burden is
   strongly confounded by cell composition and technical factors.
+- Borealis (Bioconductor) — beta-binomial outlier detection for bisulfite
+  sequencing read counts, with an explicit "too small to call" class.
+  [package](https://bioconductor.org/packages/release/bioc/html/borealis.html) —
+  the model-based version of what this project argues for; needs read counts,
+  which 450k beta values do not have. See [LITERATURE.md](LITERATURE.md) §4.
 - CoMeBack — co-methylated region construction for 450k data.
   [Bioinformatics 36:2675](https://academic.oup.com/bioinformatics/article/36/9/2675/5716323)

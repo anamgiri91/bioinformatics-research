@@ -65,11 +65,19 @@ any paired analysis. **No result in `results.md` currently uses pairing**, so
 nothing is invalidated — but the phrase "53 matched normal/tumour pairs" is an
 inherited assumption, not something this project has verified.
 
-## Q4. Is the external TCGA-GEO reference technically comparable to this cohort?
+## Q4. Is the external reference technically comparable to this cohort?
 
 **Not established, and this is the largest un-addressed threat to the external
-arm.** The panel is 2,015 normal and tumour-adjacent samples across 25 tissue
-types (Downs, Thursby & Cope 2023). Unverified here: preprocessing and
+arm.**
+
+**Correction, 2026-09-03: the panel used here is `tcga` — 747 TCGA normal
+samples across 21 tissue types — not the 2,015-sample TCGA-GEO `all` panel this
+review originally described.** Every script loads `tcga.rda` and calls
+`flagMeth(..., reference = tcga)`. Composition per Downs, Thursby & Cope 2023,
+verified in the paper; see [LITERATURE.md](LITERATURE.md) §1. The correction
+strengthens rather than weakens this answer: a smaller panel is a noisier one,
+and at n = 747 three of the four `p` levels collapse onto the reference maximum
+(Q9b below). Unverified here: preprocessing and
 normalisation pipeline, array version, batch structure, and the definition of
 "tumour-adjacent". The paper itself concedes that "tissue-specific methylation
 patterns will drive the threshold values at some CpG sites" and that a
@@ -174,6 +182,50 @@ no `H`-state flag survives at all.
 difference worth calling real on the 450k platform, not read off this table.
 `epimutacions` uses 0.15 and the 0.10-to-0.15 gap is small (0.794 vs 0.820), so
 0.10 is not privileged. `results.md` §9 says this explicitly.
+
+**Update 2026-09-03.** Two things now bear on the choice.
+
+*The floor can be calibrated per state rather than guessed.* Reading it off the
+96th percentile of each state's own `|beta − site median|` distribution (chr22
+Normal) gives `L` 0.037, `LM` 0.142, `M` 0.147, `HM` 0.125, `H` 0.046, `R` 0.306
+— so a single constant is necessarily wrong somewhere. The 0.05 proposed in the
+2026-09-03 email is close to the calibrated value at `L` and `H` and three to
+seven times too lenient elsewhere.
+
+*But the per-state floor does not beat the constant.* Benchmarked head to head
+at one flag rate (`results.md` §13), `ext.floor.med.0.10` scores 0.793 / 0.907
+stability against `ext.floor.state`'s 0.781 / 0.751, and `ext.floor.med.0.05`
+manages only 0.748 / 0.871 *at a higher flag rate*. So 0.10 stands as the
+recommendation, 0.05 is measurably worse, and the biological-justification
+requirement above is unchanged — the per-state table is evidence about the
+shape of the problem, not a replacement decision rule.
+
+## Q9b. Could the package's own `p` parameter have been tuned instead of adding a floor?
+
+*(Raised in the 2026-09-03 email: "check to see if you can adjust the
+'parameter' setting to get results".)*
+
+**No, on two independent grounds — Task 31.**
+
+**The parameter has less resolution than it appears.** `referenceMeth()` uses
+R's default type-7 `quantile()`, so level `1 − p` sits at position
+`(n − 1)(1 − p) + 1` and is a real tail estimate only when `n ≳ 1/p + 2`. On the
+747-sample `tcga` panel, `p = 0.001`, `0.0001` and `0.00001` all interpolate
+between the 746th and 747th order statistics — the two most extreme reference
+samples. `p = 0.0001` needs n ≥ 10,002; the largest packaged panel is 2,015.
+**The order-statistic degeneracy this review identified at n = 53 (Finding 1)
+also caps the external arm, at two usable settings out of four.**
+
+**And a stricter threshold would not raise the effect size.** Thresholds are
+monotone in `p`, so the flag set is nested and the entire reachable family can
+be enumerated from the `p = 0.01` matrix by keeping the top *r* flags per CpG.
+At *r* = 1 — the strictest setting that still flags anything — chr22 Normal
+`H`-site `+1` flags remain **100% below |Δβ| = 0.10, with 0 of 536 surviving a
+0.10 floor**, identical to `p = 0.01`. Only 0.24% of all `H` cells sit ≥ 0.10
+from their site median, so there is nothing for a stricter threshold to find.
+
+`p` controls how many flags you get and never how big they are. That is the
+argument for adding a magnitude term rather than tuning the existing one.
 
 ## Q10. Should ext+floor be recalibrated so its advantage is not a lower-rate artifact?
 

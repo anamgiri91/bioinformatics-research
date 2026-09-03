@@ -1,10 +1,12 @@
 # Plan
 
 Ordered by how much each step changes a conclusion, not by effort.
-Status as of 2026-08-28, after Tasks 20 and 21.
+Status as of 2026-09-03, after Tasks 29-32.
 
 Context for every item below: [REVIEW.md](REVIEW.md) has the code-level
-findings, [README.md](README.md) the results so far.
+findings, [README.md](README.md) the results so far, [LITERATURE.md](LITERATURE.md)
+the review of `OutlierMeth`'s reference panels and parameters, Borealis and
+epimutacions.
 
 ---
 
@@ -22,7 +24,7 @@ correspond to a beta shift under 0.10, against a median shift of 0.21–0.27 at
 Task 22 established the mechanism and closed off the alternatives:
 
 1. **Not panel miscalibration.** If the BRCA cohort simply sat outside the
-   2,015-sample panel's range at these CpGs, many samples per CpG would flag.
+   747-sample `tcga` panel's range at these CpGs, many samples per CpG would flag.
    They do not — at most 11 of 53, zero CpGs with ≥50% flagged, 0% of Normal
    flags in such CpGs. The flags really are per-sample calls.
 2. **Not a join or register error.** Reconstructing the thresholds from the
@@ -39,15 +41,37 @@ Task 22 established the mechanism and closed off the alternatives:
    too — a different one, driven by the IQR itself ranging from 0.008 at `L`
    to 0.157 at `R` — and overlaps the percentile rule at Jaccard 0.05–0.29.
 
+Tasks 29–32 close off the remaining escape routes:
+
+6. **It cannot be tuned away.** The `p` argument has two usable settings on the
+   747-sample `tcga` panel, not four — at n = 747 the three strictest levels all
+   interpolate between the two most extreme reference samples. And because
+   thresholds are monotone in `p` the flag set is nested, so the whole reachable
+   family can be enumerated: at the strictest setting that still flags anything,
+   chr22 Normal `H`-site `+1` flags are *still* 100% below |Δβ| = 0.10, with 0
+   of 536 surviving a 0.10 floor. `p` changes how many flags you get, never how
+   big they are.
+7. **The noise level is now measured, not assumed.** Adjacent-probe pairs bound
+   technical noise at 0.0029 (Normal) / 0.0036 (Tumour) at the tenth percentile
+   and 0.014 / 0.017 at the median. The simulated sd = 0.01 sits inside that
+   range, so the reproducibility argument no longer rests on a literature value.
+8. **It is not a few bad probes, and it is not a few bad samples.** The contrary
+   flags concentrate on sites (half the sites of a state carry all of them) but
+   spread across samples (31 of 53 in Normal). The concentrating sites are the
+   ones where the external threshold happens to land closest to this cohort's
+   median, at 1.0–1.9 cohort MADs — geometry again, not biology, which is why
+   probe masking will move the pattern rather than remove it.
+
 That reframes the deliverable. The paper is not "flags are biased toward state
 X". It is **"scale-free thresholding on bounded, heteroscedastic beta values
 manufactures irreproducible outliers at the methylation extremes, and here is
 what it costs you"** — with a concrete, cheap fix that applies to the whole
 class of methods, not one package.
 
-Three things are needed before it can be written: the tumour arm has to be
-rerun without the `"Rc"` bug, the probe-artifact confound has to be excluded,
-and the effect has to be shown to hold beyond chr22.
+Two things are still needed before it can be written: the probe-artifact
+confound has to be excluded (step 2), and the geometry and stability results
+have to be shown to hold beyond chr22 (step 3, 7c.2). The `"Rc"` bug is fixed
+and the magnitude result is already genome-wide.
 
 ---
 
@@ -127,34 +151,56 @@ If the pattern holds at 380k sites it is a general property of percentile
 thresholding on beta values, which is a much stronger claim than a chr22
 observation.
 
-## 3b. Get a real noise estimate instead of a simulated one
+## 3b. ~~Get a real noise estimate instead of a simulated one~~ — DONE 2026-09-03
 
-Task 22's stability test assumes N(0, sd) noise at sd ∈ {0.005 … 0.05}. That
-range is taken from the literature, not from this data, and it is the one
-assumption the reproducibility argument rests on. Two ways to replace it with a
-measurement, in order of preference:
+Option 2 is done (Task 32 Part A). For probe pairs within 100 bp the systematic
+difference between the two positions is constant across samples and drops out of
+`sd(beta_i − beta_j)`, leaving `sd/sqrt(2)` as an upper bound on technical noise.
+chr22, tenth percentile over pairs: **0.0029 (Normal), 0.0036 (Tumour)**; median
+over pairs 0.014 / 0.017. Distant pairs (>1 Mb) give 0.0081 / 0.0107 at the same
+percentile, 2.8–3.0× looser, so the bound is measuring probe-level noise rather
+than biology.
 
-1. **Technical replicates.** If any TCGA-BRCA sample was run twice, the
-   replicate pair gives a per-probe noise estimate directly. Check the
-   barcodes upstream of the de-identification.
-2. **Adjacent co-methylated CpGs.** For probe pairs under ~100 bp apart in a
-   co-methylated block, the within-pair difference bounds technical noise from
-   above. Cruder, but available today with no new data.
+**The assumed sd = 0.01 sits inside the measured range and is conservative
+relative to the median, so every stability result in §7 and Tasks 24/26/32
+stands as published.** `Results/Task32_MeasuredNoise.csv`
 
-Either turns "flags are unstable at plausible noise levels" into "flags are
-unstable at this cohort's measured noise level", which is the difference
-between a suggestive result and a citable one.
+Option 1 — technical replicates — would still be tighter and is the only way to
+separate technical noise from genuine divergence between neighbouring probes.
+It needs the TCGA barcodes upstream of de-identification. Low priority now that
+the assumption is validated.
+
+**A negative result worth keeping:** scaling the magnitude floor by this
+measured sigma makes things *worse*, not better. `ext.floor.noise` (floor =
+k × sigma per state) scores 0.584 / 0.705 stability against the constant 0.10
+floor's 0.793 / 0.907, because sigma is smallest exactly where the state is most
+compressed, so the `L`-site floor lands at 0.023 and keeps the trivial flags.
+Noise scaling and interpretability are different requirements — see
+`results.md` §13.
 
 ## 4. Re-flag with an absolute-difference floor and quantify what changes
 
-The fix, measured. Rerun `flagMeth()` against the external reference, then
-require `|beta − threshold| ≥ offset` for the flag to stand, at
-`offset ∈ {0.05, 0.10, 0.15, 0.20}`. `epimutacions` uses 0.15.
+**Mostly done.** Task 26 swept `offset ∈ {0, 0.05, 0.10, 0.15, 0.20}` and
+Task 32 ran a head-to-head of five floor variants at one flag rate. Summary:
 
-Report per state: flags retained, per-sample burden, and whether the
-sample ranking survives. The interesting question is whether N15/N17/N14 stay
-on top once trivial flags are removed — if they do, their burden is real; if
-they collapse, it was heteroscedasticity all along.
+| variant | Normal stability | Tumour | contrary-flag share, Normal |
+|---|---|---|---|
+| no floor (as published) | 0.329 | 0.648 | **52.9%** |
+| `\|beta − median\| ≥ 0.05` | 0.748 | 0.871 | 28.0% |
+| **`\|beta − median\| ≥ 0.10`** | **0.793** | **0.907** | 21.0% |
+| per-state floor, calibrated | 0.781 | 0.751 | 14.9% |
+| `k ×` measured noise, per state | 0.584 | 0.705 | 15.7% |
+| `deltMeth ≥ d` (distance to threshold) | 0.649 | 0.880 | 17.2% |
+
+The flat 0.10 floor on `|beta − cohort median|` wins in both tissues.
+`epimutacions` uses 0.15; the 0.10–0.15 gap is small (`REVIEW.md` Q9).
+
+**Still to do: the per-sample question.** Whether N15/N17/N14 stay on top once
+trivial flags are removed has not been run. If they do, their burden is real;
+if they collapse, it was heteroscedasticity all along. Task 29 gives a partial
+hint — over the 100-CpG window's contrary flags the leaders are N15, N48 and
+N17, so N48 needs adding to the list of samples to explain — but the
+chromosome-wide burden ranking under a floor has not been recomputed.
 
 **Do not spend time on M-values.** Task 24 tested them: a median ± k·MAD rule
 on M-values is the least stable of seven methods benchmarked at matched flag
@@ -248,7 +294,9 @@ Four items remain open.
    kappa is unreliable under >95% zeros. Task 20 already writes the full
    contingency counts, so this is an aggregation over existing output: do the
    methods agree on `+1` and `−1` separately, and what is precision/recall
-   against a designated reference method?
+   against a designated reference method? Task 32 adds one direction-aware
+   metric (`pct.contrary`, the share of a method's flags running against the
+   site's state) but not the pairwise direction-split agreement this asks for.
 
 4. **Uniform provenance blocks.** Every table names its output CSV and every
    CSV has one producing script with a `.Rout` transcript, but the review asked
@@ -258,6 +306,41 @@ Four items remain open.
 
 Also extend the §7 threshold-geometry and noise-stability experiments beyond
 chr22. The magnitude result is now genome-wide; these two are not.
+
+## 7c. Items opened by the 2026-09-03 email and Tasks 29-32
+
+1. **The `bio.stat.dev` arm needs a decision.** Task 32 makes the state-pooled
+   deviation rule the best method tested that needs no external panel at all
+   (0.779 / 0.833 stability, state-rate ratio 1.0, zero contrary flags by
+   construction). That is a genuinely useful result — it means the paper's
+   conclusion does not depend on trusting a pan-tissue reference panel. It
+   should either become the second recommended rule or be explicitly retired;
+   leaving it as a third unlabelled column repeats the `bio`/`self` confusion.
+
+2. **Extend Tasks 29–31 beyond chr22.** Task 31's ceiling, `p`-envelope and
+   `deltMeth`/`relMeth` results are chr22-only. The Task 13 matrices cover all
+   380,355 CpGs, so this is a wider denominator on existing code, as
+   step 3 was.
+
+3. **Mask the sites Task 29 identified first.** The contrary flags concentrate
+   on a handful of probes — `cg15668074` alone carries 19 of the 29 tumour `LM`
+   `−1` flags, and the Normal `LM` block sits at chr22:16.60–16.61 Mb, the same
+   pericentromeric region as N37's candidate event. Probe masking (step 2) will
+   remove some of these. It will not remove the pattern: Task 29 Part B shows
+   the concentrating sites are the ones where the external threshold happens to
+   sit closest to this cohort's median, so once they are masked the same
+   concentration will reappear at the next-closest sites. Report both.
+
+4. **N48.** Task 29 puts N48 level with N15 as the top carrier of contrary
+   flags in the normal window (9 each). N48 is not in the N15/N17/N14 trio that
+   §5/Task 21 identified from chromosome-wide burden. Either it is a
+   window-local artefact or the burden list is incomplete — one query against
+   `Task21_Chr22_SampleBurden_Normal.csv` settles it.
+
+5. **Say which panel, everywhere.** The reference is `tcga` (747 samples,
+   21 tissue types), not `all` (2,015 / 25). Corrected in the four root docs on
+   2026-09-03. Any figure caption, slide or draft carried over from before that
+   date needs the same fix.
 
 ## 8. Housekeeping
 
@@ -303,3 +386,10 @@ chr22. The magnitude result is now genome-wide; these two are not.
    floor. If it is meant as a contrast that shows what state-aware flagging
    would look like, it is already doing its job and should be labelled that
    way in the paper.
+
+3. **Which of the two fixes is the recommendation?** `ext` + a 0.10 floor is
+   the most stable rule tested and keeps the external panel. `bio.stat.dev` is
+   only slightly behind, needs no panel at all, and cannot produce a contrary
+   flag by construction. They are answers to different questions — "how do I
+   make this published method usable" versus "what should replace it" — and the
+   paper can carry both, but the abstract can only lead with one.
