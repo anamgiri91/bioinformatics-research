@@ -1,0 +1,387 @@
+
+R version 4.6.0 (2026-04-24) -- "Because it was There"
+Copyright (C) 2026 The R Foundation for Statistical Computing
+Platform: aarch64-apple-darwin23
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # ================================================================
+> # Task 35 - Direction-split agreement and precision / recall
+> # Date: Sep 3, 2026
+> #
+> # Closes plan.md step 7b item 3, raised in the 2026-08-28 supervisor
+> # review and restated in REVIEW.md Q11.
+> #
+> # THE COMPLAINT
+> #
+> # results.md section 6 compares the flagging methods with Cohen's
+> # kappa and with agreement conditional on being flagged by either.
+> # Both collapse a 3 x 3 outcome - hypo / none / hyper - into
+> # flagged / not, which throws away the most informative case. Two
+> # methods that flag the same cell in OPPOSITE directions are counted
+> # as agreeing under a flagged/not view, and as a plain disagreement
+> # under kappa. They should be counted as the strongest possible
+> # disagreement, because one of them must be wrong.
+> #
+> # Kappa is also unreliable here: with >95% zeros it is dominated by
+> # the marginal flag rates and moves for reasons unrelated to
+> # agreement (REVIEW.md Q11).
+> #
+> # WHAT THIS DOES INSTEAD
+> #
+> # The full 3 x 3 contingency for every method pair, then:
+> #
+> #   jaccard.pos / jaccard.neg   agreement computed within one
+> #                               direction at a time, so a hyper
+> #                               agreement is never propped up by a
+> #                               hypo one
+> #   opposite                    cells where A says +1 and B says -1,
+> #                               or the reverse. Reported as a share
+> #                               of the cells either method flagged.
+> #   precision / recall          taking `ext` as the designated
+> #                               reference, as the review asked:
+> #                               precision = of the cells method A
+> #                               flags, what share does ext flag in
+> #                               the SAME direction; recall = of the
+> #                               cells ext flags, what share does A
+> #                               recover. Direction is required to
+> #                               match, so a hyper-for-hypo swap
+> #                               counts against both.
+> #
+> # All of it per methylation state as well as pooled, and at both
+> # scales - the 100-CpG window from the email and the whole
+> # chromosome - because section 6's numbers are window-only and the
+> # window is not representative (results.md section 5).
+> #
+> # Every method except `ext` is a within-cohort rule at n = 53 and so
+> # is degenerate by construction (README, "the self-reference
+> # degeneracy"). The numbers below are still worth having: they say
+> # HOW the methods disagree, which is a different question from
+> # whether any of them is right.
+> # ================================================================
+> 
+> options(stringsAsFactors = FALSE)
+> 
+> pick_dir <- function(...) { for (d in c(...)) if (dir.exists(d)) return(d)
++   stop("no candidate directory exists") }
+> src_dir <- pick_dir(
++   "/home/s_s355/research3.data/TCGA/filter.BRCA.UCEC.Aug17.2022/sorted.TCGA.380355cg.files",
++   path.expand("~/Downloads/tcga_brca_380355cg"))
+> repo_dir <- pick_dir("/mmfs1/home/wln26/Experiments.Outlier.July31.2026",
++                      path.expand("~/Desktop/bioinformatics-research"))
+> out_dir <- file.path(repo_dir, "Results")
+> 
+> inputs <- list(
++   Normal = file.path(src_dir, "Sorted.BRCA.53Alive.Normal.380355cg.75col.May28.2026.txt"),
++   Tumor  = file.path(src_dir, "Sorted.BRCA.53Alive.Tumor.380355cg.75col.May28.2026.txt"))
+> flags <- list(
++   Normal = list(self = file.path(out_dir, "Task13_Normal_selfref_flags.csv"),
++                 ext  = file.path(out_dir, "Task13_Normal_extref_flags.csv")),
++   Tumor  = list(self = file.path(out_dir, "Task13_Tumor_selfref_flags.csv"),
++                 ext  = file.path(out_dir, "Task13_Tumor_extref_flags.csv")))
+> 
+> N_WINDOW <- 100
+> P_LEVEL <- 0.01
+> STATE_ORDER <- c("L", "LM", "M", "HM", "H", "R")
+> 
+> has_dt <- requireNamespace("data.table", quietly = TRUE)
+> read_any <- function(p, tab = FALSE) {
++   if (has_dt) as.data.frame(data.table::fread(p, showProgress = FALSE,
++       sep = if (tab) "\t" else ",", header = TRUE, check.names = FALSE))
++   else if (tab) read.table(p, header = TRUE, sep = "\t", check.names = FALSE)
++   else read.csv(p, check.names = FALSE)
++ }
+> write_out <- function(tbl, f) {
++   p <- file.path(out_dir, f); write.csv(tbl, p, row.names = FALSE)
++   cat("  written: ", p, "  (", nrow(tbl), " rows)\n", sep = "")
++ }
+> 
+> # ---------------------------------------------------------------
+> # the state-aware rule, and its leave-one-out variant.
+> #
+> # LOO is vectorised via one sort per row rather than 53 quantile()
+> # calls per row - the naive form is ~360,000 calls on chr22 and takes
+> # minutes. The k-th order statistic of "everyone except sample j" is
+> # S[k] when k < rank(j) and S[k+1] otherwise, so the type-7 quantile
+> # over the other 52 is two lookups and a lerp. Same numbers.
+> # ---------------------------------------------------------------
+> build_bio <- function(B, st, loo = FALSE) {
++   n <- ncol(B); m <- n - 1L
++   o <- matrix(0L, nrow(B), ncol(B), dimnames = dimnames(B))
++   elig <- which(st %in% c("L", "LM", "H", "HM"))
++   for (i in elig) {
++     v <- as.numeric(B[i, ])
++     if (all(is.na(v))) { o[i, ] <- NA; next }
++     hi <- st[i] %in% c("L", "LM")
++     p  <- if (hi) 1 - P_LEVEL else P_LEVEL
++     if (!loo) {
++       thr <- quantile(v, p, na.rm = TRUE, names = FALSE)
++       o[i, ] <- if (hi) as.integer(v > thr) else -as.integer(v < thr)
++     } else {
++       if (anyNA(v)) { o[i, ] <- NA; next }   # a LOO threshold from a
++       S <- sort(v)                            # different n is not comparable
++       R <- rank(v, ties.method = "first")
++       ostat <- function(k, j) { k <- min(max(k, 1L), m)
++         S[if (k < R[j]) k else k + 1L] }
++       h <- (m - 1) * p + 1; lo <- floor(h); fr <- h - lo
++       for (j in seq_len(n)) {
++         a <- ostat(lo, j)
++         thr <- if (fr == 0) a else a + fr * (ostat(lo + 1L, j) - a)
++         o[i, j] <- if (hi) as.integer(v[j] > thr) else -as.integer(v[j] < thr)
++       }
++     }
++     o[i, is.na(v)] <- NA
++   }
++   o[is.na(B)] <- NA
++   o
++ }
+> 
+> score_pair <- function(A, Bm, label_a, label_b, tissue, scope, stratum) {
++   ok <- !is.na(A) & !is.na(Bm)
++   a <- A[ok]; b <- Bm[ok]
++   n <- length(a)
++   if (!n) return(NULL)
++   cnt <- function(x, y) sum(a == x & b == y)
++   n_pp <- cnt(1, 1); n_nn <- cnt(-1, -1)
++   n_pn <- cnt(1, -1); n_np <- cnt(-1, 1)
++   n_p0 <- cnt(1, 0);  n_0p <- cnt(0, 1)
++   n_n0 <- cnt(-1, 0); n_0n <- cnt(0, -1)
++   a_pos <- sum(a == 1); a_neg <- sum(a == -1)
++   b_pos <- sum(b == 1); b_neg <- sum(b == -1)
++   either <- sum(a != 0 | b != 0)
++   jac <- function(both, ua, ub) { u <- ua + ub - both
++     if (!u) NA_real_ else round(both / u, 4) }
++   data.frame(
++     tissue = tissue, scope = scope, stratum = stratum,
++     method.a = label_a, method.b = label_b,
++     n.compared = n,
++     a.pos1 = a_pos, a.neg1 = a_neg, b.pos1 = b_pos, b.neg1 = b_neg,
++     # --- the 3x3, the cells that matter ---
++     both.pos1 = n_pp, both.neg1 = n_nn,
++     opposite.a.pos.b.neg = n_pn, opposite.a.neg.b.pos = n_np,
++     a.pos.b.zero = n_p0, a.zero.b.pos = n_0p,
++     a.neg.b.zero = n_n0, a.zero.b.neg = n_0n,
++     # --- agreement, one direction at a time ---
++     jaccard.pos = jac(n_pp, a_pos, b_pos),
++     jaccard.neg = jac(n_nn, a_neg, b_neg),
++     n.either = either,
++     pct.opposite.of.either = if (either) round(100 * (n_pn + n_np) / either, 3) else NA_real_,
++     # --- b treated as the reference ---
++     precision = if (a_pos + a_neg) round((n_pp + n_nn) / (a_pos + a_neg), 4) else NA_real_,
++     recall    = if (b_pos + b_neg) round((n_pp + n_nn) / (b_pos + b_neg), 4) else NA_real_,
++     precision.pos = if (a_pos) round(n_pp / a_pos, 4) else NA_real_,
++     recall.pos    = if (b_pos) round(n_pp / b_pos, 4) else NA_real_,
++     precision.neg = if (a_neg) round(n_nn / a_neg, 4) else NA_real_,
++     recall.neg    = if (b_neg) round(n_nn / b_neg, 4) else NA_real_)
++ }
+> 
+> cat("=========================================================\n")
+=========================================================
+> cat("TASK 35 - DIRECTION-SPLIT AGREEMENT, ext AS THE REFERENCE\n")
+TASK 35 - DIRECTION-SPLIT AGREEMENT, ext AS THE REFERENCE
+> cat("=========================================================\n\n")
+=========================================================
+
+> 
+> rows <- list()
+> 
+> for (tissue in c("Normal", "Tumor")) {
++   cat("#########################################################\n")
++   cat("### ", tissue, "\n", sep = "")
++   cat("#########################################################\n\n")
++ 
++   cols <- paste0(substr(tissue, 1, 1), 1:53)
++ 
++   nrm <- read_any(inputs$Normal, tab = TRUE)
++   n22 <- nrm[nrm$Chromosome == "chr22", ]; n22 <- n22[order(n22$Start), ]
++   win_ids <- n22$Composite.Element.REF[seq_len(N_WINDOW)]
++   rm(nrm, n22); invisible(gc())
++ 
++   d <- read_any(inputs[[tissue]], tab = TRUE)
++   d <- d[d$Chromosome == "chr22", ]; d <- d[order(d$Start), ]
++   ids <- d$Composite.Element.REF
++   B_all <- as.matrix(d[, cols, drop = FALSE]); storage.mode(B_all) <- "numeric"
++   rownames(B_all) <- ids; colnames(B_all) <- cols
++   st_all <- d$methy.state; rm(d); invisible(gc())
++ 
++   get_flag <- function(which) {
++     fx <- read_any(flags[[tissue]][[which]])
++     M <- as.matrix(fx[match(ids, fx$cgID), cols, drop = FALSE])
++     storage.mode(M) <- "numeric"; dimnames(M) <- list(ids, cols); M
++   }
++   self_all <- get_flag("self"); ext_all <- get_flag("ext"); invisible(gc())
++ 
++   for (scope in c("window", "chr22")) {
++     idx <- if (scope == "window") match(win_ids, ids) else seq_along(ids)
++     idx <- idx[!is.na(idx)]
++     B <- B_all[idx, , drop = FALSE]; st <- st_all[idx]
++     M <- list(bio     = build_bio(B, st, FALSE),
++               bio.loo = build_bio(B, st, TRUE),
++               self    = self_all[idx, , drop = FALSE],
++               ext     = ext_all[idx, , drop = FALSE])
++ 
++     cat("--- scope = ", scope, "  (", nrow(B), " sites)\n", sep = "")
++     pairs <- list(c("bio","ext"), c("bio.loo","ext"), c("self","ext"),
++                   c("bio","self"), c("bio","bio.loo"))
++     for (pr in pairs) {
++       for (s in c("ALL", STATE_ORDER)) {
++         k <- if (s == "ALL") seq_along(st) else which(st == s)
++         if (!length(k)) next
++         r <- score_pair(M[[pr[1]]][k, , drop = FALSE],
++                         M[[pr[2]]][k, , drop = FALSE],
++                         pr[1], pr[2], tissue, scope, s)
++         if (!is.null(r)) rows[[length(rows) + 1]] <- r
++       }
++       # the ALL row for this pair is the one printed
++       rall <- Filter(function(z) z$method.a == pr[1] && z$method.b == pr[2] &&
++                        z$stratum == "ALL" && z$scope == scope &&
++                        z$tissue == tissue, rows)[[1]]
++       cat(sprintf("   %-8s vs %-5s  jaccard +1 %-7s  -1 %-7s  opposite %5.2f%% of either  |  precision %-7s recall %-7s\n",
++           pr[1], pr[2],
++           format(rall$jaccard.pos), format(rall$jaccard.neg),
++           rall$pct.opposite.of.either,
++           format(rall$precision), format(rall$recall)))
++     }
++     cat("\n")
++     rm(M); invisible(gc())
++   }
++   rm(B_all, self_all, ext_all); invisible(gc())
++ }
+#########################################################
+### Normal
+#########################################################
+
+--- scope = window  (100 sites)
+   bio      vs ext    jaccard +1 0.049    -1 0.1188   opposite  0.00% of either  |  precision 0.2429  recall 0.1133 
+   bio.loo  vs ext    jaccard +1 0.0541   -1 0.1207   opposite  0.00% of either  |  precision 0.2062  recall 0.1333 
+   self     vs ext    jaccard +1 0.3028   -1 0.2443   opposite  0.00% of either  |  precision 0.3788  recall 0.5    
+   bio      vs self   jaccard +1 0.22     -1 0.49     opposite  0.00% of either  |  precision 1       recall 0.355  
+   bio      vs bio.loo  jaccard +1 0.6667   -1 0.7424   opposite  0.00% of either  |  precision 1       recall 0.7172 
+
+--- scope = chr22  (6809 sites)
+   bio      vs ext    jaccard +1 0.1727   -1 0.0755   opposite  0.00% of either  |  precision 0.3136  recall 0.1787 
+   bio.loo  vs ext    jaccard +1 0.2058   -1 0.0817   opposite  0.00% of either  |  precision 0.2908  recall 0.2336 
+   self     vs ext    jaccard +1 0.2951   -1 0.2436   opposite  0.00% of either  |  precision 0.372   recall 0.498  
+   bio      vs self   jaccard +1 0.4688   -1 0.3741   opposite  0.00% of either  |  precision 1       recall 0.4214 
+   bio      vs bio.loo  jaccard +1 0.698    -1 0.7258   opposite  0.00% of either  |  precision 1       recall 0.7101 
+
+#########################################################
+### Tumor
+#########################################################
+
+--- scope = window  (100 sites)
+   bio      vs ext    jaccard +1 0.0312   -1 0.0204   opposite  0.00% of either  |  precision 0.8824  recall 0.0231 
+   bio.loo  vs ext    jaccard +1 0.0373   -1 0.0275   opposite  0.00% of either  |  precision 0.8298  recall 0.0301 
+   self     vs ext    jaccard +1 0.2029   -1 0.0833   opposite  0.00% of either  |  precision 0.7727  recall 0.1181 
+   bio      vs self   jaccard +1 0.15     -1 0.2      opposite  0.00% of either  |  precision 1       recall 0.175  
+   bio      vs bio.loo  jaccard +1 0.7895   -1 0.6897   opposite  0.00% of either  |  precision 1       recall 0.7292 
+
+--- scope = chr22  (6809 sites)
+   bio      vs ext    jaccard +1 0.0575   -1 0.0492   opposite  0.00% of either  |  precision 0.4788  recall 0.0576 
+   bio.loo  vs ext    jaccard +1 0.0731   -1 0.0608   opposite  0.00% of either  |  precision 0.4581  recall 0.0742 
+   self     vs ext    jaccard +1 0.186    -1 0.1988   opposite  0.00% of either  |  precision 0.6194  recall 0.2169 
+   bio      vs self   jaccard +1 0.3755   -1 0.2975   opposite  0.00% of either  |  precision 1       recall 0.3365 
+   bio      vs bio.loo  jaccard +1 0.7392   -1 0.7493   opposite  0.00% of either  |  precision 1       recall 0.7436 
+
+> 
+> tb <- do.call(rbind, rows); rownames(tb) <- NULL
+> write_out(tb, "Task35_DirectionalAgreement.csv")
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task35_DirectionalAgreement.csv  (140 rows)
+> 
+> cat("\n---- opposite-direction calls ----\n")
+
+---- opposite-direction calls ----
+> cat("total cells where one method says +1 and the other -1, over every pair,\n")
+total cells where one method says +1 and the other -1, over every pair,
+> cat("scale, tissue and state above: ",
++     sum(tb$opposite.a.pos.b.neg) + sum(tb$opposite.a.neg.b.pos), "\n", sep = "")
+scale, tissue and state above: 0
+> cat("This is a structural zero, not a coincidence. `bio` only ever flags in\n")
+This is a structural zero, not a coincidence. `bio` only ever flags in
+> cat("the direction the state permits. `self` flags the cohort max and min, so\n")
+the direction the state permits. `self` flags the cohort max and min, so
+> cat("for `self` and `ext` to disagree in direction the whole cohort would have\n")
+for `self` and `ext` to disagree in direction the whole cohort would have
+> cat("to sit past an external threshold - and Task 22 found no CpG where more\n")
+to sit past an external threshold - and Task 22 found no CpG where more
+> cat("than 11 of 53 samples flag. So the methods never contradict each other on\n")
+than 11 of 53 samples flag. So the methods never contradict each other on
+> cat("direction; they differ entirely in WHICH cells they flag at all. Under a\n")
+direction; they differ entirely in WHICH cells they flag at all. Under a
+> cat("flagged/not view that distinction is invisible, which is why the review\n")
+flagged/not view that distinction is invisible, which is why the review
+> cat("asked for this split.\n")
+asked for this split.
+> 
+> cat("\n---- bio vs ext, chr22, by state: where do they disagree? ----\n")
+
+---- bio vs ext, chr22, by state: where do they disagree? ----
+> z <- tb[tb$method.a == "bio" & tb$method.b == "ext" & tb$scope == "chr22" &
++         tb$stratum != "ALL",
++         c("tissue","stratum","a.pos1","a.neg1","b.pos1","b.neg1",
++           "both.pos1","both.neg1","opposite.a.pos.b.neg","opposite.a.neg.b.pos",
++           "jaccard.pos","jaccard.neg","precision","recall")]
+> print(z, row.names = FALSE)
+ tissue stratum a.pos1 a.neg1 b.pos1 b.neg1 both.pos1 both.neg1
+ Normal       L   2158      0   1880   1894       903         0
+ Normal      LM    835      0    724    771       360         0
+ Normal       M      0      0    231    282         0         0
+ Normal      HM      0   1606   1313    706         0       348
+ Normal       H      0    899   1127    156         0       113
+ Normal       R      0      0    310    254         0         0
+  Tumor       L   1767      0   1845   1977       806         0
+  Tumor      LM    683      0   2148   1217       546         0
+  Tumor       M      0      0    534    477         0         0
+  Tumor      HM      0   1380   5474   2574         0       670
+  Tumor       H      0    604   1278    195         0       101
+  Tumor       R      0      0  11145   8025         0         0
+ opposite.a.pos.b.neg opposite.a.neg.b.pos jaccard.pos jaccard.neg precision
+                    0                    0      0.2880      0.0000    0.4184
+                    0                    0      0.3003      0.0000    0.4311
+                    0                    0      0.0000      0.0000        NA
+                    0                    0      0.0000      0.1772    0.2167
+                    0                    0      0.0000      0.1200    0.1257
+                    0                    0      0.0000      0.0000        NA
+                    0                    0      0.2872      0.0000    0.4561
+                    0                    0      0.2389      0.0000    0.7994
+                    0                    0      0.0000      0.0000        NA
+                    0                    0      0.0000      0.2040    0.4855
+                    0                    0      0.0000      0.1447    0.1672
+                    0                    0      0.0000      0.0000        NA
+ recall
+ 0.2393
+ 0.2408
+ 0.0000
+ 0.1724
+ 0.0881
+ 0.0000
+ 0.2109
+ 0.1623
+ 0.0000
+ 0.0833
+ 0.0686
+ 0.0000
+> 
+> cat("\n=========================================================\n")
+
+=========================================================
+> cat("TASK 35 COMPLETE\n")
+TASK 35 COMPLETE
+> cat("=========================================================\n")
+=========================================================
+> 
+> proc.time()
+   user  system elapsed 
+  8.802   1.613   8.577 
