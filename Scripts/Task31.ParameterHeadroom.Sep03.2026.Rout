@@ -1,0 +1,695 @@
+
+R version 4.6.0 (2026-04-24) -- "Because it was There"
+Copyright (C) 2026 The R Foundation for Statistical Computing
+Platform: aarch64-apple-darwin23
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # ================================================================
+> # Task 31 - Can the OutlierMeth parameters be tuned out of trouble?
+> # Date: Sep 3, 2026
+> #
+> # THE QUESTION (2026-09-03 email, "Literature review" item 1)
+> #
+> #   "Check to see if you can adjust the 'parameter' setting to get
+> #    results. Currently, the 'ext' reference-based methods seem to
+> #    be very sensitive in identifying outliers."
+> #
+> # OutlierMeth exposes exactly two knobs (Packages/OutlierMeth/R):
+> #
+> #   reference  one of four packaged panels - tcga, geo, all, blood
+> #   p          one of four significance levels - 0.01, 0.001,
+> #              0.0001, 0.00001, which select the pre-computed
+> #              columns P<p> / N<p> in the panel
+> #
+> #   flagMeth(beta, reference, p):  +1 iff beta > P<p>,  -1 iff beta < N<p>
+> #
+> # There is nothing else. No magnitude argument, no per-sample call,
+> # no multiple-testing control (see Docs/LITERATURE.md).
+> #
+> # ---------------------------------------------------------------
+> # WHY THIS CAN BE ANSWERED WITHOUT tcga.rda
+> #
+> # tcga.rda is not available on this machine, so P0.001 cannot be
+> # read off the panel. It does not need to be. The four p levels are
+> # quantiles of one distribution, so
+> #
+> #     P0.01 <= P0.001 <= P0.0001 <= P0.00001
+> #
+> # and the flag set is therefore MONOTONE AND NESTED in p: lowering p
+> # can only raise the threshold, which can only remove flags, and the
+> # flags it removes are always the ones closest to the threshold.
+> # At each CpG the survivors under any stricter p are exactly a
+> # prefix of that CpG's currently-flagged cells sorted by beta.
+> #
+> # So the entire family of outcomes reachable by tuning p can be
+> # enumerated from the p = 0.01 flag matrix alone, by keeping the top
+> # r flags per CpG for r = 1, 2, 3, ... The r = 1 case is the
+> # strictest setting that still flags anything at all - a lower bound
+> # on sensitivity and an UPPER bound on achievable effect size.
+> #
+> # If the r = 1 magnitudes at H and L sites are still trivial, then no
+> # choice of p fixes the problem, and that is a statement about the
+> # method rather than about this particular panel.
+> #
+> # ---------------------------------------------------------------
+> # PART A - the ceiling
+> #   For each state: how much beta space is there between the cohort
+> #   median and the boundary the state pushes against? A hyper flag
+> #   at a site whose median is 0.96 can never exceed |dbeta| = 0.04,
+> #   whatever p is set to. This is the hard ceiling on effect size,
+> #   and it is a property of the state, not of the threshold.
+> #
+> # PART B - the p envelope
+> #   Sweep r = all, 5, 3, 2, 1 and report flags retained and the
+> #   magnitude distribution of the survivors, per state.
+> #
+> # PART C - deltMeth and relMeth
+> #   The package already computes beta - threshold (deltMeth) and
+> #   (beta - P)/(1 - P) (relMeth). deltMeth is one line away from the
+> #   magnitude floor this project has been arguing for. relMeth is
+> #   the opposite: it divides by the remaining head-room, which is
+> #   0.037 at H sites, so it INFLATES exactly the flags that should be
+> #   discounted. Both are quantified here because both ship in the
+> #   package and a user could reasonably reach for either.
+> # ================================================================
+> 
+> options(stringsAsFactors = FALSE)
+> set.seed(20260903)
+> 
+> pick_dir <- function(...) { for (d in c(...)) if (dir.exists(d)) return(d)
++   stop("no candidate directory exists") }
+> src_dir <- pick_dir(
++   "/home/s_s355/research3.data/TCGA/filter.BRCA.UCEC.Aug17.2022/sorted.TCGA.380355cg.files",
++   path.expand("~/Downloads/tcga_brca_380355cg"))
+> repo_dir <- pick_dir("/mmfs1/home/wln26/Experiments.Outlier.July31.2026",
++                      path.expand("~/Desktop/bioinformatics-research"))
+> out_dir <- file.path(repo_dir, "Results")
+> 
+> inputs <- list(
++   Normal = file.path(src_dir, "Sorted.BRCA.53Alive.Normal.380355cg.75col.May28.2026.txt"),
++   Tumor  = file.path(src_dir, "Sorted.BRCA.53Alive.Tumor.380355cg.75col.May28.2026.txt"))
+> flag_ext <- list(
++   Normal = file.path(out_dir, "Task13_Normal_extref_flags.csv"),
++   Tumor  = file.path(out_dir, "Task13_Tumor_extref_flags.csv"))
+> 
+> STATE_ORDER <- c("L", "LM", "M", "HM", "H", "R")
+> R_GRID <- c(NA, 5L, 3L, 2L, 1L)      # NA = keep all (p = 0.01 as run)
+> FLOORS <- c(0.05, 0.10, 0.15, 0.20)
+> 
+> has_dt <- requireNamespace("data.table", quietly = TRUE)
+> read_any <- function(p, tab = FALSE) {
++   if (has_dt) as.data.frame(data.table::fread(p, showProgress = FALSE,
++       sep = if (tab) "\t" else ",", header = TRUE, check.names = FALSE))
++   else if (tab) read.table(p, header = TRUE, sep = "\t", check.names = FALSE)
++   else read.csv(p, check.names = FALSE)
++ }
+> write_out <- function(tbl, f) {
++   p <- file.path(out_dir, f); write.csv(tbl, p, row.names = FALSE)
++   cat("  written: ", p, "  (", nrow(tbl), " rows)\n", sep = "")
++ }
+> 
+> cat("=========================================================\n")
+=========================================================
+> cat("TASK 31 - PARAMETER HEADROOM IN OutlierMeth\n")
+TASK 31 - PARAMETER HEADROOM IN OutlierMeth
+> cat("=========================================================\n\n")
+=========================================================
+
+> 
+> ceil_rows <- list(); env_rows <- list(); rel_rows <- list()
+> 
+> for (tissue in c("Normal", "Tumor")) {
++ 
++   cat("#########################################################\n")
++   cat("### ", tissue, "   (chr22, 6,809 CpGs x 53 samples)\n", sep = "")
++   cat("#########################################################\n\n")
++ 
++   cols <- paste0(substr(tissue, 1, 1), 1:53)
++   d <- read_any(inputs[[tissue]], tab = TRUE)
++   d <- d[d$Chromosome == "chr22", ]; d <- d[order(d$Start), ]
++   ids <- d$Composite.Element.REF
++   B <- as.matrix(d[, cols, drop = FALSE]); storage.mode(B) <- "numeric"
++   st <- d$methy.state; rm(d); invisible(gc())
++ 
++   fx <- read_any(flag_ext[[tissue]])
++   F <- as.matrix(fx[match(ids, fx$cgID), cols, drop = FALSE])
++   storage.mode(F) <- "numeric"; rm(fx); invisible(gc())
++ 
++   med <- apply(B, 1, median, na.rm = TRUE)
++   dev <- abs(B - med)
++ 
++   # ---------------- PART A : the ceiling --------------------
++   # head-room above / below the cohort median at each site, and how
++   # many cells could EVER clear a given floor there.
++   cat("PART A - effect-size ceiling per state\n")
++   cat("  room.up   = 1 - cohort median  (largest possible hyper |dbeta| at that site)\n")
++   cat("  room.down =     cohort median  (largest possible hypo  |dbeta|)\n")
++   cat("  cells.over.0.10 = share of ALL cells at that state already >= 0.10 from their median\n\n")
++   for (s in STATE_ORDER) {
++     k <- which(st == s); if (!length(k)) next
++     ru <- 1 - med[k]; rd <- med[k]
++     dv <- dev[k, , drop = FALSE]
++     row <- data.frame(
++       tissue = tissue, methy.state = s, sites = length(k),
++       median.cohort.beta = round(median(med[k], na.rm = TRUE), 4),
++       room.up = round(median(ru, na.rm = TRUE), 4),
++       room.down = round(median(rd, na.rm = TRUE), 4),
++       pct.sites.roomup.under.0.10 = round(100 * mean(ru < 0.10, na.rm = TRUE), 1),
++       pct.sites.roomdown.under.0.10 = round(100 * mean(rd < 0.10, na.rm = TRUE), 1),
++       cells.over.0.05 = round(100 * mean(dv >= 0.05, na.rm = TRUE), 2),
++       cells.over.0.10 = round(100 * mean(dv >= 0.10, na.rm = TRUE), 2),
++       cells.over.0.15 = round(100 * mean(dv >= 0.15, na.rm = TRUE), 2))
++     ceil_rows[[length(ceil_rows) + 1]] <- row
++     cat(sprintf("   %-3s sites=%5d  median beta=%.3f  room up=%.3f down=%.3f  | cells >=0.05: %5.2f%%  >=0.10: %5.2f%%  >=0.15: %5.2f%%\n",
++         s, length(k), row$median.cohort.beta, row$room.up, row$room.down,
++         row$cells.over.0.05, row$cells.over.0.10, row$cells.over.0.15))
++   }
++ 
++   # ---------------- PART B : the p envelope -----------------
++   # keep the top r flags per CpG per direction; r = 1 is the
++   # strictest reachable non-empty setting.
++   cat("\nPART B - what any setting of p could give\n")
++   cat("  r = number of flags kept per CpG per direction; r=1 is the strictest\n")
++   cat("  non-empty threshold reachable by lowering p. Magnitudes are |beta - cohort median|.\n\n")
++ 
++   keep_top <- function(F, B, r) {
++     if (is.na(r)) return(F)
++     O <- matrix(0L, nrow(F), ncol(F))
++     for (i in seq_len(nrow(F))) {
++       fl <- F[i, ]; if (all(is.na(fl))) { O[i, ] <- NA; next }
++       b <- B[i, ]
++       up <- which(!is.na(fl) & fl == 1)
++       if (length(up)) { o <- up[order(b[up], decreasing = TRUE)]
++                         O[i, head(o, r)] <- 1L }
++       dn <- which(!is.na(fl) & fl == -1)
++       if (length(dn)) { o <- dn[order(b[dn], decreasing = FALSE)]
++                         O[i, head(o, r)] <- -1L }
++       O[i, is.na(fl)] <- NA
++     }
++     O
++   }
++ 
++   for (r in R_GRID) {
++     O <- keep_top(F, B, r)
++     lab <- if (is.na(r)) "all (p=0.01 as run)" else sprintf("top %d per CpG", r)
++     tot <- sum(O != 0, na.rm = TRUE)
++     cat("  r = ", lab, ":  ", tot, " flags total\n", sep = "")
++     for (s in STATE_ORDER) {
++       k <- which(st == s); if (!length(k)) next
++       Os <- O[k, , drop = FALSE]; dv <- dev[k, , drop = FALSE]
++       # Split by direction. Pooling them is misleading at L and H: the
++       # two directions have wildly different head-room there (at L,
++       # 0.027 down and 0.973 up), so a change in the hyper/hypo MIX
++       # moves the pooled median without any flag changing magnitude.
++       for (dsel in list(list(lab = "both", m = Os != 0),
++                         list(lab = "+1",   m = Os ==  1),
++                         list(lab = "-1",   m = Os == -1))) {
++         sel <- !is.na(Os) & dsel$m & !is.na(dv)
++         n <- sum(sel); mg <- dv[sel]
++         env_rows[[length(env_rows) + 1]] <- data.frame(
++           tissue = tissue, keep.top.per.cpg = if (is.na(r)) NA_integer_ else r,
++           setting = lab, methy.state = s, direction = dsel$lab, flags = n,
++           flag.rate.pct = round(100 * n / max(1, sum(!is.na(Os))), 4),
++           median.abs.dbeta = if (n) round(median(mg), 4) else NA_real_,
++           p90.abs.dbeta = if (n) round(quantile(mg, .9, names = FALSE), 4) else NA_real_,
++           max.abs.dbeta = if (n) round(max(mg), 4) else NA_real_,
++           pct.under.0.05 = if (n) round(100 * mean(mg < 0.05), 1) else NA_real_,
++           pct.under.0.10 = if (n) round(100 * mean(mg < 0.10), 1) else NA_real_,
++           surviving.floor.0.10 = if (n) sum(mg >= 0.10) else 0L,
++           surviving.floor.0.15 = if (n) sum(mg >= 0.15) else 0L)
++         if (s %in% c("L", "H", "R") && dsel$lab != "both")
++           cat(sprintf("       %-3s %-2s n=%6d  median|db|=%.4f  p90=%.4f  max=%.4f  under 0.10: %5.1f%%\n",
++               s, dsel$lab, n, if (n) median(mg) else NA,
++               if (n) quantile(mg,.9,names=FALSE) else NA,
++               if (n) max(mg) else NA, if (n) 100*mean(mg < 0.10) else NA))
++       }
++     }
++   }
++ 
++   # ---------------- PART C : deltMeth vs relMeth ------------
++   # reconstruct P and N from the flag matrix (Task 22 Part A) so the
++   # package's own two magnitude measures can be computed here.
++   cat("\nPART C - the package's own magnitude functions\n")
++   P <- N <- rep(NA_real_, nrow(B))
++   for (i in seq_len(nrow(B))) {
++     b <- B[i, ]; fl <- F[i, ]; if (all(is.na(fl))) next
++     up <- which(fl == 1); dn <- which(fl == -1); ze <- which(fl == 0)
++     loP <- if (length(c(ze, dn))) max(b[c(ze, dn)], na.rm = TRUE) else NA_real_
++     hiP <- if (length(up)) min(b[up], na.rm = TRUE) else NA_real_
++     if (is.finite(loP) && is.finite(hiP)) P[i] <- (loP + hiP) / 2
++     loN <- if (length(dn)) max(b[dn], na.rm = TRUE) else NA_real_
++     hiN <- if (length(c(ze, up))) min(b[c(ze, up)], na.rm = TRUE) else NA_real_
++     if (is.finite(loN) && is.finite(hiN)) N[i] <- (loN + hiN) / 2
++   }
++   cat("  thresholds recovered for ", sum(is.finite(P)), " CpGs (hyper) and ",
++       sum(is.finite(N)), " (hypo) of ", nrow(B), "\n", sep = "")
++ 
++   for (s in STATE_ORDER) {
++     k <- which(st == s); if (!length(k)) next
++     up <- which(!is.na(F[k, , drop = FALSE]) & F[k, , drop = FALSE] == 1, arr.ind = TRUE)
++     if (!nrow(up)) next
++     Bs <- B[k, , drop = FALSE]; Ps <- P[k]
++     b  <- Bs[up]; pp <- Ps[up[, 1]]
++     ok <- is.finite(b) & is.finite(pp)
++     if (!any(ok)) next
++     delt <- b[ok] - pp[ok]                    # deltMeth
++     rel  <- delt / (1 - pp[ok])               # relMeth
++     rel_rows[[length(rel_rows) + 1]] <- data.frame(
++       tissue = tissue, methy.state = s, hyper.flags = sum(ok),
++       median.threshold.P = round(median(pp[ok]), 4),
++       median.headroom.1minusP = round(median(1 - pp[ok]), 4),
++       median.deltMeth = round(median(delt), 4),
++       median.relMeth = round(median(rel), 4),
++       inflation.rel.over.delt = round(median(rel) / max(1e-9, median(delt)), 1),
++       pct.deltMeth.under.0.05 = round(100 * mean(delt < 0.05), 1),
++       pct.relMeth.under.0.05 = round(100 * mean(rel < 0.05), 1))
++     cat(sprintf("   %-3s hyper n=%6d  P=%.3f  1-P=%.3f  deltMeth=%.4f  relMeth=%.4f  (relMeth inflates %.0fx)\n",
++         s, sum(ok), median(pp[ok]), median(1 - pp[ok]),
++         median(delt), median(rel), median(rel) / max(1e-9, median(delt))))
++   }
++ 
++   cat("\n")
++   rm(B, F, dev); invisible(gc())
++ }
+#########################################################
+### Normal   (chr22, 6,809 CpGs x 53 samples)
+#########################################################
+
+PART A - effect-size ceiling per state
+  room.up   = 1 - cohort median  (largest possible hyper |dbeta| at that site)
+  room.down =     cohort median  (largest possible hypo  |dbeta|)
+  cells.over.0.10 = share of ALL cells at that state already >= 0.10 from their median
+
+   L   sites= 2211  median beta=0.027  room up=0.973 down=0.027  | cells >=0.05:  3.16%  >=0.10:  0.79%  >=0.15:  0.04%
+   LM  sites=  981  median beta=0.118  room up=0.881 down=0.118  | cells >=0.05: 25.37%  >=0.10:  9.52%  >=0.15:  4.18%
+   M   sites=  762  median beta=0.498  room up=0.502 down=0.498  | cells >=0.05: 41.25%  >=0.10: 14.34%  >=0.15:  5.01%
+   HM  sites= 1648  median beta=0.805  room up=0.195 down=0.805  | cells >=0.05: 33.06%  >=0.10: 10.65%  >=0.15:  3.75%
+   H   sites=  899  median beta=0.934  room up=0.066 down=0.934  | cells >=0.05:  3.78%  >=0.10:  0.24%  >=0.15:  0.02%
+   R   sites=  308  median beta=0.480  room up=0.520 down=0.480  | cells >=0.05: 62.75%  >=0.10: 36.62%  >=0.15: 21.30%
+
+PART B - what any setting of p could give
+  r = number of flags kept per CpG per direction; r=1 is the strictest
+  non-empty threshold reachable by lowering p. Magnitudes are |beta - cohort median|.
+
+  r = all (p=0.01 as run):  9648 flags total
+       L   +1 n=  1880  median|db|=0.0897  p90=0.1266  max=0.1831  under 0.10:  64.5%
+       L   -1 n=  1894  median|db|=0.0135  p90=0.0276  max=0.1225  under 0.10:  99.8%
+       H   +1 n=  1127  median|db|=0.0281  p90=0.0519  max=0.0956  under 0.10: 100.0%
+       H   -1 n=   156  median|db|=0.0780  p90=0.1300  max=0.1749  under 0.10:  81.4%
+       R   +1 n=   310  median|db|=0.3135  p90=0.4991  max=0.6982  under 0.10:   0.3%
+       R   -1 n=   254  median|db|=0.2081  p90=0.4120  max=0.7515  under 0.10:   7.5%
+  r = top 5 per CpG:  9573 flags total
+       L   +1 n=  1880  median|db|=0.0897  p90=0.1266  max=0.1831  under 0.10:  64.5%
+       L   -1 n=  1878  median|db|=0.0135  p90=0.0277  max=0.1225  under 0.10:  99.8%
+       H   +1 n=  1116  median|db|=0.0282  p90=0.0521  max=0.0956  under 0.10: 100.0%
+       H   -1 n=   155  median|db|=0.0781  p90=0.1302  max=0.1749  under 0.10:  81.3%
+       R   +1 n=   305  median|db|=0.3167  p90=0.4999  max=0.6982  under 0.10:   0.3%
+       R   -1 n=   245  median|db|=0.2100  p90=0.4189  max=0.7515  under 0.10:   6.9%
+  r = top 3 per CpG:  8952 flags total
+       L   +1 n=  1870  median|db|=0.0898  p90=0.1266  max=0.1831  under 0.10:  64.4%
+       L   -1 n=  1720  median|db|=0.0135  p90=0.0282  max=0.1225  under 0.10:  99.8%
+       H   +1 n=  1011  median|db|=0.0287  p90=0.0533  max=0.0956  under 0.10: 100.0%
+       H   -1 n=   153  median|db|=0.0782  p90=0.1308  max=0.1749  under 0.10:  81.0%
+       R   +1 n=   284  median|db|=0.3254  p90=0.5043  max=0.6982  under 0.10:   0.4%
+       R   -1 n=   203  median|db|=0.2191  p90=0.4334  max=0.7515  under 0.10:   5.4%
+  r = top 2 per CpG:  7521 flags total
+       L   +1 n=  1527  median|db|=0.0914  p90=0.1287  max=0.1831  under 0.10:  62.0%
+       L   -1 n=  1476  median|db|=0.0134  p90=0.0290  max=0.1225  under 0.10:  99.8%
+       H   +1 n=   855  median|db|=0.0292  p90=0.0544  max=0.0956  under 0.10: 100.0%
+       H   -1 n=   146  median|db|=0.0788  p90=0.1334  max=0.1749  under 0.10:  80.1%
+       R   +1 n=   229  median|db|=0.3288  p90=0.5135  max=0.6982  under 0.10:   0.0%
+       R   -1 n=   162  median|db|=0.2271  p90=0.4382  max=0.7515  under 0.10:   4.3%
+  r = top 1 per CpG:  4805 flags total
+       L   +1 n=   903  median|db|=0.0939  p90=0.1345  max=0.1831  under 0.10:  57.4%
+       L   -1 n=   977  median|db|=0.0134  p90=0.0299  max=0.1225  under 0.10:  99.8%
+       H   +1 n=   536  median|db|=0.0308  p90=0.0572  max=0.0956  under 0.10: 100.0%
+       H   -1 n=   113  median|db|=0.0789  p90=0.1347  max=0.1749  under 0.10:  79.6%
+       R   +1 n=   136  median|db|=0.3421  p90=0.5228  max=0.6982  under 0.10:   0.0%
+       R   -1 n=    99  median|db|=0.2429  p90=0.4397  max=0.7515  under 0.10:   3.0%
+
+PART C - the package's own magnitude functions
+  thresholds recovered for 2744 CpGs (hyper) and 2061 (hypo) of 6809
+   L   hyper n=  1880  P=0.100  1-P=0.900  deltMeth=0.0236  relMeth=0.0265  (relMeth inflates 1x)
+   LM  hyper n=   724  P=0.207  1-P=0.793  deltMeth=0.0476  relMeth=0.0624  (relMeth inflates 1x)
+   M   hyper n=   231  P=0.673  1-P=0.327  deltMeth=0.0236  relMeth=0.0689  (relMeth inflates 3x)
+   HM  hyper n=  1313  P=0.907  1-P=0.093  deltMeth=0.0097  relMeth=0.1100  (relMeth inflates 11x)
+   H   hyper n=  1127  P=0.963  1-P=0.037  deltMeth=0.0022  relMeth=0.0746  (relMeth inflates 34x)
+   R   hyper n=   310  P=0.750  1-P=0.250  deltMeth=0.0399  relMeth=0.2051  (relMeth inflates 5x)
+
+#########################################################
+### Tumor   (chr22, 6,809 CpGs x 53 samples)
+#########################################################
+
+PART A - effect-size ceiling per state
+  room.up   = 1 - cohort median  (largest possible hyper |dbeta| at that site)
+  room.down =     cohort median  (largest possible hypo  |dbeta|)
+  cells.over.0.10 = share of ALL cells at that state already >= 0.10 from their median
+
+   L   sites= 1803  median beta=0.027  room up=0.973 down=0.027  | cells >=0.05:  3.51%  >=0.10:  0.69%  >=0.15:  0.03%
+   LM  sites=  754  median beta=0.073  room up=0.927 down=0.073  | cells >=0.05: 24.72%  >=0.10: 11.60%  >=0.15:  6.07%
+   M   sites=  131  median beta=0.484  room up=0.516 down=0.484  | cells >=0.05: 58.20%  >=0.10: 31.11%  >=0.15: 14.84%
+   HM  sites= 1421  median beta=0.863  room up=0.137 down=0.863  | cells >=0.05: 32.29%  >=0.10: 13.24%  >=0.15:  6.45%
+   H   sites=  605  median beta=0.943  room up=0.058 down=0.943  | cells >=0.05:  3.34%  >=0.10:  0.28%  >=0.15:  0.01%
+   R   sites= 2095  median beta=0.542  room up=0.458 down=0.542  | cells >=0.05: 65.21%  >=0.10: 43.84%  >=0.15: 29.26%
+
+PART B - what any setting of p could give
+  r = number of flags kept per CpG per direction; r=1 is the strictest
+  non-empty threshold reachable by lowering p. Magnitudes are |beta - cohort median|.
+
+  r = all (p=0.01 as run):  36889 flags total
+       L   +1 n=  1845  median|db|=0.0813  p90=0.1195  max=0.1793  under 0.10:  73.8%
+       L   -1 n=  1977  median|db|=0.0138  p90=0.0267  max=0.1006  under 0.10:  99.9%
+       H   +1 n=  1278  median|db|=0.0288  p90=0.0489  max=0.0985  under 0.10: 100.0%
+       H   -1 n=   195  median|db|=0.0745  p90=0.1147  max=0.1545  under 0.10:  80.0%
+       R   +1 n= 11145  median|db|=0.2159  p90=0.4747  max=0.9525  under 0.10:  17.6%
+       R   -1 n=  8025  median|db|=0.2105  p90=0.4302  max=0.9260  under 0.10:  17.4%
+  r = top 5 per CpG:  23445 flags total
+       L   +1 n=  1813  median|db|=0.0819  p90=0.1199  max=0.1793  under 0.10:  73.3%
+       L   -1 n=  1833  median|db|=0.0139  p90=0.0272  max=0.1006  under 0.10:  99.9%
+       H   +1 n=  1098  median|db|=0.0297  p90=0.0503  max=0.0985  under 0.10: 100.0%
+       H   -1 n=   184  median|db|=0.0772  p90=0.1167  max=0.1545  under 0.10:  78.8%
+       R   +1 n=  5587  median|db|=0.2857  p90=0.5574  max=0.9525  under 0.10:   7.9%
+       R   -1 n=  4339  median|db|=0.2954  p90=0.4914  max=0.9260  under 0.10:   6.3%
+  r = top 3 per CpG:  17878 flags total
+       L   +1 n=  1627  median|db|=0.0833  p90=0.1217  max=0.1793  under 0.10:  71.6%
+       L   -1 n=  1576  median|db|=0.0138  p90=0.0277  max=0.1006  under 0.10:  99.9%
+       H   +1 n=   899  median|db|=0.0299  p90=0.0522  max=0.0985  under 0.10: 100.0%
+       H   -1 n=   167  median|db|=0.0791  p90=0.1184  max=0.1545  under 0.10:  76.6%
+       R   +1 n=  3877  median|db|=0.3030  p90=0.5879  max=0.9525  under 0.10:   7.6%
+       R   -1 n=  3189  median|db|=0.3243  p90=0.5251  max=0.9260  under 0.10:   6.6%
+  r = top 2 per CpG:  13649 flags total
+       L   +1 n=  1311  median|db|=0.0847  p90=0.1243  max=0.1793  under 0.10:  69.4%
+       L   -1 n=  1297  median|db|=0.0137  p90=0.0280  max=0.1006  under 0.10:  99.9%
+       H   +1 n=   717  median|db|=0.0297  p90=0.0544  max=0.0985  under 0.10: 100.0%
+       H   -1 n=   145  median|db|=0.0816  p90=0.1201  max=0.1545  under 0.10:  74.5%
+       R   +1 n=  2792  median|db|=0.3133  p90=0.6058  max=0.9525  under 0.10:   7.4%
+       R   -1 n=  2411  median|db|=0.3439  p90=0.5518  max=0.9260  under 0.10:   6.9%
+  r = top 1 per CpG:  8000 flags total
+       L   +1 n=   806  median|db|=0.0863  p90=0.1302  max=0.1793  under 0.10:  65.4%
+       L   -1 n=   842  median|db|=0.0135  p90=0.0282  max=0.1006  under 0.10:  99.9%
+       H   +1 n=   427  median|db|=0.0293  p90=0.0565  max=0.0985  under 0.10: 100.0%
+       H   -1 n=   101  median|db|=0.0859  p90=0.1206  max=0.1545  under 0.10:  69.3%
+       R   +1 n=  1533  median|db|=0.3293  p90=0.6382  max=0.9525  under 0.10:   7.1%
+       R   -1 n=  1409  median|db|=0.3723  p90=0.5946  max=0.9260  under 0.10:   7.4%
+
+PART C - the package's own magnitude functions
+  thresholds recovered for 4530 CpGs (hyper) and 3470 (hypo) of 6809
+   L   hyper n=  1845  P=0.096  1-P=0.904  deltMeth=0.0154  relMeth=0.0173  (relMeth inflates 1x)
+   LM  hyper n=  2148  P=0.182  1-P=0.818  deltMeth=0.0684  relMeth=0.0885  (relMeth inflates 1x)
+   M   hyper n=   534  P=0.603  1-P=0.397  deltMeth=0.0431  relMeth=0.1148  (relMeth inflates 3x)
+   HM  hyper n=  5474  P=0.896  1-P=0.104  deltMeth=0.0134  relMeth=0.1387  (relMeth inflates 10x)
+   H   hyper n=  1278  P=0.955  1-P=0.045  deltMeth=0.0038  relMeth=0.0959  (relMeth inflates 25x)
+   R   hyper n= 11145  P=0.587  1-P=0.413  deltMeth=0.0734  relMeth=0.2217  (relMeth inflates 3x)
+
+> 
+> write_out(do.call(rbind, ceil_rows), "Task31_EffectSizeCeiling.csv")
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task31_EffectSizeCeiling.csv  (12 rows)
+> write_out(do.call(rbind, env_rows),  "Task31_PEnvelope.csv")
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task31_PEnvelope.csv  (180 rows)
+> write_out(do.call(rbind, rel_rows),  "Task31_DeltVsRelMeth.csv")
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task31_DeltVsRelMeth.csv  (12 rows)
+> 
+> cat("\n---- bottom line: the strictest reachable p (r = 1) ----\n")
+
+---- bottom line: the strictest reachable p (r = 1) ----
+> ev <- do.call(rbind, env_rows)
+> print(ev[!is.na(ev$keep.top.per.cpg) & ev$keep.top.per.cpg == 1 &
++            ev$direction != "both",
++          c("tissue","methy.state","direction","flags","median.abs.dbeta",
++            "max.abs.dbeta","pct.under.0.10","surviving.floor.0.10")],
++       row.names = FALSE)
+ tissue methy.state direction flags median.abs.dbeta max.abs.dbeta
+ Normal           L        +1   903           0.0939        0.1831
+ Normal           L        -1   977           0.0134        0.1225
+ Normal          LM        +1   360           0.2047        0.5405
+ Normal          LM        -1   385           0.0508        0.3865
+ Normal           M        +1   118           0.2009        0.4228
+ Normal           M        -1   139           0.1330        0.3922
+ Normal          HM        +1   691           0.1033        0.3854
+ Normal          HM        -1   348           0.1740        0.4474
+ Normal           H        +1   536           0.0308        0.0956
+ Normal           H        -1   113           0.0789        0.1749
+ Normal           R        +1   136           0.3421        0.6982
+ Normal           R        -1    99           0.2429        0.7515
+  Tumor           L        +1   806           0.0863        0.1793
+  Tumor           L        -1   842           0.0135        0.1006
+  Tumor          LM        +1   546           0.2794        0.5782
+  Tumor          LM        -1   381           0.0394        0.2464
+  Tumor           M        +1    88           0.2397        0.3825
+  Tumor           M        -1    67           0.2234        0.3552
+  Tumor          HM        +1  1130           0.0786        0.3136
+  Tumor          HM        -1   670           0.2903        0.5698
+  Tumor           H        +1   427           0.0293        0.0985
+  Tumor           H        -1   101           0.0859        0.1545
+  Tumor           R        +1  1533           0.3293        0.9525
+  Tumor           R        -1  1409           0.3723        0.9260
+ pct.under.0.10 surviving.floor.0.10
+           57.4                  385
+           99.8                    2
+            0.6                  358
+           79.0                   81
+            7.6                  109
+           19.4                  112
+           47.2                  365
+           10.1                  313
+          100.0                    0
+           79.6                   23
+            0.0                  136
+            3.0                   96
+           65.4                  279
+           99.9                    1
+            0.2                  545
+           76.1                   91
+            1.1                   87
+            1.5                   66
+           65.2                  393
+            0.7                  665
+          100.0                    0
+           69.3                   31
+            7.1                 1424
+            7.4                 1305
+> 
+> cat("\n---- the same cells at p = 0.01 as actually run, for contrast ----\n")
+
+---- the same cells at p = 0.01 as actually run, for contrast ----
+> print(ev[is.na(ev$keep.top.per.cpg) & ev$direction != "both",
++          c("tissue","methy.state","direction","flags","median.abs.dbeta",
++            "pct.under.0.10","surviving.floor.0.10")], row.names = FALSE)
+ tissue methy.state direction flags median.abs.dbeta pct.under.0.10
+ Normal           L        +1  1880           0.0897           64.5
+ Normal           L        -1  1894           0.0135           99.8
+ Normal          LM        +1   724           0.1746            4.1
+ Normal          LM        -1   771           0.0472           81.8
+ Normal           M        +1   231           0.1782            7.8
+ Normal           M        -1   282           0.1187           28.7
+ Normal          HM        +1  1313           0.0976           51.6
+ Normal          HM        -1   706           0.1513           16.4
+ Normal           H        +1  1127           0.0281          100.0
+ Normal           H        -1   156           0.0780           81.4
+ Normal           R        +1   310           0.3135            0.3
+ Normal           R        -1   254           0.2081            7.5
+  Tumor           L        +1  1845           0.0813           73.8
+  Tumor           L        -1  1977           0.0138           99.9
+  Tumor          LM        +1  2148           0.1931           13.5
+  Tumor          LM        -1  1217           0.0445           78.8
+  Tumor           M        +1   534           0.1440           26.6
+  Tumor           M        -1   477           0.1210           36.7
+  Tumor          HM        +1  5474           0.0631           77.8
+  Tumor          HM        -1  2574           0.2135           11.5
+  Tumor           H        +1  1278           0.0288          100.0
+  Tumor           H        -1   195           0.0745           80.0
+  Tumor           R        +1 11145           0.2159           17.6
+  Tumor           R        -1  8025           0.2105           17.4
+ surviving.floor.0.10
+                  668
+                    4
+                  694
+                  140
+                  213
+                  201
+                  636
+                  590
+                    0
+                   29
+                  309
+                  235
+                  484
+                    1
+                 1858
+                  258
+                  392
+                  302
+                 1215
+                 2278
+                    0
+                   39
+                 9178
+                 6628
+> 
+> cat("\n=========================================================\n")
+
+=========================================================
+> cat("TASK 31 COMPLETE\n")
+TASK 31 COMPLETE
+> cat("=========================================================\n")
+=========================================================
+> 
+> # ================================================================
+> # PART D - how many of the four p levels are actually distinct?
+> #
+> # This is arithmetic on the packaged panels, not on our data, and it
+> # turned out to be the single most important thing in Task 31.
+> #
+> # referenceMeth() builds every threshold with the plain R call
+> #   quantile(x, 1 - p, na.rm = TRUE)
+> # which is type 7: the value sits at position h = (n-1)(1-p) + 1 in
+> # the sorted reference, interpolating between order statistics
+> # floor(h) and floor(h)+1. So level p is an actual estimate of a
+> # tail only when n is large enough for h to fall clear of the top of
+> # the sample - roughly n >= 1/p + 2. Below that, the "threshold" is
+> # the reference MAXIMUM with a small interpolation, and successive p
+> # levels differ by a fraction of the gap between the two most
+> # extreme reference samples.
+> #
+> # This is the identical order-statistic degeneracy that README
+> # documents for the n = 53 self-reference arm. What was not
+> # previously noticed is that it also bites the EXTERNAL arm at the
+> # strict end, because none of the packaged panels is large enough:
+> #
+> #   tcga   747 samples, 21 tissue types   (this project's reference)
+> #   geo  1,268 samples, 15 tissue types
+> #   all  2,015 samples, 25 tissue types   (tcga + geo)
+> #   blood  656 samples, whole blood
+> #
+> # Sample counts are from Downs, Thursby & Cope 2023, Epigenetics
+> # 18(1):2213874. Note that 2,015 is the COMBINED "all" panel; this
+> # project loads tcga.rda and calls flagMeth(..., reference = tcga),
+> # so its reference is the 747-sample one.
+> # ================================================================
+> 
+> cat("\n\n=========================================================\n")
+
+
+=========================================================
+> cat("TASK 31 PART D - ARE THE FOUR p LEVELS DISTINCT?\n")
+TASK 31 PART D - ARE THE FOUR p LEVELS DISTINCT?
+> cat("=========================================================\n\n")
+=========================================================
+
+> 
+> PANELS <- c(tcga = 747, geo = 1268, all = 2015, blood = 656, `self(n=53)` = 53)
+> PLEVELS <- c(0.01, 0.001, 0.0001, 0.00001)
+> 
+> plev_rows <- list()
+> cat(sprintf("%-12s %6s %10s %12s %14s %16s %s\n", "panel", "n", "p",
++             "position h", "interpolates", "rank from top", "expected n above"))
+panel             n          p   position h   interpolates    rank from top expected n above
+> for (nm in names(PANELS)) {
++   n <- PANELS[[nm]]
++   for (p in PLEVELS) {
++     h <- (n - 1) * (1 - p) + 1
++     lo <- floor(h)
++     rank_top <- n - lo
++     usable <- n >= (1 / p) + 2
++     plev_rows[[length(plev_rows) + 1]] <- data.frame(
++       panel = nm, n.reference = n, p = p,
++       position.h = round(h, 3),
++       order.stats.spanned = sprintf("%d-%d", lo, min(lo + 1L, n)),
++       rank.from.top = rank_top,
++       expected.n.above = round(n * p, 3),
++       distinct.from.max = usable)
++     cat(sprintf("%-12s %6d %10g %12.2f %14s %16d %16.3f%s\n",
++         nm, n, p, h, sprintf("%d-%d", lo, min(lo + 1L, n)),
++         rank_top, n * p, if (usable) "" else "   <- pinned to the top"))
++   }
++ }
+tcga            747       0.01       739.54        739-740                8            7.470
+tcga            747      0.001       746.25        746-747                1            0.747   <- pinned to the top
+tcga            747     0.0001       746.93        746-747                1            0.075   <- pinned to the top
+tcga            747      1e-05       746.99        746-747                1            0.007   <- pinned to the top
+geo            1268       0.01      1255.33      1255-1256               13           12.680
+geo            1268      0.001      1266.73      1266-1267                2            1.268
+geo            1268     0.0001      1267.87      1267-1268                1            0.127   <- pinned to the top
+geo            1268      1e-05      1267.99      1267-1268                1            0.013   <- pinned to the top
+all            2015       0.01      1994.86      1994-1995               21           20.150
+all            2015      0.001      2012.99      2012-2013                3            2.015
+all            2015     0.0001      2014.80      2014-2015                1            0.202   <- pinned to the top
+all            2015      1e-05      2014.98      2014-2015                1            0.020   <- pinned to the top
+blood           656       0.01       649.45        649-650                7            6.560
+blood           656      0.001       655.35        655-656                1            0.656   <- pinned to the top
+blood           656     0.0001       655.93        655-656                1            0.066   <- pinned to the top
+blood           656      1e-05       655.99        655-656                1            0.007   <- pinned to the top
+self(n=53)       53       0.01        52.48          52-53                1            0.530   <- pinned to the top
+self(n=53)       53      0.001        52.95          52-53                1            0.053   <- pinned to the top
+self(n=53)       53     0.0001        52.99          52-53                1            0.005   <- pinned to the top
+self(n=53)       53      1e-05        53.00          52-53                1            0.001   <- pinned to the top
+> pl <- do.call(rbind, plev_rows); rownames(pl) <- NULL
+> write_out(pl, "Task31_PLevelResolution.csv")
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task31_PLevelResolution.csv  (20 rows)
+> 
+> cat("\nsmallest reference n at which each p level clears the top two order statistics:\n")
+
+smallest reference n at which each p level clears the top two order statistics:
+> for (p in PLEVELS) {
++   n <- 3L; while (floor((n - 1) * (1 - p) + 1) > n - 2L) n <- n + 1L
++   cat(sprintf("   p = %-8g  needs n >= %6d   (largest packaged panel is 2,015)\n", p, n))
++ }
+   p = 0.01      needs n >=    102   (largest packaged panel is 2,015)
+   p = 0.001     needs n >=   1002   (largest packaged panel is 2,015)
+   p = 0.0001    needs n >=  10002   (largest packaged panel is 2,015)
+   p = 1e-05     needs n >= 100002   (largest packaged panel is 2,015)
+> 
+> cat("\nCONSEQUENCE\n")
+
+CONSEQUENCE
+> cat("  With reference = tcga (n = 747), which is what this project ran:\n")
+  With reference = tcga (n = 747), which is what this project ran:
+> cat("    p = 0.01     -> the 8th largest of 747. A real tail estimate.\n")
+    p = 0.01     -> the 8th largest of 747. A real tail estimate.
+> cat("    p = 0.001    -> between the 746th and 747th, i.e. between the two\n")
+    p = 0.001    -> between the 746th and 747th, i.e. between the two
+> cat("                    most extreme reference samples.\n")
+                    most extreme reference samples.
+> cat("    p = 0.0001   -> 93%% of the way from the 746th to the 747th.\n")
+    p = 0.0001   -> 93%% of the way from the 746th to the 747th.
+> cat("    p = 0.00001  -> 99%% of the way. Indistinguishable from p = 0.0001.\n")
+    p = 0.00001  -> 99%% of the way. Indistinguishable from p = 0.0001.
+> cat("  So the p argument offers TWO usable settings on this panel, not four,\n")
+  So the p argument offers TWO usable settings on this panel, not four,
+> cat("  and the strict end is the reference maximum however it is spelled.\n")
+  and the strict end is the reference maximum however it is spelled.
+> cat("  Even the largest packaged panel (all, n = 2,015) reaches only the 3rd\n")
+  Even the largest packaged panel (all, n = 2,015) reaches only the 3rd
+> cat("  largest at p = 0.001 and is pinned to the top at 0.0001 and below.\n")
+  largest at p = 0.001 and is pinned to the top at 0.0001 and below.
+> cat("  Combined with Part B - where even the strictest reachable threshold\n")
+  Combined with Part B - where even the strictest reachable threshold
+> cat("  leaves H-site hyper flags 100%% below |dbeta| = 0.10 - the answer to\n")
+  leaves H-site hyper flags 100%% below |dbeta| = 0.10 - the answer to
+> cat("  \"can the parameters be adjusted to fix this\" is no.\n")
+  "can the parameters be adjusted to fix this" is no.
+> 
+> cat("\n=========================================================\n")
+
+=========================================================
+> cat("TASK 31 PART D COMPLETE\n")
+TASK 31 PART D COMPLETE
+> cat("=========================================================\n")
+=========================================================
+> 
+> proc.time()
+   user  system elapsed 
+  4.603   0.681   4.613 
