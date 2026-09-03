@@ -256,9 +256,38 @@ same way — κ 0.21 / agreement 12.2% in Normal, κ 0.11 / 6.8% in Tumour — w
 is why the conclusion stands. The wording now says the methods *operationalise
 outliers differently* rather than that they are "close to independent".
 
-**Not yet done:** direction-specific agreement (do they agree on `+1` and `−1`
-separately?) and precision/recall against a designated reference method. Both
-are cheap; added to `plan.md`.
+**Update 2026-09-03 — done, Task 35, `results.md` §15.** The full 3 × 3
+contingency for five method pairs, at both scales, in both tissues, per state
+and pooled.
+
+The headline is a structural zero: across every pair, scale, tissue and state,
+there is **not one cell** where one method calls `+1` and another calls `−1`.
+`bio` only ever flags in the direction its state permits, and for `self` and
+`ext` to disagree in direction the entire cohort would have to sit past an
+external threshold — which Task 22 ruled out. So the disagreement §6 documents
+is entirely about *which cells get flagged at all*, never about which way. That
+is a cleaner statement of the result than κ gives, and it is exactly what a
+flagged/not view hides.
+
+Precision and recall against `ext` as the designated reference, direction
+required to match, chr22, all states pooled:
+
+| tissue | method | precision | recall | Jaccard `+1` | Jaccard `−1` |
+|---|---|---|---|---|---|
+| Normal | `bio` | 0.314 | 0.179 | 0.173 | 0.076 |
+| Normal | `self` | 0.372 | 0.498 | 0.295 | 0.244 |
+| Tumour | `bio` | 0.479 | 0.058 | 0.058 | 0.049 |
+| Tumour | `self` | 0.619 | 0.217 | 0.186 | 0.199 |
+
+No method recovers half of `ext`'s calls, and none is right more than 62% of
+the time when it flags — under the assumption that `ext` is the reference,
+which Q9b gives ample reason to doubt.
+
+One caveat this makes explicit: `bio` produces **no** `−1` calls at `L`/`LM` and
+no `+1` at `H`/`HM` by definition, so its directional Jaccard against `ext` in
+those cells is 0 by construction, not by measurement. That is the definitional
+difference `plan.md`'s closing question 2 asks the supervisor to settle, and it
+is now visible in the table rather than buried in a pooled statistic.
 
 ## Q12. Are chr22 conclusions representative genome-wide?
 
@@ -275,9 +304,29 @@ all 380,355 CpGs (`Results/Task26_GenomeWideMagnitude.csv`):
 
 Reproduces to within about a percentage point.
 
-**Still chr22-only:** the threshold-geometry table and the noise-stability
-experiment (§7). This limitation now appears beside those results, not only in
-Next Steps.
+**Update 2026-09-03 — now fully genome-wide, Task 33, `results.md` §14.** The
+threshold-geometry table, the noise-stability experiment, the effect-size
+ceiling and the `p` envelope have all been repeated on 380,355 CpGs.
+
+| quantity | chr22 | genome-wide |
+|---|---|---|
+| flag density in the constrained direction, `H` sites, Normal | 171× | 169.8× |
+| share of `H` flags that are `+1`, Normal | 87.8% | 88.0% |
+| `H` cells ≥ 0.10 from their site median, Normal | 0.24% | 0.225% |
+| flags lost at noise sd = 0.01, Normal | 21.4% | 21.0% |
+
+**One thing did not replicate and is stated rather than buried.** Tumour is far
+more stable genome-wide than on chr22 — 7.4% of flags lost at sd = 0.01 against
+27.9% — because the genome-wide tumour flag set is dominated by `R` sites, which
+have room to move and sit further from their thresholds. That is consistent with
+the mechanism rather than against it: the instability is a property of the
+compressed states, so a flag set weighted towards `R` inherits less of it. But
+"the flags are unstable" now needs the state qualifier attached whenever it is
+said of tumour.
+
+The new headline number is genome-wide: **of the 154,810 contrary flags the
+external reference makes at `H` and `L` sites in normal tissue, 134 — 0.087% —
+correspond to a beta shift of 0.10 or more**, against 98.7% of `R`-site flags.
 
 ## Q13. Were normal and tumour methylation states assigned independently?
 

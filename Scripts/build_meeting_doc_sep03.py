@@ -365,6 +365,53 @@ k.figure("Fig8_PEnvelope.png",
 k.para("**In one sentence: p changes how many flags you get, and never how big "
        "they are.**")
 
+doc.add_heading("3.3  And this is not a chromosome-22 result", 2)
+
+k.para("Everything above was measured on chromosome 22. Repeating it on all "
+       "380,355 sites gives the same answer, with the numbers now large enough "
+       "to state bluntly:")
+
+d33 = load("Task33_GenomeWide_PEnvelope.csv")
+
+
+def gw(tissue, state, direction):
+    return next(x for x in d33 if x["tissue"] == tissue
+                and x["methy.state"] == state and x["direction"] == direction
+                and x["keep.top.per.cpg"] == "NA")
+
+
+rows = []
+for tis, disp in (("Normal", "normal"), ("Tumor", "tumour")):
+    h, l, r = gw(tis, "H", "hyper"), gw(tis, "L", "hypo"), gw(tis, "R", "hyper")
+    tot = int(h["flags"]) + int(l["flags"])
+    sur = int(h["surviving.floor.0.10"]) + int(l["surviving.floor.0.10"])
+    rows.append([disp, "H and L, contrary direction", "{:,}".format(tot),
+                 "**{:,}**".format(sur), "**%.3f%%**" % (100.0 * sur / tot)])
+    rows.append(["", "R sites, hyper (for contrast)",
+                 "{:,}".format(int(r["flags"])),
+                 "{:,}".format(int(r["surviving.floor.0.10"])),
+                 "%.1f%%" % (100.0 * int(r["surviving.floor.0.10"])
+                             / int(r["flags"]))])
+k.table(["tissue", "flags", "how many", "clear a 0.10 shift", "share"], rows,
+        widths=[0.9, 2.2, 1.0, 1.2, 1.0], highlight_rows=(0, 2))
+k.source("all 380,355 CpGs · Results/Task33_GenomeWide_PEnvelope.csv · "
+         "Scripts/Task33.GenomeWideHeadroom.Sep03.2026.R")
+
+k.callout("The single clearest number in the project",
+ "**Of the 154,810 flags the external reference makes against the state at H and "
+ "L sites across the whole array in normal tissue, 134 — 0.087% — correspond to "
+ "a methylation change of 0.10 or more.** In tumour it is 56 of 142,166. At R "
+ "sites, where the methylation level leaves room to move, 98.7% of flags clear "
+ "the same bar.\n\n"
+ "The threshold geometry replicates too: at H sites the flag density per unit of "
+ "available scale is 169.8 times higher in the constrained direction genome-wide, "
+ "against 171 on chromosome 22, and 88.0% of H-site flags are “too high” against "
+ "87.8%.\n\n"
+ "And the plainest form of the whole argument: **at L sites, where every sample "
+ "is unmethylated, the external reference calls almost exactly as many samples "
+ "abnormally low as abnormally high — 85,932 against 88,635 — inside a window "
+ "0.022 wide.**", 'FDF0F0')
+
 k.pagebreak()
 
 # ============================ 4 ============================
@@ -604,11 +651,16 @@ k.numbered("**Probe masking, and what to expect from it.** It is still blocking 
            "flags rather than remove them, because the concentrating sites are "
            "concentrated for a geometric reason. Both the before and after "
            "numbers should be reported.")
-k.numbered("**Per-sample burden.** N15, N17, N14 and now N48 lead at every "
-           "scale. Batch, detection-p, tumour purity and cell composition all "
-           "remain unexcluded, and a published outlier-burden study found burden "
-           "strongly confounded by exactly those. Until they are excluded, "
-           "per-sample burden cannot be interpreted.")
+k.numbered("**Per-sample burden — and it is now harder to dismiss.** N15, N17, "
+           "N14 and now N48 lead at every scale, and applying the 0.10 floor "
+           "genome-wide leaves the top six in exactly the same order "
+           "(Spearman 0.910). So their burden is not an artifact of the "
+           "measurement scale. One sample separates out — N27 falls from 7th to "
+           "28th, keeping 10.7% of its flags — which shows the floor is not "
+           "simply thinning everything uniformly. Batch, detection-p, tumour "
+           "purity and cell composition all remain unexcluded, and a published "
+           "outlier-burden study found burden strongly confounded by exactly "
+           "those. This result raises the stakes on excluding them.")
 
 doc.add_heading("Appendix — where every number comes from", 1)
 k.para("Each script has a matching console transcript in Scripts/. Tables "
@@ -624,6 +676,9 @@ k.table(["§", "script", "output"],
   ["4", "— (LITERATURE.md, sources cited there)", "—"],
   ["5", "Task32.ImprovedFlagging.Sep03.2026.R",
    "Task32_MeasuredNoise / _FloorsApplied / _ImprovedMethodScores.csv"],
+  ["3.3, 6", "Task33.GenomeWideHeadroom.Sep03.2026.R",
+   "Task33_GenomeWide_EffectSizeCeiling / _PEnvelope / _ThresholdGeometry / "
+   "_FlagStability / _SampleBurdenFloor.csv"],
   ["figs", "Task34.Figures.Sep03.2026.R", "Results/Fig8–Fig12*.png"]],
  widths=[0.4, 2.6, 3.3], font=8.5)
 

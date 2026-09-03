@@ -130,26 +130,36 @@ This is not housekeeping. Two current results depend on it:
   region of chr22's acrocentric short arm, repetitive and poorly mapped. A
   seven-probe hypermethylation run there is exactly what a mapping artifact
   looks like. Until masked, it cannot be reported as an epimutation.
-- The samples carrying the most burden (N15, N17, N14) may be carrying probe
+- The samples carrying the most burden (N15, N17, N14, N48) may be carrying probe
   failures rather than methylation.
 
 The Task 20 annotation already checks CpG-island and SNV overlap for contrary
 flags; in the tight window both came back zero. Extend it chromosome-wide and
 add the masking lists.
 
-## 3. Confirm the magnitude result outside chr22
+## 3. ~~Confirm the magnitude result outside chr22~~ — DONE 2026-09-03
 
-**The main result rests on one chromosome.**
+Task 26 did the magnitude table genome-wide on 2026-08-28. Task 33 has now done
+the rest: the effect-size ceiling, the `p` envelope, the threshold geometry and
+the noise-stability test, all on 380,355 CpGs in both tissues. Everything
+replicates (`results.md` §14):
 
-Task 21's magnitude table is chr22 only (6,809 CpGs). The Task 13 flag
-matrices already cover all 380,355 sites for both references and both tissues,
-so this is a straight extension of Task 21 Part E — no new flagging, just a
-wider denominator. Report median |Δβ| and the fraction under 0.05 / 0.10 /
-0.15 per state, genome-wide, both tissues.
+- `H`-site flag density in the constrained direction 169.8× genome-wide against
+  171× on chr22; 88.0% of `H` flags `+1` against 87.8%.
+- Of 154,810 contrary flags at `H` and `L` sites in normal tissue, **134 clear a
+  0.10 floor — 0.087%** — against 98.7% of `R`-site flags.
+- Normal stability reproduces (21.0% of flags lost at sd = 0.01 against 21.4%).
 
-If the pattern holds at 380k sites it is a general property of percentile
-thresholding on beta values, which is a much stronger claim than a chr22
-observation.
+**One thing did not replicate, and it is worth understanding rather than
+burying.** Tumour is far more stable genome-wide than on chr22 — 7.4% of flags
+lost against 27.9% — because the genome-wide tumour flag set is dominated by
+`R` sites, which have room to move and therefore sit further from their
+thresholds. The instability is a property of the compressed states, so a flag
+set weighted towards `R` inherits less of it. Consistent with everything else,
+but it means "flags are unstable" needs the state qualifier attached whenever
+it is stated for tumour.
+
+**Nothing in §7 or §12 now rests on one chromosome.**
 
 ## 3b. ~~Get a real noise estimate instead of a simulated one~~ — DONE 2026-09-03
 
@@ -195,12 +205,19 @@ Task 32 ran a head-to-head of five floor variants at one flag rate. Summary:
 The flat 0.10 floor on `|beta − cohort median|` wins in both tissues.
 `epimutacions` uses 0.15; the 0.10–0.15 gap is small (`REVIEW.md` Q9).
 
-**Still to do: the per-sample question.** Whether N15/N17/N14 stay on top once
-trivial flags are removed has not been run. If they do, their burden is real;
-if they collapse, it was heteroscedasticity all along. Task 29 gives a partial
-hint — over the 100-CpG window's contrary flags the leaders are N15, N48 and
-N17, so N48 needs adding to the list of samples to explain — but the
-chromosome-wide burden ranking under a floor has not been recomputed.
+**The per-sample question is now answered — Task 33 Part E.** In normal tissue
+the ranking survives intact: the top six by raw burden are the top six by
+floored burden in the same order (N15, N17, N14, N48, N31, N34), Spearman
+0.910, 41% of flags retained. So the leaders' burden is **not**
+heteroscedasticity, which makes step 6 more urgent rather than less. One sample
+does collapse — N27 falls from rank 7 to rank 28, keeping 10.7% of its flags —
+which is useful evidence that the floor is not simply thinning uniformly.
+
+Tumour reshuffles more (Spearman 0.973 overall, but T17 falls 2 → 8 and T16
+4 → 12 while T38 rises 5 → 2). Quote the floored ranking for tumour.
+
+N48 is confirmed as a genuine fourth leader, not a window artefact: it ranks
+4th of 53 on chr22 and 4th genome-wide.
 
 **Do not spend time on M-values.** Task 24 tested them: a median ± k·MAD rule
 on M-values is the least stable of seven methods benchmarked at matched flag
@@ -227,9 +244,12 @@ a fixed 1 kb gap — the gap is defensible but arbitrary, and roughly 10% of
 
 ## 6. Test what drives the per-sample burden
 
-N15, N17 and N14 lead at every scale in both tissues (Spearman 0.761 Normal /
-0.843 Tumour between chr22 external burden and genome-wide self burden). That
-is a global sample property and it is currently unexplained. The candidates,
+N15, N17, N14 and N48 lead at every scale in both tissues (Spearman 0.761
+Normal / 0.843 Tumour between chr22 external burden and genome-wide self
+burden). That is a global sample property and it is currently unexplained —
+and Task 33 Part E has now ruled out the cheapest explanation, since the
+ranking survives a 0.10 magnitude floor intact (Spearman 0.910, same top six in
+the same order). Whatever drives it, it is not heteroscedasticity. The candidates,
 in the order they should be excluded:
 
 1. **Technical** — array batch, plate, scan date, detection-p failure rate,
@@ -290,13 +310,14 @@ Four items remain open.
    (no CpG flags more than 11 of 53 samples), but that is not comparability.
    This is the largest un-addressed threat to the external arm.
 
-3. **Add direction-specific agreement and precision/recall to §6.** Cohen's
-   kappa is unreliable under >95% zeros. Task 20 already writes the full
-   contingency counts, so this is an aggregation over existing output: do the
-   methods agree on `+1` and `−1` separately, and what is precision/recall
-   against a designated reference method? Task 32 adds one direction-aware
-   metric (`pct.contrary`, the share of a method's flags running against the
-   site's state) but not the pairwise direction-split agreement this asks for.
+3. ~~**Add direction-specific agreement and precision/recall to §6.**~~ Done —
+   Task 35, written up as `results.md` §15. The headline is a structural zero:
+   across every pair, scale, tissue and state there is **not one cell** where
+   one method says `+1` and another says `−1`. The methods never contradict each
+   other about direction; they differ entirely in which cells they flag at all.
+   Precision and recall against `ext` are now reported per direction and per
+   state — no method recovers half of `ext`'s calls, and none is right more than
+   62% of the time when it flags.
 
 4. **Uniform provenance blocks.** Every table names its output CSV and every
    CSV has one producing script with a `.Rout` transcript, but the review asked
@@ -317,10 +338,13 @@ chr22. The magnitude result is now genome-wide; these two are not.
    should either become the second recommended rule or be explicitly retired;
    leaving it as a third unlabelled column repeats the `bio`/`self` confusion.
 
-2. **Extend Tasks 29–31 beyond chr22.** Task 31's ceiling, `p`-envelope and
-   `deltMeth`/`relMeth` results are chr22-only. The Task 13 matrices cover all
-   380,355 CpGs, so this is a wider denominator on existing code, as
-   step 3 was.
+2. ~~**Extend Tasks 29–31 beyond chr22.**~~ Done for the ceiling, the
+   `p` envelope, the geometry and the stability test (Task 33). Still chr22-only,
+   and lower priority: Task 29's site/sample decomposition (it is a question
+   about one 100-CpG window by construction), Task 31 Part C's
+   `deltMeth`/`relMeth` comparison, and the whole of Task 32's benchmark — the
+   last of these because rate-matched calibration by bisection over 380k CpGs
+   for ten methods is expensive and the chr22 ranking is unlikely to move.
 
 3. **Mask the sites Task 29 identified first.** The contrary flags concentrate
    on a handful of probes — `cg15668074` alone carries 19 of the 29 tumour `LM`
@@ -331,11 +355,9 @@ chr22. The magnitude result is now genome-wide; these two are not.
    sit closest to this cohort's median, so once they are masked the same
    concentration will reappear at the next-closest sites. Report both.
 
-4. **N48.** Task 29 puts N48 level with N15 as the top carrier of contrary
-   flags in the normal window (9 each). N48 is not in the N15/N17/N14 trio that
-   §5/Task 21 identified from chromosome-wide burden. Either it is a
-   window-local artefact or the burden list is incomplete — one query against
-   `Task21_Chr22_SampleBurden_Normal.csv` settles it.
+4. ~~**N48.**~~ Settled: N48 ranks **4th of 53** both on chr22 and genome-wide,
+   before and after the magnitude floor. The burden list is a quartet —
+   N15, N17, N14, N48 — not a trio. Updated wherever the trio was named.
 
 5. **Say which panel, everywhere.** The reference is `tcga` (747 samples,
    21 tissue types), not `all` (2,015 / 25). Corrected in the four root docs on

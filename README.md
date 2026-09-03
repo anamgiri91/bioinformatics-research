@@ -326,6 +326,43 @@ question directly (chr22 Normal):
 everywhere else.** Benchmarked head to head, a flat 0.10 still beats both 0.05
 and the per-state version on stability (`results.md` §13).
 
+### 8b. Genome-wide: 134 contrary flags out of 154,810 clear a 0.10 floor
+
+Everything in Findings 2b, 2c and 6 was measured on chr22. Task 33 repeats it
+on all 380,355 CpGs and it replicates closely.
+
+| tissue | cell | flags | median \|Δβ\| | under 0.10 | **survive a 0.10 floor** |
+|---|---|---|---|---|---|
+| Normal | `H` `+1` | 68,878 | 0.029 | 99.95% | **36** |
+| Normal | `L` `−1` | 85,932 | 0.015 | 99.89% | **98** |
+| Normal | `R` `+1` | 22,221 | **0.294** | 1.27% | **21,938** |
+| Tumour | `H` `+1` | 60,218 | 0.026 | 99.97% | **17** |
+| Tumour | `L` `−1` | 81,948 | 0.013 | 99.95% | **39** |
+
+**0.087% of the external reference's contrary flags at `H` and `L` sites carry
+a beta shift of 0.10 or more, against 98.7% at `R` sites.** The threshold
+geometry replicates too — 169.8× flag density in the constrained direction at
+`H` sites genome-wide against 171× on chr22, and 88.0% of `H` flags `+1`
+against 87.8%.
+
+And the plainest version of the whole argument: **at `L` sites, where every
+sample is unmethylated, the external reference calls almost exactly as many
+samples abnormally low as abnormally high — 85,932 against 88,635 — inside a
+hypo zone 0.022 of the beta scale wide.**
+
+### 8c. The per-sample burden is not heteroscedasticity
+
+Applying a 0.10 floor genome-wide and re-ranking (Task 33 Part E), normal
+tissue keeps the **same top six in the same order** — N15, N17, N14, N48, N31,
+N34 — at Spearman 0.910, retaining 41% of flags overall. One sample separates
+out: **N27 falls from rank 7 to rank 28**, keeping only 10.7% of its flags.
+
+So the leaders' burden survives a magnitude requirement. That does not make it
+biological — batch, detection-p, purity and cell composition are all still
+unexcluded ([plan.md](plan.md) §6) — but it does rule out the cheapest
+explanation, and it raises the stakes on excluding the rest. Tumour reshuffles
+more (T17 2 → 8, T16 4 → 12), so quote the floored ranking there.
+
 ### 9. The state-aware rule and the external reference do not agree
 
 Cohen's kappa and non-zero conditional agreement over the tight window
@@ -382,7 +419,9 @@ and polymorphic probe masking has not yet been applied — see
 
 ### 11. Which samples actually carry burden
 
-N15, N17 and N14 lead at every scale and in both tissues. Their chr22
+N15, N17, N14 and N48 lead at every scale and in both tissues — N48 was
+originally missed and is confirmed 4th of 53 both on chr22 and genome-wide
+(Finding 8c). Their chr22
 external-reference burden tracks their genome-wide self-referential burden at
 Spearman 0.761 (Normal) and 0.843 (Tumour), so this is a global sample
 property, not a chr22 story — plausibly global hypomethylation, tumour purity,
@@ -419,6 +458,9 @@ or a technical batch effect. None of those have been tested yet.
 | **Task 30** | State-pooled ("bio-stat") thresholds, absolute and deviation variants | **new** |
 | **Task 31** | Parameter headroom: effect-size ceiling, `p` envelope, `deltMeth` vs `relMeth`, `p`-level resolution | **new** |
 | **Task 32** | Measured noise from adjacent probes; five candidate fixes scored | **new** |
+| **Task 33** | Ceiling, `p` envelope, geometry, stability and burden-under-floor, genome-wide | **new** |
+| **Task 34** | Figures 8–12 | **new** |
+| **Task 35** | Direction-split agreement and precision/recall | **new** |
 
 [plan.md](plan.md) has the ordered next steps.
 
