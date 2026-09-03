@@ -1,0 +1,539 @@
+
+R version 4.6.0 (2026-04-24) -- "Because it was There"
+Copyright (C) 2026 The R Foundation for Statistical Computing
+Platform: aarch64-apple-darwin23
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # ================================================================
+> # Task 33 - Tasks 29-32 taken off chromosome 22
+> # Date: Sep 3, 2026
+> #
+> # Three of this project's load-bearing results are still chr22-only:
+> # the threshold geometry and stability of results.md section 7, and
+> # now the effect-size ceiling and p-envelope of Task 31. plan.md steps
+> # 3 and 7b both ask for them genome-wide, and the Task 13 flag
+> # matrices already cover all 380,355 CpGs for both references and both
+> # tissues, so this is a wider denominator on existing logic rather
+> # than new flagging.
+> #
+> # It also closes the half of plan.md step 4 that was never run: does
+> # the per-sample burden ranking survive a magnitude floor? That is the
+> # question that decides whether N15 / N17 / N14 / N48 carry real
+> # burden or heteroscedasticity.
+> #
+> # ---------------------------------------------------------------
+> # PART A  effect-size ceiling per state (Task 31 Part A, genome-wide)
+> # PART B  what any setting of p could give (Task 31 Part B)
+> # PART C  threshold geometry and directional asymmetry (section 7)
+> # PART D  flag stability under measured-range noise (section 7)
+> # PART E  per-sample burden with and without the 0.10 floor
+> #
+> # ---------------------------------------------------------------
+> # COST
+> # 380,355 x 53 doubles is ~161 MB per matrix and two are held at once,
+> # so tissues are processed one at a time with an explicit gc() between
+> # them. Part D uses 5 replicates rather than the 10-20 used on chr22;
+> # at 380k CpGs the Monte Carlo error on a Jaccard is already small and
+> # the run would otherwise take over an hour.
+> # ================================================================
+> 
+> options(stringsAsFactors = FALSE)
+> set.seed(20260903)
+> 
+> pick_dir <- function(...) { for (d in c(...)) if (dir.exists(d)) return(d)
++   stop("no candidate directory exists") }
+> src_dir <- pick_dir(
++   "/home/s_s355/research3.data/TCGA/filter.BRCA.UCEC.Aug17.2022/sorted.TCGA.380355cg.files",
++   path.expand("~/Downloads/tcga_brca_380355cg"))
+> repo_dir <- pick_dir("/mmfs1/home/wln26/Experiments.Outlier.July31.2026",
++                      path.expand("~/Desktop/bioinformatics-research"))
+> out_dir <- file.path(repo_dir, "Results")
+> 
+> inputs <- list(
++   Normal = file.path(src_dir, "Sorted.BRCA.53Alive.Normal.380355cg.75col.May28.2026.txt"),
++   Tumor  = file.path(src_dir, "Sorted.BRCA.53Alive.Tumor.380355cg.75col.May28.2026.txt"))
+> flag_ext <- list(
++   Normal = file.path(out_dir, "Task13_Normal_extref_flags.csv"),
++   Tumor  = file.path(out_dir, "Task13_Tumor_extref_flags.csv"))
+> 
+> STATE_ORDER <- c("L", "LM", "M", "HM", "H", "R")
+> R_GRID   <- c(NA, 3L, 1L)
+> NOISE_SD <- c(0.005, 0.010, 0.020)
+> N_REPS   <- 5
+> FLOOR    <- 0.10
+> 
+> has_dt <- requireNamespace("data.table", quietly = TRUE)
+> read_any <- function(p, tab = FALSE) {
++   if (has_dt) as.data.frame(data.table::fread(p, showProgress = FALSE,
++       sep = if (tab) "\t" else ",", header = TRUE, check.names = FALSE))
++   else if (tab) read.table(p, header = TRUE, sep = "\t", check.names = FALSE)
++   else read.csv(p, check.names = FALSE)
++ }
+> write_out <- function(tbl, f) {
++   p <- file.path(out_dir, f); write.csv(tbl, p, row.names = FALSE)
++   cat("  written: ", p, "  (", nrow(tbl), " rows)\n", sep = "")
++ }
+> jaccard <- function(a, b) {
++   ok <- !is.na(a) & !is.na(b)
++   A <- a[ok] != 0; B2 <- b[ok] != 0
++   u <- sum(A | B2); if (!u) return(NA_real_)
++   sum(A & B2 & a[ok] == b[ok]) / u
++ }
+> 
+> cat("=========================================================\n")
+=========================================================
+> cat("TASK 33 - GENOME-WIDE HEADROOM, GEOMETRY, STABILITY, BURDEN\n")
+TASK 33 - GENOME-WIDE HEADROOM, GEOMETRY, STABILITY, BURDEN
+> cat("=========================================================\n\n")
+=========================================================
+
+> 
+> ceil_rows <- list(); env_rows <- list(); geom_rows <- list()
+> stab_rows <- list(); burden_rows <- list()
+> 
+> for (tissue in c("Normal", "Tumor")) {
++ 
++   cat("#########################################################\n")
++   cat("### ", tissue, "   (all 380,355 CpGs x 53 samples)\n", sep = "")
++   cat("#########################################################\n\n")
++ 
++   cols <- paste0(substr(tissue, 1, 1), 1:53)
++   d <- read_any(inputs[[tissue]], tab = TRUE)
++   ids <- d$Composite.Element.REF
++   B <- as.matrix(d[, cols, drop = FALSE]); storage.mode(B) <- "numeric"
++   colnames(B) <- cols
++   st <- d$methy.state
++   stopifnot(all(st %in% STATE_ORDER))
++   rm(d); invisible(gc())
++ 
++   fx <- read_any(flag_ext[[tissue]])
++   F <- as.matrix(fx[match(ids, fx$cgID), cols, drop = FALSE])
++   storage.mode(F) <- "numeric"; rm(fx); invisible(gc())
++   cat("  loaded ", nrow(B), " CpGs; ", sum(!is.na(F)),
++       " evaluable cells (", round(100 * mean(!is.na(F)), 2), "%)\n\n", sep = "")
++ 
++   med <- apply(B, 1, median, na.rm = TRUE)
++   dev <- abs(B - med)
++ 
++   # ---------------- PART A ----------------------------------
++   cat("PART A - effect-size ceiling per state, genome-wide\n\n")
++   for (s in STATE_ORDER) {
++     k <- which(st == s); if (!length(k)) next
++     ru <- 1 - med[k]; rd <- med[k]; dv <- dev[k, , drop = FALSE]
++     row <- data.frame(
++       tissue = tissue, methy.state = s, sites = length(k),
++       median.cohort.beta = round(median(med[k], na.rm = TRUE), 4),
++       room.up = round(median(ru, na.rm = TRUE), 4),
++       room.down = round(median(rd, na.rm = TRUE), 4),
++       pct.sites.roomup.under.0.10 = round(100 * mean(ru < 0.10, na.rm = TRUE), 1),
++       pct.sites.roomdown.under.0.10 = round(100 * mean(rd < 0.10, na.rm = TRUE), 1),
++       cells.over.0.05 = round(100 * mean(dv >= 0.05, na.rm = TRUE), 3),
++       cells.over.0.10 = round(100 * mean(dv >= 0.10, na.rm = TRUE), 3),
++       cells.over.0.15 = round(100 * mean(dv >= 0.15, na.rm = TRUE), 3))
++     ceil_rows[[length(ceil_rows) + 1]] <- row
++     cat(sprintf("   %-3s sites=%6d  median beta=%.3f  room up=%.3f down=%.3f  | cells >=0.05: %6.3f%%  >=0.10: %6.3f%%  >=0.15: %6.3f%%\n",
++         s, length(k), row$median.cohort.beta, row$room.up, row$room.down,
++         row$cells.over.0.05, row$cells.over.0.10, row$cells.over.0.15))
++     rm(dv); invisible(gc())
++   }
++ 
++   # ---------------- PART B ----------------------------------
++   # Same nesting argument as Task 31: any stricter p keeps a prefix of
++   # each CpG's flags ordered by beta. Vectorised here rather than
++   # looped, because 380k row-wise order() calls is not viable.
++   cat("\nPART B - the p envelope, genome-wide\n")
++   cat("  r = flags kept per CpG per direction; r=1 is the strictest reachable p.\n\n")
++ 
++   keep_top <- function(r) {
++     if (is.na(r)) return(F)
++     O <- matrix(0L, nrow(F), ncol(F))
++     O[is.na(F)] <- NA_integer_
++     for (dir in c(1L, -1L)) {
++       # rank each flagged cell within its CpG: hyper by descending beta,
++       # hypo by ascending. A stricter threshold keeps the top-ranked r.
++       M <- ifelse(!is.na(F) & F == dir, B, NA_real_)
++       if (dir == -1L) M <- -M
++       # rank via row-wise ordering, done in one pass over columns
++       R <- matrix(NA_integer_, nrow(M), ncol(M))
++       ord <- t(apply(M, 1, function(v) order(v, decreasing = TRUE, na.last = TRUE)))
++       for (j in seq_len(ncol(M))) R[cbind(seq_len(nrow(M)), ord[, j])] <- j
++       O[!is.na(M) & R <= r] <- dir
++     }
++     O
++   }
++ 
++   for (r in R_GRID) {
++     O <- keep_top(r)
++     lab <- if (is.na(r)) "all (p=0.01 as run)" else sprintf("top %d per CpG", r)
++     cat("  r = ", lab, ":  ", sum(O != 0, na.rm = TRUE), " flags total\n", sep = "")
++     for (s in STATE_ORDER) {
++       k <- which(st == s); if (!length(k)) next
++       Os <- O[k, , drop = FALSE]; dv <- dev[k, , drop = FALSE]
++       # "hyper"/"hypo" rather than "+1"/"-1": a column holding only
++       # "+1" and "-1" is read back by read.csv as NUMERIC 1 and -1, so
++       # a downstream filter on direction == "+1" silently matches
++       # nothing. Task 31's equivalent column escapes this only because
++       # it also carries the value "both".
++       for (dl in list(list(l = "hyper", m = 1L), list(l = "hypo", m = -1L))) {
++         sel <- !is.na(Os) & Os == dl$m & !is.na(dv)
++         n <- sum(sel); mg <- dv[sel]
++         env_rows[[length(env_rows) + 1]] <- data.frame(
++           tissue = tissue, keep.top.per.cpg = if (is.na(r)) NA_integer_ else r,
++           setting = lab, methy.state = s, direction = dl$l, flags = n,
++           median.abs.dbeta = if (n) round(median(mg), 4) else NA_real_,
++           max.abs.dbeta = if (n) round(max(mg), 4) else NA_real_,
++           pct.under.0.10 = if (n) round(100 * mean(mg < 0.10), 2) else NA_real_,
++           surviving.floor.0.10 = if (n) sum(mg >= 0.10) else 0L)
++         if (s %in% c("L", "H") )
++           cat(sprintf("       %-3s %-5s n=%7d  median|db|=%.4f  under 0.10: %6.2f%%  surviving 0.10: %6d\n",
++               s, dl$l, n, if (n) median(mg) else NA,
++               if (n) 100*mean(mg < 0.10) else NA, if (n) sum(mg >= 0.10) else 0L))
++       }
++       rm(Os, dv)
++     }
++     rm(O); invisible(gc())
++   }
++ 
++   # ---------------- PART C ----------------------------------
++   cat("\nPART C - threshold geometry and directional asymmetry, genome-wide\n")
++   cat("  P, N recovered from the flag matrix (Task 22 Part A). flag.density is\n")
++   cat("  flags per unit of available beta space in that direction.\n\n")
++ 
++   nr <- nrow(B)
++   P <- N <- rep(NA_real_, nr)
++   for (i in seq_len(nr)) {
++     fl <- F[i, ]; if (all(is.na(fl))) next
++     b <- B[i, ]
++     up <- which(fl == 1); dn <- which(fl == -1); ze <- which(fl == 0)
++     if (length(up)) {
++       lo <- if (length(c(ze, dn))) max(b[c(ze, dn)], na.rm = TRUE) else NA_real_
++       hi <- min(b[up], na.rm = TRUE)
++       if (is.finite(lo) && is.finite(hi)) P[i] <- (lo + hi) / 2
++     }
++     if (length(dn)) {
++       lo <- max(b[dn], na.rm = TRUE)
++       hi <- if (length(c(ze, up))) min(b[c(ze, up)], na.rm = TRUE) else NA_real_
++       if (is.finite(lo) && is.finite(hi)) N[i] <- (lo + hi) / 2
++     }
++   }
++   cat("  thresholds recovered: ", sum(is.finite(P)), " hyper, ",
++       sum(is.finite(N)), " hypo, of ", nr, " CpGs\n\n", sep = "")
++ 
++   for (s in STATE_ORDER) {
++     k <- which(st == s); if (!length(k)) next
++     npos <- sum(F[k, , drop = FALSE] ==  1, na.rm = TRUE)
++     nneg <- sum(F[k, , drop = FALSE] == -1, na.rm = TRUE)
++     zoneU <- median(1 - P[k], na.rm = TRUE)
++     zoneD <- median(N[k], na.rm = TRUE)
++     dU <- if (is.finite(zoneU) && zoneU > 0) npos / zoneU else NA_real_
++     dD <- if (is.finite(zoneD) && zoneD > 0) nneg / zoneD else NA_real_
++     # L and LM are pinned against 0, so the direction the state constrains is
++     # hypo; H and HM are pinned against 1, so it is hyper. M and R are pinned
++     # against neither and get no constrained direction.
++     cdir <- if (s %in% c("L", "LM")) "hypo" else
++             if (s %in% c("H", "HM")) "hyper" else NA_character_
++     ratio_c <- if (is.na(cdir)) NA_real_ else
++                if (cdir == "hypo") dD / dU else dU / dD
++     geom_rows[[length(geom_rows) + 1]] <- data.frame(
++       tissue = tissue, methy.state = s, sites = length(k),
++       median.thr.hyper.P = round(median(P[k], na.rm = TRUE), 4),
++       median.thr.hypo.N = round(median(N[k], na.rm = TRUE), 4),
++       hyper.zone.1minusP = round(zoneU, 4),
++       hypo.zone.N = round(zoneD, 4),
++       zone.asymmetry.hyper.over.hypo = round(zoneU / zoneD, 3),
++       flags.pos1 = npos, flags.neg1 = nneg,
++       pct.flags.pos1 = round(100 * npos / max(1, npos + nneg), 1),
++       density.hyper = round(dU, 0), density.hypo = round(dD, 0),
++       constrained.direction = cdir,
++       density.ratio.constrained.over.free = round(ratio_c, 1))
++     cat(sprintf("   %-3s P=%.3f N=%.3f | hyper zone %.3f hypo zone %.3f | +1 %6d  -1 %6d  (%.1f%% +1) | constrained: %-5s  density %8.1fx higher there\n",
++         s, median(P[k], na.rm = TRUE), median(N[k], na.rm = TRUE),
++         zoneU, zoneD, npos, nneg,
++         100 * npos / max(1, npos + nneg),
++         if (is.na(cdir)) "-" else cdir, ratio_c))
++   }
++ 
++   # ---------------- PART D ----------------------------------
++   cat("\nPART D - flag stability under noise, genome-wide\n")
++   cat("  Noise levels bracket the range Task 32 measured from adjacent probes\n")
++   cat("  (p10 ", if (tissue == "Normal") "0.0029" else "0.0036",
++       ", median ", if (tissue == "Normal") "0.0142" else "0.0171", ").\n\n", sep = "")
++ 
++   ext_apply <- function(X) {
++     o <- matrix(0L, nrow(X), ncol(X), dimnames = dimnames(X))
++     o[!is.na(P) & X > P] <-  1L
++     o[!is.na(N) & X < N] <- -1L
++     o[is.na(X)] <- NA; o
++   }
++   floor_apply <- function(Fm, X) {
++     m <- apply(X, 1, median, na.rm = TRUE)
++     o <- Fm; o[!is.na(Fm) & Fm != 0 & abs(X - m) < FLOOR] <- 0L; o
++   }
++   base_ext   <- ext_apply(B)
++   base_floor <- floor_apply(base_ext, B)
++   cat("  baseline flags: ext ", sum(base_ext != 0, na.rm = TRUE),
++       "   ext+", FLOOR, " floor ", sum(base_floor != 0, na.rm = TRUE), "\n", sep = "")
++ 
++   for (sd in NOISE_SD) {
++     je <- jf <- 0; lost <- gain <- 0
++     for (r in seq_len(N_REPS)) {
++       Bn <- B + matrix(rnorm(length(B), 0, sd), nrow(B))
++       Bn[Bn < 0] <- 0; Bn[Bn > 1] <- 1; Bn[is.na(B)] <- NA
++       en <- ext_apply(Bn); fn <- floor_apply(en, Bn)
++       je <- je + jaccard(base_ext, en)
++       jf <- jf + jaccard(base_floor, fn)
++       lost <- lost + sum(base_ext != 0 & en == 0, na.rm = TRUE)
++       gain <- gain + sum(base_ext == 0 & en != 0, na.rm = TRUE)
++       rm(Bn, en, fn); invisible(gc())
++     }
++     nb <- sum(base_ext != 0, na.rm = TRUE)
++     stab_rows[[length(stab_rows) + 1]] <- data.frame(
++       tissue = tissue, noise.sd = sd, reps = N_REPS,
++       baseline.flags = nb,
++       flags.lost = round(lost / N_REPS),
++       flags.gained = round(gain / N_REPS),
++       pct.baseline.lost = round(100 * (lost / N_REPS) / nb, 1),
++       churn.over.baseline = round(((lost + gain) / N_REPS) / nb, 2),
++       jaccard.ext = round(je / N_REPS, 4),
++       jaccard.ext.floor = round(jf / N_REPS, 4))
++     cat(sprintf("   sd=%.3f  lost %7.0f  gained %8.0f  %5.1f%% of baseline lost  churn %5.2f  |  Jaccard ext %.4f  ext+floor %.4f\n",
++         sd, lost / N_REPS, gain / N_REPS, 100 * (lost / N_REPS) / nb,
++         ((lost + gain) / N_REPS) / nb, je / N_REPS, jf / N_REPS))
++   }
++ 
++   # ---------------- PART E ----------------------------------
++   # plan.md step 4, the half that was never run. If the per-sample
++   # ranking survives a magnitude floor, the burden is real; if the
++   # leaders collapse, it was heteroscedasticity.
++   cat("\nPART E - per-sample burden with and without the ", FLOOR, " floor\n\n", sep = "")
++ 
++   raw <- colSums(base_ext   != 0, na.rm = TRUE)
++   flr <- colSums(base_floor != 0, na.rm = TRUE)
++   rk_raw <- rank(-raw, ties.method = "min")
++   rk_flr <- rank(-flr, ties.method = "min")
++   rho <- cor(raw, flr, method = "spearman")
++   burden_rows[[length(burden_rows) + 1]] <- data.frame(
++     tissue = tissue, sample = names(raw),
++     flags.raw = as.integer(raw), rank.raw = as.integer(rk_raw),
++     flags.floored = as.integer(flr), rank.floored = as.integer(rk_flr),
++     retained.pct = round(100 * flr / pmax(1, raw), 1),
++     rank.change = as.integer(rk_raw - rk_flr))
++   cat("  Spearman between raw and floored burden: ", round(rho, 4), "\n", sep = "")
++   cat("  overall flags retained: ", round(100 * sum(flr) / sum(raw), 1), "%\n\n", sep = "")
++   o <- order(rk_raw)
++   cat("  top 8 by raw burden:\n")
++   cat(sprintf("    %-5s %9s %6s %10s %6s %9s\n",
++               "samp", "raw", "rank", "floored", "rank", "retained"))
++   for (i in head(o, 8))
++     cat(sprintf("    %-5s %9d %6d %10d %6d %8.1f%%\n",
++         names(raw)[i], raw[i], rk_raw[i], flr[i], rk_flr[i],
++         100 * flr[i] / max(1, raw[i])))
++   cat("\n  top 8 by floored burden:\n")
++   for (i in head(order(rk_flr), 8))
++     cat(sprintf("    %-5s %9d %6d %10d %6d %8.1f%%\n",
++         names(raw)[i], raw[i], rk_raw[i], flr[i], rk_flr[i],
++         100 * flr[i] / max(1, raw[i])))
++ 
++   rm(B, F, dev, base_ext, base_floor, P, N); invisible(gc())
++   cat("\n")
++ }
+#########################################################
+### Normal   (all 380,355 CpGs x 53 samples)
+#########################################################
+
+  loaded 380355 CpGs; 18931441 evaluable cells (93.91%)
+
+PART A - effect-size ceiling per state, genome-wide
+
+   L   sites=104540  median beta=0.030  room up=0.970 down=0.030  | cells >=0.05:  3.580%  >=0.10:  0.835%  >=0.15:  0.040%
+   LM  sites= 56636  median beta=0.124  room up=0.875 down=0.124  | cells >=0.05: 27.430%  >=0.10: 10.538%  >=0.15:  4.561%
+   M   sites= 36785  median beta=0.500  room up=0.500 down=0.500  | cells >=0.05: 43.595%  >=0.10: 16.045%  >=0.15:  5.839%
+   HM  sites= 97094  median beta=0.821  room up=0.179 down=0.821  | cells >=0.05: 34.490%  >=0.10: 11.713%  >=0.15:  4.364%
+   H   sites= 61845  median beta=0.933  room up=0.067 down=0.933  | cells >=0.05:  3.737%  >=0.10:  0.225%  >=0.15:  0.011%
+   R   sites= 23455  median beta=0.499  room up=0.501 down=0.499  | cells >=0.05: 64.146%  >=0.10: 38.365%  >=0.15: 22.525%
+
+PART B - the p envelope, genome-wide
+  r = flags kept per CpG per direction; r=1 is the strictest reachable p.
+
+  r = all (p=0.01 as run):  514010 flags total
+       L   hyper n=  88635  median|db|=0.0903  under 0.10:  63.74%  surviving 0.10:  32142
+       L   hypo  n=  85932  median|db|=0.0147  under 0.10:  99.89%  surviving 0.10:     98
+       H   hyper n=  68878  median|db|=0.0287  under 0.10:  99.95%  surviving 0.10:     36
+       H   hypo  n=   9381  median|db|=0.0781  under 0.10:  75.10%  surviving 0.10:   2336
+  r = top 3 per CpG:  474038 flags total
+       L   hyper n=  87855  median|db|=0.0905  under 0.10:  63.50%  surviving 0.10:  32066
+       L   hypo  n=  78741  median|db|=0.0147  under 0.10:  99.88%  surviving 0.10:     98
+       H   hyper n=  62289  median|db|=0.0293  under 0.10:  99.94%  surviving 0.10:     36
+       H   hypo  n=   9150  median|db|=0.0785  under 0.10:  74.69%  surviving 0.10:   2316
+  r = top 1 per CpG:  255054 flags total
+       L   hyper n=  42704  median|db|=0.0949  under 0.10:  56.60%  surviving 0.10:  18535
+       L   hypo  n=  44722  median|db|=0.0147  under 0.10:  99.91%  surviving 0.10:     40
+       H   hyper n=  33511  median|db|=0.0306  under 0.10:  99.92%  surviving 0.10:     27
+       H   hypo  n=   6256  median|db|=0.0820  under 0.10:  71.15%  surviving 0.10:   1805
+
+PART C - threshold geometry and directional asymmetry, genome-wide
+  P, N recovered from the flag matrix (Task 22 Part A). flag.density is
+  flags per unit of available beta space in that direction.
+
+  thresholds recovered: 149241 hyper, 105813 hypo, of 380355 CpGs
+
+   L   P=0.104 N=0.022 | hyper zone 0.896 hypo zone 0.022 | +1  88635  -1  85932  (50.8% +1) | constrained: hypo   density     39.5x higher there
+   LM  P=0.226 N=0.048 | hyper zone 0.774 hypo zone 0.048 | +1  43097  -1  40294  (51.7% +1) | constrained: hypo   density     15.0x higher there
+   M   P=0.682 N=0.359 | hyper zone 0.318 hypo zone 0.359 | +1  12590  -1  12497  (50.2% +1) | constrained: -      density       NAx higher there
+   HM  P=0.918 N=0.678 | hyper zone 0.082 hypo zone 0.678 | +1  71257  -1  43318  (62.2% +1) | constrained: hyper  density     13.7x higher there
+   H   P=0.962 N=0.881 | hyper zone 0.038 hypo zone 0.881 | +1  68878  -1   9381  (88.0% +1) | constrained: hyper  density    169.8x higher there
+   R   P=0.773 N=0.260 | hyper zone 0.227 hypo zone 0.260 | +1  22221  -1  15910  (58.3% +1) | constrained: -      density       NAx higher there
+
+PART D - flag stability under noise, genome-wide
+  Noise levels bracket the range Task 32 measured from adjacent probes
+  (p10 0.0029, median 0.0142).
+
+  baseline flags: ext 514010   ext+0.1 floor 210758
+   sd=0.005  lost   76389  gained   303372   14.9% of baseline lost  churn  0.74  |  Jaccard ext 0.5354  ext+floor 0.8976
+   sd=0.010  lost  107987  gained   621210   21.0% of baseline lost  churn  1.42  |  Jaccard ext 0.3576  ext+floor 0.7989
+   sd=0.020  lost  142392  gained  1121009   27.7% of baseline lost  churn  2.46  |  Jaccard ext 0.2271  ext+floor 0.6320
+
+PART E - per-sample burden with and without the 0.1 floor
+
+  Spearman between raw and floored burden: 0.9101
+  overall flags retained: 41%
+
+  top 8 by raw burden:
+    samp        raw   rank    floored   rank  retained
+    N15       65468      1      33282      1     50.8%
+    N17       63937      2      33212      2     51.9%
+    N14       52440      3      23654      3     45.1%
+    N48       26937      4      11922      4     44.3%
+    N31       22996      5      10262      5     44.6%
+    N34       16333      6       7800      6     47.8%
+    N27       14776      7       1575     28     10.7%
+    N49       14458      8       5626      8     38.9%
+
+  top 8 by floored burden:
+    N15       65468      1      33282      1     50.8%
+    N17       63937      2      33212      2     51.9%
+    N14       52440      3      23654      3     45.1%
+    N48       26937      4      11922      4     44.3%
+    N31       22996      5      10262      5     44.6%
+    N34       16333      6       7800      6     47.8%
+    N30       13994      9       6708      7     47.9%
+    N49       14458      8       5626      8     38.9%
+
+#########################################################
+### Tumor   (all 380,355 CpGs x 53 samples)
+#########################################################
+
+  loaded 380355 CpGs; 18931441 evaluable cells (93.91%)
+
+PART A - effect-size ceiling per state, genome-wide
+
+   L   sites= 76106  median beta=0.029  room up=0.971 down=0.029  | cells >=0.05:  3.765%  >=0.10:  0.735%  >=0.15:  0.034%
+   LM  sites= 40824  median beta=0.071  room up=0.929 down=0.071  | cells >=0.05: 25.431%  >=0.10: 12.588%  >=0.15:  7.181%
+   M   sites=  5436  median beta=0.497  room up=0.503 down=0.497  | cells >=0.05: 57.126%  >=0.10: 29.999%  >=0.15: 14.542%
+   HM  sites= 74430  median beta=0.881  room up=0.118 down=0.881  | cells >=0.05: 30.205%  >=0.10: 13.247%  >=0.15:  7.146%
+   H   sites= 30080  median beta=0.942  room up=0.058 down=0.942  | cells >=0.05:  3.357%  >=0.10:  0.376%  >=0.15:  0.023%
+   R   sites=153479  median beta=0.559  room up=0.441 down=0.559  | cells >=0.05: 64.816%  >=0.10: 44.775%  >=0.15: 30.876%
+
+PART B - the p envelope, genome-wide
+  r = flags kept per CpG per direction; r=1 is the strictest reachable p.
+
+  r = all (p=0.01 as run):  2474226 flags total
+       L   hyper n=  81840  median|db|=0.0849  under 0.10:  70.45%  surviving 0.10:  24187
+       L   hypo  n=  81948  median|db|=0.0132  under 0.10:  99.95%  surviving 0.10:     39
+       H   hyper n=  60218  median|db|=0.0261  under 0.10:  99.97%  surviving 0.10:     17
+       H   hypo  n=   7896  median|db|=0.0843  under 0.10:  67.08%  surviving 0.10:   2599
+  r = top 3 per CpG:  1047355 flags total
+       L   hyper n=  73212  median|db|=0.0861  under 0.10:  68.70%  surviving 0.10:  22915
+       L   hypo  n=  69391  median|db|=0.0132  under 0.10:  99.95%  surviving 0.10:     35
+       H   hyper n=  44279  median|db|=0.0273  under 0.10:  99.96%  surviving 0.10:     17
+       H   hypo  n=   7343  median|db|=0.0868  under 0.10:  65.11%  surviving 0.10:   2562
+  r = top 1 per CpG:  463238 flags total
+       L   hyper n=  35891  median|db|=0.0900  under 0.10:  62.15%  surviving 0.10:  13584
+       L   hypo  n=  38471  median|db|=0.0134  under 0.10:  99.96%  surviving 0.10:     15
+       H   hyper n=  21474  median|db|=0.0279  under 0.10:  99.94%  surviving 0.10:     13
+       H   hypo  n=   4829  median|db|=0.0943  under 0.10:  57.28%  surviving 0.10:   2063
+
+PART C - threshold geometry and directional asymmetry, genome-wide
+  P, N recovered from the flag matrix (Task 22 Part A). flag.density is
+  flags per unit of available beta space in that direction.
+
+  thresholds recovered: 252154 hyper, 211084 hypo, of 380355 CpGs
+
+   L   P=0.102 N=0.019 | hyper zone 0.898 hypo zone 0.019 | +1  81840  -1  81948  (50.0% +1) | constrained: hypo   density     47.0x higher there
+   LM  P=0.190 N=0.036 | hyper zone 0.810 hypo zone 0.036 | +1 132720  -1  65392  (67.0% +1) | constrained: hypo   density     11.0x higher there
+   M   P=0.664 N=0.352 | hyper zone 0.336 hypo zone 0.352 | +1  18971  -1  18648  (50.4% +1) | constrained: -      density       NAx higher there
+   HM  P=0.937 N=0.732 | hyper zone 0.063 hypo zone 0.732 | +1 224562  -1 173381  (56.4% +1) | constrained: hyper  density     15.0x higher there
+   H   P=0.963 N=0.882 | hyper zone 0.037 hypo zone 0.882 | +1  60218  -1   7896  (88.4% +1) | constrained: hyper  density    181.8x higher there
+   R   P=0.769 N=0.353 | hyper zone 0.231 hypo zone 0.353 | +1 851843  -1 756807  (53.0% +1) | constrained: -      density       NAx higher there
+
+PART D - flag stability under noise, genome-wide
+  Noise levels bracket the range Task 32 measured from adjacent probes
+  (p10 0.0036, median 0.0171).
+
+  baseline flags: ext 2474226   ext+0.1 floor 1664844
+   sd=0.005  lost  111258  gained   348076    4.5% of baseline lost  churn  0.19  |  Jaccard ext 0.8372  ext+floor 0.9631
+   sd=0.010  lost  182423  gained   741659    7.4% of baseline lost  churn  0.37  |  Jaccard ext 0.7126  ext+floor 0.9211
+   sd=0.020  lost  281921  gained  1372480   11.4% of baseline lost  churn  0.67  |  Jaccard ext 0.5697  ext+floor 0.8391
+
+PART E - per-sample burden with and without the 0.1 floor
+
+  Spearman between raw and floored burden: 0.973
+  overall flags retained: 67.3%
+
+  top 8 by raw burden:
+    samp        raw   rank    floored   rank  retained
+    T15      121226      1      78921      1     65.1%
+    T17      105025      2      61880      8     58.9%
+    T14      104501      3      66695      4     63.8%
+    T16       92918      4      49411     12     53.2%
+    T38       88407      5      71611      2     81.0%
+    T25       86061      6      70044      3     81.4%
+    T34       85359      7      63217      5     74.1%
+    T44       79972      8      62224      7     77.8%
+
+  top 8 by floored burden:
+    T15      121226      1      78921      1     65.1%
+    T38       88407      5      71611      2     81.0%
+    T25       86061      6      70044      3     81.4%
+    T14      104501      3      66695      4     63.8%
+    T34       85359      7      63217      5     74.1%
+    T36       78050     10      62267      6     79.8%
+    T44       79972      8      62224      7     77.8%
+    T17      105025      2      61880      8     58.9%
+
+> 
+> write_out(do.call(rbind, ceil_rows),   "Task33_GenomeWide_EffectSizeCeiling.csv")
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task33_GenomeWide_EffectSizeCeiling.csv  (12 rows)
+> write_out(do.call(rbind, env_rows),    "Task33_GenomeWide_PEnvelope.csv")
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task33_GenomeWide_PEnvelope.csv  (72 rows)
+> write_out(do.call(rbind, geom_rows),   "Task33_GenomeWide_ThresholdGeometry.csv")
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task33_GenomeWide_ThresholdGeometry.csv  (12 rows)
+> write_out(do.call(rbind, stab_rows),   "Task33_GenomeWide_FlagStability.csv")
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task33_GenomeWide_FlagStability.csv  (6 rows)
+> write_out(do.call(rbind, burden_rows), "Task33_GenomeWide_SampleBurdenFloor.csv")
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task33_GenomeWide_SampleBurdenFloor.csv  (106 rows)
+> 
+> cat("\n=========================================================\n")
+
+=========================================================
+> cat("TASK 33 COMPLETE\n")
+TASK 33 COMPLETE
+> cat("=========================================================\n")
+=========================================================
+> 
+> proc.time()
+   user  system elapsed 
+416.426  46.852 479.853 
