@@ -1,0 +1,150 @@
+{
+  "task": 47,
+  "frozen_at": "2026-09-29T20:57:27-05:00",
+  "note": "Fixed before any new data were scored with a similarity score. Any later change is a deviation.",
+  "score": {
+    "name": "F_plus",
+    "formula": "S * (w + (1 - w) * E_plus)",
+    "S": "1 - mean |x - y| over reference samples, raw beta",
+    "E": "Codex E: (dCor^2 - q0) / (1 - q0), floored at 0; q0 = tr(A) tr(B) / ((n - 1) sqrt(sum A^2 sum B^2))",
+    "E_plus": "E if Spearman > 0 else 0",
+    "w": "exp(-gap / ell)",
+    "ell_bp": 200
+  },
+  "reliability_flags": {
+    "sequencing": {
+      "not_unique": "Bismap k50 C2T uniqueness",
+      "poor_mapping": "Bismap k50 multi-read < 1",
+      "SINE": "RepeatMasker hg38 class SINE"
+    },
+    "array_450k": {
+      "not_unique": "Zhou M_nonuniq",
+      "poor_mapping": "Zhou M_mapping",
+      "SINE": "RepeatMasker hg38 class SINE",
+      "reported_only": "Zhou M_general"
+    },
+    "pair_rule": "flagged if either site is flagged",
+    "use": "reported beside the score, never multiplied in"
+  },
+  "shared_test_design": {
+    "top_fraction": 0.1,
+    "ties": "split evenly",
+    "ell_grid_bp": [
+      0,
+      3,
+      5,
+      10,
+      20,
+      30,
+      50,
+      75,
+      100,
+      150,
+      200,
+      300,
+      500,
+      1000,
+      3000,
+      10000,
+      100000,
+      "Inf"
+    ],
+    "families": [
+      "Codex F",
+      "F no distance",
+      "F_plus",
+      "F guarded (sign + m/(m+3))",
+      "New C planned",
+      "New C with dCor"
+    ],
+    "matched_error": "6 evenly spaced levels over the middle 80% of the overlap of the two curves (fold means)",
+    "halves": {
+      "array": "odd vs even autosomes",
+      "sequencing": "first vs second half of each chromosome by position"
+    }
+  },
+  "step2_tcga_450k": {
+    "cohorts": {
+      "primary": "TCGA-BRCA 53 Alive normals",
+      "second": "TCGA-BRCA 32 Dead normals"
+    },
+    "pairs": "380,355 filtered probes, autosomes, hg38 CpG position = Zhou CpG_beg + 1, each probe with the next on the same chromosome",
+    "folds": 10,
+    "seed": 20260929,
+    "hypotheses": {
+      "H1": {
+        "claim": "distance weight helps F",
+        "task46": "66/85",
+        "holds_if": "F beats F-no-distance in > 50% of cells"
+      },
+      "H2": {
+        "claim": "F beats planned New C",
+        "task46": "New C won 23/81",
+        "holds_if": "New C wins < 50%"
+      },
+      "H3": {
+        "claim": "dCor beats shrunk Spearman inside New C",
+        "task46": "8/77",
+        "holds_if": "shrunk wins < 50%"
+      },
+      "H4": {
+        "claim": "sign guard is free",
+        "task46": "<= 0.00001",
+        "holds_if": "|F_plus - F| < 0.0005 in both outcomes at every ell"
+      },
+      "H5": {
+        "claim": "spread guard costs gain",
+        "task46": "12/85",
+        "holds_if": "guarded wins < 50%"
+      },
+      "H6": {
+        "claim": "flagged pairs behave worse",
+        "holds_if": "higher error and lower gain at matched spread (20 bins), worse in >= 12/20 bins on both, for not_unique, poor_mapping, SINE"
+      }
+    },
+    "replicates_if": "rule holds genome-wide and in both halves"
+  },
+  "step3_outlier_replication": {
+    "flags": "Task 13 external-reference OutlierMeth flags, 53 Alive normals, autosomal probes with non-missing flags",
+    "primary_set": "|beta - median of 53 normals| >= 0.10",
+    "neighbours": "previous and next probe with flags, hg38 order, same chromosome; flagged = same sample and direction, no floor on the neighbour",
+    "similarity": "F_plus on the 32 Dead normals, ell = 200",
+    "outcome": "matched tumour flag at the same probe, same direction; excess = replicated - share of the other 52 tumours with a same-direction flag",
+    "rules": {
+      "run": ">= 3 consecutive flagged probes, same sample and direction, each step <= 1000 bp (epimutacions)",
+      "adjacency": ">= 1 flagged neighbour within 1000 bp",
+      "similarity": ">= 1 flagged neighbour with F_plus >= 0.5, any distance"
+    },
+    "support_score": "max F_plus over flagged neighbours, 0 if none",
+    "primary_test": "top K flags by similarity support (K = run-rule set size, ties split evenly) vs run-rule flags, difference in mean excess replication",
+    "uncertainty": {
+      "bootstrap": "patients",
+      "B": 1000,
+      "seed": 20260929,
+      "interval": "95% percentile"
+    },
+    "success": "whole interval above 0",
+    "secondary": [
+      "rules at own sizes",
+      "top K by |beta - median|",
+      "no floor",
+      "exclude Zhou M_general",
+      "tumour -> matched normal",
+      "theta 0.3 and 0.7"
+    ]
+  },
+  "step2b_public_sequencing": {
+    "selection": "human RRBS/WGBS, >= 15 samples of one tissue or cell type from different people, per-CpG methylated and total counts, open access; prefer hg38 and read-level files",
+    "sites": "coverage >= 10 in every sample (>= 5 if < 10,000 truly consecutive pairs remain)",
+    "hypotheses": "H1-H6 as step 2; H7: depth-weighted S (weight = smaller read count of the two sites) beats F_plus at matched error in > 50% of cells in both halves"
+  },
+  "step4_shared_reads": {
+    "linkage": "share of reads covering both sites with the same state minus p_i p_j + (1 - p_i)(1 - p_j), pairs within 200 bp, >= 10 spanning reads",
+    "H8": "mean linkage > 0 and falls with distance",
+    "H9": "among low-spread pairs (one site has no sample > 0.1 from its median), above-median linkage pairs have higher held-out prediction gain than below-median, in both halves"
+  },
+  "files_sha256": {
+    "Scripts/Task47.FrozenScore.Sep29.2026.R": "766b410e97aa0de184e7212bf8d5b0edfbf480ba87a1ec96d0c74ef8f48329b5",
+    "Results/Task47_FrozenProtocol.md": "2d1fd31e4e5af4d367aeb8cf2f236d23782d0c554bbf1c7cfd0ed9565b229e64"
+  }
+}
