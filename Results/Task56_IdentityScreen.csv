@@ -1,0 +1,7 @@
+type,pairs,min,median,max,at_or_above_0.8,median_sites
+blood vs blood,1596,0.325,0.375,0.493,0,11973.5
+blood vs colon,1653,0.319,0.383,0.484,0,7643
+blood vs esophagus control,456,0.339,0.382,0.446,0,9423.5
+colon vs colon (different donors),406,0.381,0.45,0.472,0,5788.5
+other different GTEx donors,249,0.399,0.447,0.464,0,6664
+same GTEx donor (positive control),11,0.975,0.981,0.997,11,6903
