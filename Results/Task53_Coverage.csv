@@ -1,0 +1,2 @@
+pairs_within_200bp,pairs_seen,pairs_with_20_donors,donor_rows_seen,donor_rows_low_coverage,donor_rows_single_shared,donor_rows_eligible,donor_rows_no_shared,share_donor_rows_low_coverage,share_donor_rows_single_shared,share_eligible_rows_no_shared
+22811505,10100308,4447998,148909517,14798964,1462421,132648132,2355040,0.0994,0.0098,0.0178
