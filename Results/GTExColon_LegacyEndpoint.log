@@ -1,0 +1,88 @@
+
+Frozen hypotheses on the GTEx colon RRBS cohort:
+    hypothesis                 a               b subset cells a_wins   share
+        <char>            <char>          <char> <char> <int>  <int>   <num>
+ 1:         H1           Codex F   F no distance    all    60      3 0.05000
+ 2:         H1           Codex F   F no distance  first    60      3 0.05000
+ 3:         H1           Codex F   F no distance second    60      3 0.05000
+ 4:         H2             New C         Codex F    all    60      7 0.11670
+ 5:         H2             New C         Codex F  first    60      7 0.11670
+ 6:         H2             New C         Codex F second    60      7 0.11670
+ 7:         H3             New C New C with dCor    all    58      0 0.00000
+ 8:         H3             New C New C with dCor  first    58      0 0.00000
+ 9:         H3             New C New C with dCor second    58      0 0.00000
+10:         H4                F+         Codex F    all    18     NA 0.00001
+11:         H4                F+         Codex F  first    18     NA 0.00000
+12:         H4                F+         Codex F second    18     NA 0.00001
+13:         H5         F guarded         Codex F    all    60      0 0.00000
+14:         H5         F guarded         Codex F  first    60      0 0.00000
+15:         H5         F guarded         Codex F second    60      0 0.00000
+16:         H6           flagged       unflagged    all     3      3 1.00000
+17:         H6           flagged       unflagged  first     3      3 1.00000
+18:         H6           flagged       unflagged second     3      3 1.00000
+19:         H7 F+ depth-weighted              F+    all    60     45 0.75000
+20:         H7 F+ depth-weighted              F+  first    60     44 0.73330
+21:         H7 F+ depth-weighted              F+ second    60     47 0.78330
+    hypothesis                 a               b subset cells a_wins   share
+        <char>            <char>          <char> <char> <int>  <int>   <num>
+     holds
+    <lgcl>
+ 1:  FALSE
+ 2:  FALSE
+ 3:  FALSE
+ 4:   TRUE
+ 5:   TRUE
+ 6:   TRUE
+ 7:   TRUE
+ 8:   TRUE
+ 9:   TRUE
+10:   TRUE
+11:   TRUE
+12:   TRUE
+13:   TRUE
+14:   TRUE
+15:   TRUE
+16:   TRUE
+17:   TRUE
+18:   TRUE
+19:   TRUE
+20:   TRUE
+21:   TRUE
+     holds
+    <lgcl>
+
+Replicates (holds genome-wide and in both halves):
+   hypothesis replicates
+       <char>     <lgcl>
+1:         H1      FALSE
+2:         H2       TRUE
+3:         H3       TRUE
+4:         H4       TRUE
+5:         H5       TRUE
+6:         H6       TRUE
+7:         H7       TRUE
+
+H6 in detail:
+   subset         flag flagged_pairs error_diff gain_diff bins_worse_error
+   <char>       <char>         <int>      <num>     <num>            <int>
+1:    all   not_unique        146998    0.00563  -0.00421               14
+2:    all poor_mapping        358242    0.00692  -0.00472               15
+3:    all         SINE        284514    0.00712  -0.00519               15
+4:  first   not_unique         76616    0.00658  -0.00427               15
+5:  first poor_mapping        188891    0.00808  -0.00489               18
+6:  first         SINE        149060    0.00807  -0.00546               14
+7: second   not_unique         70382    0.00463  -0.00414               14
+8: second poor_mapping        169351    0.00573  -0.00456               14
+9: second         SINE        135454    0.00615  -0.00492               14
+   bins_lower_gain  bins  holds
+             <int> <int> <lgcl>
+1:              18    20   TRUE
+2:              16    20   TRUE
+3:              19    20   TRUE
+4:              17    20   TRUE
+5:              16    20   TRUE
+6:              20    20   TRUE
+7:              18    20   TRUE
+8:              15    20   TRUE
+9:              19    20   TRUE
+Legacy endpoint hypothesis summaries saved separately

@@ -1,0 +1,2 @@
+case,legacy_slope,corrected_slope,expected_intercept_only_slope
+constant one-third predictor; 26 training samples,-1.53846153846154,0,0

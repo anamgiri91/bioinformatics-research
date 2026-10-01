@@ -1,0 +1,22 @@
+hypothesis,a,b,subset,cells,a_wins,share,holds
+H1,Codex F,F no distance,all,60,3,0.05,FALSE
+H1,Codex F,F no distance,first,60,3,0.05,FALSE
+H1,Codex F,F no distance,second,60,3,0.05,FALSE
+H2,New C,Codex F,all,60,7,0.1167,TRUE
+H2,New C,Codex F,first,60,7,0.1167,TRUE
+H2,New C,Codex F,second,60,7,0.1167,TRUE
+H3,New C,New C with dCor,all,58,0,0,TRUE
+H3,New C,New C with dCor,first,58,0,0,TRUE
+H3,New C,New C with dCor,second,58,0,0,TRUE
+H4,F+,Codex F,all,18,,1e-05,TRUE
+H4,F+,Codex F,first,18,,0,TRUE
+H4,F+,Codex F,second,18,,1e-05,TRUE
+H5,F guarded,Codex F,all,60,0,0,TRUE
+H5,F guarded,Codex F,first,60,0,0,TRUE
+H5,F guarded,Codex F,second,60,0,0,TRUE
+H6,flagged,unflagged,all,3,3,1,TRUE
+H6,flagged,unflagged,first,3,3,1,TRUE
+H6,flagged,unflagged,second,3,3,1,TRUE
+H7,F+ depth-weighted,F+,all,60,45,0.75,TRUE
+H7,F+ depth-weighted,F+,first,60,44,0.7333,TRUE
+H7,F+ depth-weighted,F+,second,60,47,0.7833,TRUE
