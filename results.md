@@ -1681,7 +1681,142 @@ it was checked (full text or abstract).
 
 Files: `Results/Task60_PriorArt.md`.
 
-### 16.10 Where this leaves the work
+### 16.10 A second external cohort, from another lab (Tasks 61, 62 and 64)
+
+**Why.** The blood samples of Task 59 came from the same study, lab and
+pipeline as the development data. A second cohort from elsewhere removes
+that limit.
+
+**Where read-level data from other labs exist.**
+- **No aligners here.** This machine has no bisulfite aligners, and
+  aligning 30 or more libraries from raw reads would take days.
+- **mHapBrowser.** This database holds read-level files (`.mhap`) for
+  5,852 public human samples. It reprocessed each one with its own
+  pipeline.
+- **Checked in its code.** I read mHapSuite's source code. It drops reads
+  marked as duplicates, and merges the two mates of a fragment when their
+  CpG ranges overlap.
+
+**The choice:** the 46 healthy-control plasma samples of GSE149438.
+- **Lab and assay.** The Goel lab's EpiPanGI Dx study used targeted
+  bisulfite capture of cell-free DNA, paired 2 x 128.
+- **Why not the others.** It was the only cohort with 30 or more
+  deduplicated healthy donors. The RRBS series in mHapBrowser are not
+  deduplicated, and a neuron WGBS set has only 25 controls.
+- **The format checks out.** In one file, every autosomal line starts and
+  ends on an hg19 CpG, with one call per CpG.
+
+| Independence screen (969 genotype-like CpGs) | Concordance |
+|---|---|
+| Two random halves of one plasma sample (positive control) | 0.953 to 1.000 |
+| Same GTEx donor, two samples (positive control) | 0.920 to 0.993 |
+| Different people (plasma with plasma, colon, blood or esophagus) | at most 0.593 |
+
+No plasma sample matched another, or any of the 94 development samples,
+so all 46 are kept.
+
+**The lock.** `Results/Task64_LockedProtocol.md` was committed (commit
+`bebd19b`) before the test ran.
+- **Unchanged from Task 59:** the endpoint, the version 2 interval and
+  the pass rule.
+- **New:**
+  - a new seed series;
+  - a sensitivity analysis on pairs at most 40 bp apart;
+  - the section 6 comparisons, as descriptive results.
+
+**Limits, stated before the test.**
+- **Unmerged mates.** When the mates' CpG ranges do not overlap, one
+  fragment becomes two lines. Its shared calls are then hidden. This
+  mostly affects pairs farther apart than the mates' overlap, which is
+  why the 40 bp analysis exists.
+- **Deduplication by position.** This can merge distinct cfDNA molecules
+  that share ends. It lowers depth but creates no shared reads.
+- **A possible untrimmed library tail.** Untrimmed bases act like call
+  errors.
+- **Biology close to blood.** cfDNA from healthy people comes mostly from
+  blood cells.
+
+Files: `Results/Task61_SecondCohortChoice.md`,
+`Scripts/Task62.SharedReadNoise.PlasmaIdentityScreen.Oct01.2026.R`,
+`Results/Task62_IdentityScreen.csv`, `Task62_PlasmaSamples.csv`,
+`Results/Fig44_PlasmaIdentityScreen.png`, `Results/Task64_LockedProtocol.md`
+and `.json`.
+
+![The second independence screen](Results/Fig44_PlasmaIdentityScreen.png)
+
+### 16.11 The plan's other comparisons, in development (Task 63)
+
+Section 6 of the plan asks for three more comparisons. I developed them on
+GTEx colon, with the same split as Task 55. The script checks that its
+covariance results equal Task 55's for all 2,972,692 pairs.
+
+**1. Correlation recovery.** The reference correlation comes from B and
+C, so it shares no reads.
+
+| Estimator from A | Valid (variances above 0, value in [-1, 1]) | MSE against the reference, 69,696 common pairs |
+|---|---|---|
+| Pearson | 81% | **0.220** |
+| Variance-only correction | 8% | 0.321 |
+| Full correction | 13% | 0.375 |
+
+The reference itself is defined for only 18% of pairs.
+
+- **Correcting the covariance works; correcting the correlation does
+  not.** The corrected variances are often near 0 or below it. That makes
+  the ratio unstable, and it does worse than plain Pearson even where it
+  is valid.
+
+**2. Pair ranking.** Each score picks its top pairs using A only. The
+outcome is how much those pairs truly disagree, by the B/C reference
+squared disagreement. Lower is better; over all pairs it is 1.2e-2.
+
+| Score | Top 1% | Top 10% | Top 25% |
+|---|---|---|---|
+| Observed squared disagreement | **1.8e-7** | **1.8e-7** | 1.1e-5 |
+| Manhattan agreement, 1 - mean abs(x - y) | **1.8e-7** | **1.8e-7** | **1.0e-5** |
+| Frozen score F+ (Task 47) | 5.2e-6 | 1.1e-5 | 6.5e-5 |
+| Corrected, positive part + 1.645 SE | 9.4e-6 | 9.4e-6 | 1.8e-5 |
+| Corrected squared disagreement (plain) | 6.4e-3 | 3.2e-3 | 2.0e-3 |
+| Spearman | 2.2e-6 | 3.7e-3 | 7.9e-3 |
+
+- **The correction does not help rank pairs.** The plain corrected
+  disagreement puts noisy pairs first. Its most negative values are noise,
+  not agreement.
+- **Shared reads help the observed disagreement.** When two sites are read
+  on the same fragments, their read errors move together. So the
+  difference x - y is less noisy than either value. The coupling that
+  inflates covariance makes disagreement more precise.
+- **The noise-aware variant does not win either.** I added three variants
+  in development, after seeing the plain one fail. The best is the
+  positive part plus 1.645 SE. It comes close, but does not beat the
+  observed score.
+- **Pairs that vary.** Among the 96,554 pairs whose sites both vary, the
+  order of the scores is the same.
+- **Correlation-type scores do poorly beyond the top 1%.** Spearman,
+  distance correlation and Chatterjee's xi ignore whether the two sites
+  sit at the same level.
+
+**3. An existing correlated-error method.** This was Ding & Gentleman
+(2003), from the Bioconductor package MeasurementError.cor, run on 2,000
+pairs.
+- **It often fails or does worse.** It converged for 75% of the pairs. On
+  the 211 pairs where every method was valid, its MSE was 0.640, against
+  0.242 for Pearson.
+- **Why it may fail.** It assumes one error correlation for all donors.
+  Here, the error correlation changes with each donor's depth and overlap.
+
+Files: `Scripts/SharedReadNoise.Section6.R`,
+`Scripts/Task63.SharedReadNoise.Section6Development.Oct01.2026.R`,
+`Results/Task63_CorrelationRecovery.csv`, `Task63_Ranking.csv`,
+`Task63_MEcorBaseline.csv`, `Results/Fig45_Section6Development.png`.
+
+![Section 6 development: which score finds pairs that truly agree](Results/Fig45_Section6Development.png)
+
+### 16.12 The second external test (Task 65)
+
+Running under the Task 64 lock.
+
+### 16.13 Where this leaves the work
 
 - **The problem is real.** Close CpGs are almost always read on the same
   fragments. In colon with all reads, about 40% of their covariance across
@@ -1691,27 +1826,26 @@ Files: `Results/Task60_PriorArt.md`.
 - **It works on real data.** Against a reference that shares no reads, it
   cuts the squared error by 41% in colon (development) and by 48% in blood
   (the locked external test).
+- **It helps covariance, not correlation or ranking.** In development, a
+  corrected correlation did worse than plain Pearson. Ranking pairs by the
+  corrected disagreement found truly similar pairs less well than the
+  observed disagreement (16.11).
 - **Not yet shown.**
-  - Other labs, pipelines and assays.
+  - Other labs, pipelines and assays. The second external test (16.12)
+    addresses this.
   - Robustness when PCR copies remain.
 - **Possibly new, not proven new.** The subtraction is known: CompDTUme
   does it for transcripts. What may be new is the closed-form estimate from
   joint read states, and its use for neighbouring CpGs (16.9).
 
-### 16.11 Still to do
+### 16.14 Still to do
 
 1. ~~**Finish the prior-art search.**~~ **Done** (16.9). It found
    CompDTUme, which makes the novelty claim narrower.
-2. **Test on a second cohort from a different lab and pipeline.** This
-   would remove the same-study limit.
-3. **Plan comparisons not yet done** (plan section 6):
-   - correlation recovery (Pearson, variance-only and full correction) on
-     real data;
-   - the pair-ranking comparison;
-   - an existing correlated-error method as a baseline.
-
-   Each would need its own lock. The blood cohort has now been used, so
-   new data would be cleaner.
+2. **A second cohort from a different lab and pipeline.** Chosen,
+   screened and locked (16.10). The test is running (16.12).
+3. ~~**The plan's section 6 comparisons.**~~ **Developed** on colon
+   (16.11). They are locked for the second cohort as descriptive results.
 
 ---
 
