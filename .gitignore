@@ -82,3 +82,13 @@ Results/*_Cluster_*
 Results/*_flags.csv
 Results/*FullFlagMatrix*
 .venv/
+
+# ---------- PRIVATE: Task 36 top-site drill-down ----------
+# Per-sample betas, flags and ranks at named CpGs, and a site summary
+# whose Min/Max columns are single individuals' values. The Zhou
+# manifests and the hg38 sequence cache sit under Data/ (already ignored).
+Results/Task36_*Detail*
+Results/Task36_TopSites_Summary.csv
+
+# The Sep 15 report quotes per-sample beta values at named CpGs.
+sep15.docx
