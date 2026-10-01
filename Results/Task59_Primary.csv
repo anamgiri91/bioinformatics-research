@@ -1,0 +1,2 @@
+donors,pairs,delta_mse_cov,subsample_pairs,subsample_estimate,lo95,hi95,plain_percentile_lo95,plain_percentile_hi95,relative_change,share_cor_closer,delta_mse_d2,mean_failed_pairs_per_draw,verdict
+57,4408849,-9.343e-06,176146,-9.651e-06,-1.099e-05,-8.219e-06,-8.792e-06,-6.022e-06,-0.4786,0.435,-0.0003042,0,primary criterion met: correction closer to the independent reference
