@@ -1,0 +1,257 @@
+{
+  "checked_at": "2026-10-01 01:57:59 UTC",
+  "status": "all checks passed",
+  "frozen_score_unchanged": true,
+  "files": [
+    {
+      "path": "Scripts/Task47.FrozenScore.Sep29.2026.R",
+      "bytes": 5135,
+      "sha256": "766b410e97aa0de184e7212bf8d5b0edfbf480ba87a1ec96d0c74ef8f48329b5"
+    },
+    {
+      "path": "Scripts/Task50.GTExColon.Build.Sep29.2026.R",
+      "bytes": 8138,
+      "sha256": "6758f5f5862fb1af36148f587f32924f345ded46a5f61874bab522dd65c841e5"
+    },
+    {
+      "path": "Scripts/Task51.GTExColon.FrozenTests.Sep29.2026.R",
+      "bytes": 19095,
+      "sha256": "4ed1b0b54a368a6a7bb8072e89e4e9351abe2ec88112ed373e525fb7724b81c0"
+    },
+    {
+      "path": "Scripts/Task52.GTExColon.SharedReads.Sep29.2026.R",
+      "bytes": 8832,
+      "sha256": "6a5501688aa55d71e7ee773bff3b7e6a67688aefb9a6ce79799b740ae41feafb"
+    },
+    {
+      "path": "Scripts/GTExColon.BlockBootstrap.R",
+      "bytes": 3717,
+      "sha256": "b46b91c673065ee25e367c51a48f1f0540f8727cc16ac6a7ac64d8c164c4c5e8"
+    },
+    {
+      "path": "Scripts/GTExColon.Continuation.Checks.R",
+      "bytes": 3444,
+      "sha256": "3072f48baa0527b1d53242b4f5ef47f710ef5528805cad0b39f7c5e9ee122790"
+    },
+    {
+      "path": "Scripts/GTExColon.LegacyEndpointSummary.R",
+      "bytes": 1180,
+      "sha256": "09dae6a20500f6eeb52af5a716cacc6d91a7e58bb480e1856bdc13f5c5fba9b1"
+    },
+    {
+      "path": "Scripts/GTExColon.Validation.Checks.R",
+      "bytes": 3926,
+      "sha256": "9742a32bc3c7a0923b9189d0d8015869db8d6c81d98c620e529d44746cd63bd7"
+    },
+    {
+      "path": "Scripts/Item5.SharedReadNoise.Pilot.R",
+      "bytes": 5845,
+      "sha256": "573cd4bdf92ee2c1ed1052d6c1ef931cca385f20768534e2e2cba77a6fea40f6"
+    },
+    {
+      "path": "Results/GTExColon_ConstantPredictorCheck.csv",
+      "bytes": 136,
+      "sha256": "540ac6a0920946cce6df0981c3e97037f5d2996ef07e6c830ef05eca9d1040a8"
+    },
+    {
+      "path": "Results/GTExColon_MappingAudit.csv",
+      "bytes": 21375,
+      "sha256": "75eb3d7da6947450e054ef408a4ffde1f60995906d8ff2f187e5185eb7836079"
+    },
+    {
+      "path": "Results/Item5_SharedReadNoise_Protocol.json",
+      "bytes": 1548,
+      "sha256": "b7cad22af319eedca457bcf485de51d6f2e80d18cf937195e8199e3475b2dd42"
+    },
+    {
+      "path": "Results/Item5_SharedReadNoise_Summary.csv",
+      "bytes": 2651,
+      "sha256": "7a58477f5b647a94af26b294d03d32697955785eb8a070f76383d514e6fdb55a"
+    },
+    {
+      "path": "Results/Task50_BuildSummary.csv",
+      "bytes": 1866,
+      "sha256": "60e62c1b36e4ee1c75cd937766ad2cf53767267b31831348fd734fce3ff77239"
+    },
+    {
+      "path": "Results/Task51_ConstantPredictorImpact.csv",
+      "bytes": 71,
+      "sha256": "d540c7d04cbba51073c69f1c002601e3ccba39bbc29dfe816ea52d30f913733f"
+    },
+    {
+      "path": "Results/Task51_DistanceDecay.csv",
+      "bytes": 200,
+      "sha256": "afe8d412fb4ca43b8f1e583aadcbeedd96ee47c1856f22b39994e77bedcfc685"
+    },
+    {
+      "path": "Results/Task51_Fold01.csv",
+      "bytes": 36614,
+      "sha256": "7e9dd95651e2dac9d3c451ab5ec2d2aa37db273a15a3e2c5ff4c9c42f76edf91"
+    },
+    {
+      "path": "Results/Task51_Fold02.csv",
+      "bytes": 36573,
+      "sha256": "0ba2cb67b3e5b6eb0384092b465d148efcc2d9d275a5d296a53083afcf48bc4e"
+    },
+    {
+      "path": "Results/Task51_Fold03.csv",
+      "bytes": 36627,
+      "sha256": "8921a475775085dcad2327efa3e3c903c49e038caeb3c43eb0fbda00a30059a6"
+    },
+    {
+      "path": "Results/Task51_Fold04.csv",
+      "bytes": 36626,
+      "sha256": "a8713554107025c96b04cf90a3448113a2ea0616798a7154f9bf07ca561283c3"
+    },
+    {
+      "path": "Results/Task51_Fold05.csv",
+      "bytes": 36592,
+      "sha256": "10efac44560ffb0b8a9fdde0aff62cc0588fd1a6080cc9490169433a3b5a5dd1"
+    },
+    {
+      "path": "Results/Task51_Fold06.csv",
+      "bytes": 36654,
+      "sha256": "5424be727da706ef302d1327740f75a45ff11022954cbd0196b8505b00594db6"
+    },
+    {
+      "path": "Results/Task51_Fold07.csv",
+      "bytes": 36627,
+      "sha256": "30b707beb8a8799c27275987a066d6c4ca6ae4569f739cb38a2b6bf77c8d937a"
+    },
+    {
+      "path": "Results/Task51_Fold08.csv",
+      "bytes": 36618,
+      "sha256": "cfa082b579f6d1ad538121d06c0216c268c6487c169d39212863571a5a47129e"
+    },
+    {
+      "path": "Results/Task51_Fold09.csv",
+      "bytes": 36628,
+      "sha256": "1f2710ece996ecc0ab299bef1a640793975ecb553f135e34b408e6c535130cac"
+    },
+    {
+      "path": "Results/Task51_Fold10.csv",
+      "bytes": 36987,
+      "sha256": "73a884a2e403057d8dd6f1eb3ca9be3841b6d2258695ba18f060738b13a6f8d7"
+    },
+    {
+      "path": "Results/Task51_Frontier_Folds.csv",
+      "bytes": 366069,
+      "sha256": "e0c71f07d803ae25ce794484ad1c3ffe2c9b073e5feb1e51e99b2a7730ee223f"
+    },
+    {
+      "path": "Results/Task51_Frontier.csv",
+      "bytes": 30957,
+      "sha256": "89e2c7a5282ecba576234081d2ca52863755f2d9620b46d769373d0fd952dece"
+    },
+    {
+      "path": "Results/Task51_Hypotheses.csv",
+      "bytes": 904,
+      "sha256": "670b2a440aa1a886f8da8d18a976fb50bfb3b59fa740669854f82e45d03c19c3"
+    },
+    {
+      "path": "Results/Task51_LegacyEndpoint_Hypotheses.csv",
+      "bytes": 904,
+      "sha256": "670b2a440aa1a886f8da8d18a976fb50bfb3b59fa740669854f82e45d03c19c3"
+    },
+    {
+      "path": "Results/Task51_LegacyEndpoint_Matched.csv",
+      "bytes": 5272,
+      "sha256": "77a5c5414b0e09abb97a7772919084586e4e11802316fd052a42ee841c0d06e0"
+    },
+    {
+      "path": "Results/Task51_LegacyEndpoint_Reliability_SpreadMatched.csv",
+      "bytes": 569,
+      "sha256": "acd2851b4eb82207faaab780a9d52e14445666913ac4d487271626972d875b3a"
+    },
+    {
+      "path": "Results/Task51_Matched.csv",
+      "bytes": 5272,
+      "sha256": "77a5c5414b0e09abb97a7772919084586e4e11802316fd052a42ee841c0d06e0"
+    },
+    {
+      "path": "Results/Task51_Reliability_SpreadMatched.csv",
+      "bytes": 569,
+      "sha256": "acd2851b4eb82207faaab780a9d52e14445666913ac4d487271626972d875b3a"
+    },
+    {
+      "path": "Results/Task52_H8_ByDistance.csv",
+      "bytes": 227,
+      "sha256": "383ba9f4d64b90ba81adc334faa7d9b9f9cc2d4f03b38500169d29971ce88d7d"
+    },
+    {
+      "path": "Results/Task52_H8_Detail.csv",
+      "bytes": 331,
+      "sha256": "8c7fe2f10af2c13d1a04e5e5ee453d28093dd3449857784a0ba9fe198dfe6dca"
+    },
+    {
+      "path": "Results/Task52_H9_Detail.csv",
+      "bytes": 292,
+      "sha256": "e85a3db48baada1cd550dde3d4314349450b9efa6ed3b960caa9bf9ca5347d53"
+    },
+    {
+      "path": "Results/Task52_Hypotheses.csv",
+      "bytes": 351,
+      "sha256": "feb4f7718bc975710e9d5e81155fa90692e6b7e0d5384dc11efd0f394febb022"
+    },
+    {
+      "path": "report.md",
+      "bytes": 50922,
+      "sha256": "1ef7d91244978ca77127ac754c8b49a98fae2e7d17dc05ecc76db449512d8c66"
+    },
+    {
+      "path": "Results/Task47_FrozenProtocol.md",
+      "bytes": 9635,
+      "sha256": "2d1fd31e4e5af4d367aeb8cf2f236d23782d0c554bbf1c7cfd0ed9565b229e64"
+    },
+    {
+      "path": "Results/Task47_FrozenProtocol.json",
+      "bytes": 5722,
+      "sha256": "5e88fdb25d652ceaf10c6da76720df5736e23f41770c6ea6e0ee4e99b0907939"
+    },
+    {
+      "path": "Results/GTExColon_Validation_Report.md",
+      "bytes": 9726,
+      "sha256": "3d41aaecbfa5b469253a6b65c452a853d061fafda5499511ca576b0ea7844c70"
+    },
+    {
+      "path": "Results/GTExColon_Continuation_Deviations.md",
+      "bytes": 6206,
+      "sha256": "4b06440e8a32d3ad92cfb2937df11700ebbef1627e01a9a71ddbc06284773adb"
+    },
+    {
+      "path": "Results/Task51_H6_AnnotationFix.md",
+      "bytes": 2322,
+      "sha256": "aff1042c96347fa9c38defe7fd95d7f9d5f13c450cdf59363b2fca256f71b1d1"
+    },
+    {
+      "path": "Results/Item5_SharedReadNoise_Design.md",
+      "bytes": 9052,
+      "sha256": "53daa732d7b9b08b50dfe463f952c1b16f6373d48c2cf7a7bc3dc451b4efa3eb"
+    },
+    {
+      "path": "Results/Fig37_GTExColon_Frontier.png",
+      "bytes": 247471,
+      "sha256": "c894f25cbea8854bd93dbd913dc5dfe86f75377e0bc36ba177d28fc1c255aa55"
+    },
+    {
+      "path": "Results/Fig38_SharedReads.png",
+      "bytes": 154729,
+      "sha256": "5d666f805cbe429f4ebfbf6751aa647ed856eccf730bd2233a0cb906a93e538d"
+    },
+    {
+      "path": "Data/gtex_colon_rrbs/colon_samples.json",
+      "bytes": 14150,
+      "sha256": "53136f91d6ba0df207415f93416ba31382cae581cf236270215f65421a1984cb"
+    },
+    {
+      "path": "Data/gtex_colon_rrbs/cache_cohort.rds",
+      "bytes": 191750568,
+      "sha256": "5d6e124c6f235f5f3db03bc8a0acff7fb398c2f7ae3477b271733089e6e73d99"
+    },
+    {
+      "path": "Data/gtex_colon_rrbs/pair_outcomes.rds",
+      "bytes": 53520046,
+      "sha256": "61dfe1a6fc97afce87b838a0e78b51eae2e3db9571abcd3baf79ca64567cfb8c"
+    }
+  ]
+}

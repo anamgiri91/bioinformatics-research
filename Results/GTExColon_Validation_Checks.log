@@ -1,0 +1,2 @@
+PASS: 150 exact comparisons against expanded whole-block bootstrap, including ties and medians
+PASS: frozen hashes; 3,780 fold records; fold means; identical legacy results; corrected annotation counts; H8/H9 summaries; bootstrap checks; script parsing
