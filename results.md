@@ -1296,6 +1296,411 @@ question 2 asks the supervisor to settle.
 
 ---
 
+## 16. Shared-read noise in co-methylation (item 5, from October 2026)
+
+This section follows `plan_shared_read_noise.md`. It asks one narrow
+question. When two close CpGs are read on the same DNA fragment, their
+measured betas in one person share read noise. Across people, that noise
+adds to the observed covariance. How big is it, and can it be removed?
+
+It is separate from the frozen similarity work of Tasks 47 to 52, which is
+not changed.
+
+### 16.1 The correction
+
+For each donor k, the fragments that call both sites give four counts:
+n00, n01, n10 and n11 (first digit = site i, 1 = methylated). From them:
+
+- shared-read noise covariance:
+  c_k = (r n11 - (n10 + n11)(n01 + n11)) / (N_ik N_jk (r - 1)),
+  where r is the number of shared fragments and N the site depths;
+- read noise variance: v_ik = b_ik (1 - b_ik) / (N_ik - 1).
+
+Then, over the donors:
+
+| Quantity | Observed | Corrected |
+|---|---|---|
+| Covariance | s_ij | s_ij - mean(c_k) |
+| Variance | s_i^2 | s_i^2 - mean(v_ik) |
+| Squared disagreement | mean (b_i - b_j)^2 | mean [(b_i - b_j)^2 - v_i - v_j + 2 c_k] |
+
+These are unbiased for the sampled donors' true moments if two things
+hold. Each read must be an independent molecule, and shared fragments must
+represent each site like the other fragments. A donor needs at least 2 reads
+at both sites and either 0 or at least 2 shared fragments. A pair needs 20
+such donors.
+
+The code is `Scripts/SharedReadNoise.Core.R`. Its 300 checks in
+`Scripts/SharedReadNoise.Checks.R` pass. They include hand-worked cases, an
+exact enumeration of all outcomes, and a slow independent parser for the
+read files.
+
+### 16.2 What one read count is (plan phase A)
+
+- **GEO's processing notes for GSE233417.** PCR duplicates were removed
+  with UMIs: UMI-Grinder on a 16 bp UMI, allowing up to 4 mismatches. The
+  fragment-level files were written by wgbstools from the deduplicated
+  reads.
+- **The wgbstools `.pat` format.** The two mates of a read pair are merged
+  into one line. Reads with the same start and the same pattern are
+  collapsed into one line with a count.
+- **So one counted unit is one deduplicated fragment.** That is what the
+  correction needs.
+- **What cannot be checked here.** The raw reads are in EGA under
+  controlled access (EGAS00001007213). Two small risks remain. Two
+  different molecules can share a UMI and be merged, which is rare with
+  16 bp. And wgbstools may apply filters that GEO does not list.
+
+### 16.3 How big is the noise? GTEx colon RRBS, 29 donors (Task 53)
+
+The read files of all 29 donors were turned into joint counts for every
+pair of adjacent CpGs within 200 bp on the autosomes. That is 22.8 million
+pairs, of which 4,447,998 have at least 20 usable donors. The rebuilt site
+counts match the Task 50 build exactly.
+
+Of the donor-pair rows seen, 9.9% had fewer than 2 reads at a site and 1.0%
+had exactly one shared fragment, so they were left out. Only 1.8% of the
+usable rows had no shared fragment at all: close CpGs are almost always
+read together.
+
+| Pairs | Observed covariance | Read-noise part | Corrected covariance | Noise share |
+|---|---|---|---|---|
+| All | 0.00364 | 0.00153 | 0.00211 | 42% |
+| 0 to 10 bp apart | 0.00343 | 0.00154 | 0.00189 | 45% |
+| 150 to 200 bp apart | 0.00296 | 0.00094 | 0.00202 | 32% |
+| Depth under 10 reads | 0.00654 | 0.00414 | 0.00241 | 63% |
+| Depth 50 reads or more | 0.00208 | 0.00031 | 0.00177 | 15% |
+| Nearly constant pairs (SD under 0.02) | 0.000024 | 0.000023 | 0.000001 | 96% |
+
+What this shows:
+
+- **About 40% of the covariance between close CpGs is read noise.** It is
+  larger at low depth and for pairs that barely vary.
+- **Most of the drop with distance is noise.** The observed covariance falls
+  from 0.0039 to 0.0030 over 10 to 200 bp. The noise part falls with it,
+  but the corrected covariance stays between 0.0019 and 0.0024. This fits
+  Tasks 48 and 51, where a distance weight did not help.
+- **The Task 52 H9 groups.** Among low-spread pairs with strong read linkage,
+  65% of the covariance is read noise (block interval 64% to 66%). A real
+  part remains: their corrected covariance is about 6.6 times that of the
+  weakly linked pairs. So that signal is mostly, but not only, shared
+  noise.
+- **A corrected correlation is rarely possible.** Both corrected variances
+  are positive and the ratio lies within -1 to 1 for only 20% of pairs, and
+  for 2% of low-spread pairs. Corrected covariance and corrected
+  agreement are usable; a corrected correlation mostly is not.
+- **Limits.** These are development results on a cohort we have already
+  used. The intervals resample 1-Mb blocks of pairs, not donors.
+
+Files: `Scripts/Task53.SharedReadNoise.GTExDevelopment.Oct01.2026.R`,
+`Results/Task53_Coverage.csv`, `Task53_ByStratum.csv`, `Task53_H9_Link.csv`,
+`Task53_GainCorrelations.csv`, `Results/Fig39_SharedReadNoise.png`.
+
+![Shared-read noise by distance, and in the Task 52 H9 groups](Results/Fig39_SharedReadNoise.png)
+
+### 16.4 Simulation (plan phase D, Task 54)
+
+The plan asks for simulations before any external test. I fixed 40
+scenarios, and a 9-scenario subset for checking intervals, in
+`Results/Task54_SimulationScenarios.json` before running anything. The
+script refuses to run if that file changes. Each scenario has 2,000
+simulated cohorts.
+
+Fragments are simulated one by one, so the violations act on real reads.
+On simulated cohorts, the script's fast estimator gives the same numbers as
+the tested core code.
+
+| Scenario | Observed bias | Corrected bias | Observed RMSE | Corrected RMSE | Corrected correlation valid |
+|---|---|---|---|---|---|
+| Base (29 donors, 10 reads, all shared, coupling 0.5) | +0.0080 | +0.0002 | 0.0122 | 0.0096 | 97% |
+| 3 reads | +0.0265 | +0.0004 | 0.0327 | 0.0229 | 61% |
+| 30 reads | +0.0026 | -0.0000 | 0.0057 | 0.0051 | 100% |
+| Sites that do not vary | +0.0123 | -0.0001 | 0.0134 | 0.0055 | 11% |
+| Fragments disagree (coupling -1) | -0.0122 | -0.0002 | 0.0150 | 0.0086 | 82% |
+| No shared fragments | -0.0001 | -0.0001 | 0.0086 | 0.0086 | 92% |
+
+Bias is measured against the true covariance of the sampled donors.
+
+What it shows:
+
+- **The correction removes the bias when the model holds.** In all 34
+  scenarios that follow the model, the corrected covariance is centred on
+  the truth. The largest gap is 2.6 Monte Carlo SEs, which is what chance
+  gives over 34 scenarios. The observed covariance is biased upward when
+  shared fragments agree, and downward when they disagree.
+- **It also lowers the error.** The corrected RMSE is lower whenever
+  fragments are shared and coupled. With no coupling, or no shared
+  fragments, it changes nothing. With no shared fragments the correction
+  is exactly 0.
+- **The same holds for squared disagreement.**
+- **A corrected correlation often fails.** It is valid in 97% of base
+  cohorts, but only 11% to 19% when the sites barely vary, and 43% to 61%
+  at 2 or 3 reads. This matches the real data, where 20% are valid.
+- **Assumption violations.** Three of the six bias the corrected
+  covariance, but it stays closer to the truth than the observed one:
+  - PCR copies left in the data: +0.003;
+  - shared fragments with different methylation from the rest: -0.002;
+  - conversion errors: -0.002.
+
+  Three do not bias it: call loss that depends on the methylation state,
+  coverage that depends on methylation, and a mix of cell types.
+- **Intervals.** I used whole-donor bootstrap 95% intervals for the
+  population covariance.
+  - Corrected intervals cover the truth 90% to 95% of the time, which is
+    slightly low.
+  - Observed intervals cover it only 19% to 94% of the time.
+  - Where the true covariance is 0, observed intervals wrongly exclude 0 in
+    9% (independent sites) and 81% (sites that do not vary) of cohorts.
+    Corrected intervals do so in 7% and 9%.
+
+Files: `Scripts/Task54.SharedReadNoise.Simulation.Oct01.2026.R`,
+`Results/Task54_SimulationScenarios.json` (declared first),
+`Results/Task54_SimulationSummary.csv`, `Task54_Calibration.csv`,
+`Task54_PopulationTargets.csv`, `Results/Fig40_SimulationBias.png`.
+
+![Simulation: covariance bias, observed and corrected, in every scenario](Results/Fig40_SimulationBias.png)
+
+### 16.5 A dry run of the three-way fragment benchmark (Task 55)
+
+**The test.** Simulation can only check the correction against an assumed
+model. Real data have no known truth, so the plan uses the data itself. In
+each donor, every fragment is sent at random to one of three groups, A, B
+or C, with all its calls kept together.
+
+- The observed and corrected covariances are computed from A only.
+- The reference covariance compares a site's B reads with the neighbour's C
+  reads. B and C share no reads, so the reference carries no shared-read
+  noise.
+- The endpoint is the mean over pairs of (corrected - reference)^2 minus
+  (observed - reference)^2. Below 0 means the correction is closer.
+
+This dry run is on GTEx colon, so it is development, not validation. It
+tests the pipeline, and its checks pass. The split keeps every read count,
+and the cross covariance and the endpoint match direct calculation.
+
+| Pairs | Change in squared error, corrected vs observed |
+|---|---|
+| All 2,972,692 pairs | **-41%** (95% interval of the endpoint below 0: -3.0e-5 to -2.0e-5) |
+| 0 to 10 bp apart | -50% |
+| 150 to 200 bp apart | -13% |
+| Most reads shared (overlap 0.75 or more) | -42% |
+| Few reads shared (overlap under 0.25) | 0% |
+| Nearly constant pairs (SD under 0.02) | -92% |
+| Pairs that vary most (SD 0.1 or more) | -42% |
+
+- **The correction moves the covariance closer to a noise-free reference.**
+  The gain follows how many reads the two sites share, as the theory says.
+- **The squared disagreement improves too,** in every stratum.
+- **Not every pair improves.**
+  - The corrected value is closer for 44% of pairs, the observed one for
+    30%.
+  - The other 27% are ties: the correction is exactly 0 there, and in 70%
+    of them the A reads do not vary at all.
+  - Where the correction helps, the mean gain is about twice the mean loss
+    where it does not (8.5e-5 against 4.2e-5).
+
+Files: `Scripts/SharedReadNoise.Benchmark.R`,
+`Scripts/Task55.SharedReadNoise.BenchmarkDryRun.Oct01.2026.R`,
+`Results/Task55_Endpoint.csv`, `Task55_ByStratum.csv`, `Task55_Bootstrap.csv`,
+`Results/Fig41_BenchmarkDryRun.png`.
+
+![Dry run on GTEx colon: the gain from the correction by distance, depth, overlap and spread](Results/Fig41_BenchmarkDryRun.png)
+
+### 16.6 Checking the bootstrap interval (Task 57)
+
+The plan asks for the endpoint's bootstrap interval to be checked in
+simulation before any external test. The simulation has whole genomes of
+2,000 pairs in 100 blocks with shared parameters, and every donor has a
+global shift. This gives the data both spatial and donor dependence.
+
+| Interval | 29 donors | 57 donors | Null (no shared-read noise) |
+|---|---|---|---|
+| Percentile, as the plan proposed | 67% | 82% | 38% |
+| **Bias-corrected percentile** | **99.7%** | **96.0%** | **100%** |
+| Donor-only, bias-corrected | 88% | 67% | 100% |
+
+The numbers are coverage of the true average endpoint; the target is 95%.
+
+- **The plan's interval would have misled.** The endpoint is built from
+  squared errors. Resampling donors adds variance to those squares, which
+  shifts the whole bootstrap distribution upward.
+- **The bias-corrected interval does not mislead.** It covers 96% to 100%,
+  so if anything it is cautious. It never falsely showed a benefit in the
+  null, and it detected the real benefit in every replicate.
+- **A donor-only bootstrap is not enough.** It ignores the variation
+  between genomic blocks, and covers only 67% to 88%.
+- **It was adopted as version 2 of the protocol** before any external data
+  were analysed, as the plan requires.
+
+Files: `Scripts/Task57.SharedReadNoise.BootstrapCalibration.Oct01.2026.R`,
+`Results/Task57_BootstrapCalibration.csv`.
+
+### 16.7 The external cohort, and the lock (Tasks 56 and 58)
+
+- **Choice, from metadata only.** The 57 white-blood-cell RRBS samples of
+  GSE233417. They are the only public set found with read-level files and
+  30 or more people of one tissue who are not development donors.
+  - The other GTEx tissues share donors with colon; for example, 5 of the
+    30 esophagus donors.
+  - The other read-level series fall short. One cfDNA set has only 27
+    usable people.
+
+  The full record is `Results/Task56_CohortChoice.md`.
+- **Independence, checked from the data.** The samples have no donor IDs.
+  So I used 13,230 genotype-like CpGs, where people fall into low, middle
+  and high groups, like genotypes. I counted how often two samples get the
+  same call.
+  - Same person: 0.975 to 0.997. The 11 control pairs come from 8
+    esophagus samples of 5 colon donors. Eight pairs compare an esophagus
+    sample with the same donor's colon sample, and three compare two
+    esophagus samples of one donor.
+  - Different people: 0.32 to 0.49.
+  - No blood sample matched another blood sample or a colon donor, so all
+    57 are kept.
+- **Limit.** The donors are independent, but the samples come from the
+  same study, lab and pipeline.
+- **The lock.** `Results/Task58_LockedProtocol.md` was committed (commit
+  `3c14390`) before the test ran. It fixes the samples, file hashes, seeds,
+  pair rules, endpoint, version 2 interval, pass criterion and every
+  deviation. The test script stops if anything has changed.
+
+Files: `Results/Task56_CohortChoice.md`,
+`Scripts/Task56.SharedReadNoise.ExternalCohortScreen.Oct01.2026.R`,
+`Results/Task56_IdentityScreen.csv`, `Task56_ExternalSamples.csv`,
+`Results/Fig42_IdentityScreen.png`, `Results/Task58_LockedProtocol.md` and
+`.json`.
+
+![The independence screen: same-person pairs against different people](Results/Fig42_IdentityScreen.png)
+
+### 16.8 The external test (Task 59)
+
+The test ran once, under the lock, on the 57 blood samples. Of the
+4,629,140 pairs in the universe, 4,408,849 had at least 20 eligible donors.
+
+| Locked outcome | Result |
+|---|---|
+| Primary endpoint, Delta MSE | -9.3e-6 |
+| 95% interval (bias-corrected, version 2) | -1.10e-5 to -8.2e-6 |
+| **Verdict** | **Primary criterion met: the upper end is below 0** |
+| Change in squared error, corrected vs observed | -48% |
+| Squared disagreement (secondary) | Also closer: Delta MSE -3.0e-4 |
+
+What it shows:
+
+- **The correction passed its locked test in 57 people it had never seen.**
+  The corrected covariance is closer to a reference that shares no reads.
+  - The plain percentile interval also excludes 0 (-8.8e-6 to -6.0e-6).
+  - So the verdict does not depend on the version 2 change.
+- **On average, the corrected covariance matches the reference almost
+  exactly.**
+
+  | Mean over all pairs | Blood (external) | Colon (dry run) |
+  |---|---|---|
+  | Observed covariance (A) | 0.00181 | 0.00450 |
+  | Corrected covariance (A) | 0.00074 | 0.00200 |
+  | Reference (B with C, no shared reads) | 0.00074 | 0.00200 |
+
+  - The observed covariance is about 2.4 times too large in blood.
+  - In blood, corrected and reference agree within 6% in every stratum.
+  - For a single pair the estimate is still noisy; see the per-pair split
+    below.
+- **In the A third of the reads, 59% of the observed covariance is
+  shared-read noise.** With all the reads, the share would be smaller,
+  because more reads mean less noise.
+- **Every stratum improves, except where few reads are shared.**
+  - By distance: -59% at 0 to 10 bp, -15% at 150 to 200 bp.
+  - By depth: -40% to -50% at every depth.
+  - With overlap under 0.25: +0.2%, so no real change. There is little to
+    correct there.
+- **Per pair.** This split was computed after the test, as a description
+  only.
+  - The corrected value is closer for 43.5% of pairs, the observed one for
+    33%.
+  - The other 23.5% are ties, where the correction is exactly 0.
+  - Where the correction helps, the mean gain is about three times the
+    mean loss where it does not (2.9e-5 against 1.0e-5).
+- **One difference from colon: distance matters in blood.**
+  - In colon, the noise-free covariance was nearly flat within 200 bp.
+  - In blood it falls by about half, from 0.00078 at 0 to 10 bp to 0.00042
+    at 150 to 200 bp.
+  - So in blood, part of the fall with distance is real.
+- **What this does not show.**
+  - **Other labs or pipelines.** These samples come from the same study as
+    the development data.
+  - **Assumption failures in practice.** It does not test PCR copies or
+    conversion errors directly. In simulation, both bias the correction
+    (16.4).
+
+Files: `Scripts/Task59.SharedReadNoise.ExternalTest.Oct01.2026.R` and
+`.Rout`, `Results/Task59_Primary.csv`, `Task59_ByStratum.csv`,
+`Results/Fig43_ExternalTest.png`.
+
+![The locked external test, by distance, depth and overlap](Results/Fig43_ExternalTest.png)
+
+### 16.9 Is it new? Prior art (plan phase H, Task 60)
+
+I checked every method the plan lists, and the nearest work found in other
+fields. Each citation and claim is in `Results/Task60_PriorArt.md`, with how
+it was checked (full text or abstract).
+
+- **What is not new.**
+  - Removing shared sampling noise from a covariance. Population genetics
+    does this for allele-frequency changes over time (Buffalo & Coop 2020).
+  - Correcting a correlation for correlated error, once the error
+    covariance is known (Saccenti et al. 2020).
+  - Correcting the variance for binomial read-count error. Buonaccorsi et
+    al. (2016) do this for one methylation proportion, and CS-CORE (2023)
+    for single-cell counts.
+  - Measuring how two CpGs on one read are linked (Saito & Suyama 2015;
+    Guo et al. 2017).
+  - Noting that neighbouring sites share fragments. MethylPCA (2013) does
+    this for MBD-seq, and merges such sites.
+  - Splitting molecules at random to check a method. This is molecular
+    cross-validation (2019) and data thinning (2024).
+- **What may be new.** Saccenti et al. say the error covariance is the hard
+  part to estimate. For bisulfite reads, each donor's joint read states give
+  it directly. No paper was found that uses them to correct the covariance
+  of neighbouring CpGs across people.
+- **Not yet searched in depth.** Three areas could still hold the same idea:
+  - other count data where reads are shared between two quantities
+    (allele-specific expression, isoforms, pooled sequencing);
+  - the documentation of co-methylation tools;
+  - models that may turn out to be mathematically the same.
+
+Files: `Results/Task60_PriorArt.md`.
+
+### 16.10 Where this leaves the work
+
+- **The problem is real.** Close CpGs are almost always read on the same
+  fragments. In colon with all reads, about 40% of their covariance across
+  people is read noise.
+- **The correction works under its assumptions.** It uses each donor's joint
+  read states. In simulation it is unbiased when the model holds.
+- **It works on real data.** Against a reference that shares no reads, it
+  cuts the squared error by 41% in colon (development) and by 48% in blood
+  (the locked external test).
+- **Not yet shown.**
+  - Other labs, pipelines and assays.
+  - Robustness when PCR copies remain.
+- **Possibly new, not proven new.** The pieces are known (16.9). Estimating
+  the error covariance from joint read states was not found.
+
+### 16.11 Still to do
+
+1. **Finish the prior-art search** in the three areas listed in 16.9.
+2. **Test on a second cohort from a different lab and pipeline.** This
+   would remove the same-study limit.
+3. **Plan comparisons not yet done** (plan section 6):
+   - correlation recovery (Pearson, variance-only and full correction) on
+     real data;
+   - the pair-ranking comparison;
+   - an existing correlated-error method as a baseline.
+
+   Each would need its own lock. The blood cohort has now been used, so
+   new data would be cleaner.
+
+---
+
 ## Files
 
 | | |
