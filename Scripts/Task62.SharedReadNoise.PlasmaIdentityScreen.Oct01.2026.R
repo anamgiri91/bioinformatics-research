@@ -1,0 +1,213 @@
+# ================================================================
+# Task 62 - Second external cohort (results.md 16.11, item 2): are the
+#           46 healthy-control plasma samples of GSE149438 independent
+#           of each other and of every development sample?
+# Date: Oct 1, 2026
+#
+# WHY THIS COHORT (from metadata; Results/Task61_SecondCohortChoice.md)
+#   A different lab (Goel lab), assay (targeted capture of cfDNA) and
+#   pipeline (mHapBrowser: BSMAP, sambamba duplicate marking, mHapSuite
+#   convert, which merges overlapping mates). The samples carry no donor
+#   IDs, so independence is checked from the data, as in Task 56.
+#
+# THE SCREEN (rules fixed here, before any data were read)
+#   Samples: the 46 plasma controls (.mhap), and every development
+#   sample: 29 GTEx colon, 57 GSE233417 white-blood-cell and 8 GTEx
+#   esophagus samples (.pat).
+#   Genotype-like CpGs, found in the 46 plasma samples: autosomal CpGs
+#   with at least 10 reads in at least 32 of the 46 (70%, the Task 56
+#   share), where at least 10% of those samples sit in each of three
+#   clusters (beta < 0.15; 0.3 to 0.7; > 0.85) and at most 10% sit
+#   between them. If fewer than 200 sites pass, the middle cluster
+#   widens to 0.2 to 0.8 and the gap limit to 15%.
+#   Calls: with at least 10 reads, 0 (beta < 0.15), 1 (0.3 to 0.7) or
+#   2 (> 0.85); otherwise no call.
+#   Concordance of two samples: the share of sites called in both with
+#   the same call, over at least 50 such sites. Same person: >= 0.8.
+#   Positive controls:
+#     (a) each plasma sample split at random into two halves of its
+#         molecules (seed 20261201 + sample rank). Every comparable
+#         pair of halves of one sample must reach 0.8, and at least 30
+#         such pairs must be comparable;
+#     (b) the 11 same-donor GTEx pairs of Task 56 (esophagus with colon,
+#         esophagus with esophagus), wherever comparable at these sites.
+#   If (a) fails, the screen fails and the second external test is
+#   declared unmet. If fewer than 5 pairs in (b) are comparable, the
+#   comparison of plasma with the development samples is declared not
+#   possible from these sites, and that is stated as a limit.
+#   Exclusions: a plasma sample matching any development sample is
+#   dropped; of two matching plasma samples, the later GEO accession is
+#   dropped. If fewer than 30 remain, the second external test is unmet.
+#
+# OUTPUTS
+#   Results/Task62_IdentityScreen.csv  concordance by pair type
+#   Results/Task62_PlasmaSamples.csv   plasma samples kept, with reasons
+#   Results/Fig44_PlasmaIdentityScreen.png
+# ================================================================
+
+suppressPackageStartupMessages({ library(data.table); library(jsonlite); library(ggplot2) })
+
+pick_dir <- function(...) { for (d in c(...)) if (dir.exists(d)) return(d)
+  stop("no candidate directory exists") }
+repo_dir <- pick_dir("/mmfs1/home/wln26/Experiments.Outlier.July31.2026",
+                     path.expand("~/Desktop/bioinformatics-research"))
+res <- file.path(repo_dir, "Results"); D0 <- file.path(repo_dir, "Data")
+AUTO <- paste0("chr", 1:22); MINR <- 10L; MINSITES <- 50L; SAME <- 0.8
+cpg <- readRDS(file.path(D0, "hg19_seq", "cpg_positions_hg19.rds")); NCPG <- sum(lengths(cpg))
+I0 <- c(0L, cumsum(lengths(cpg))[-22])
+
+pla <- as.data.table(fromJSON(file.path(D0, "gse149438_plasma_mhap", "plasma_normal_samples.json")))[order(Sample_GEO)]
+wbc <- fromJSON(file.path(D0, "gtex_wbc_rrbs", "wbc_samples.json"))
+col <- fromJSON(file.path(D0, "gtex_colon_rrbs", "colon_samples.json"))
+eso <- fromJSON(file.path(D0, "gtex_eso_controls", "eso_controls.json"))
+dev <- rbind(
+  data.table(group = "blood (GSE233417)", gsm = wbc$gsm, donor = NA_character_,
+             file = file.path(D0, "gtex_wbc_rrbs", basename(sapply(wbc$files, `[`, 2)))),
+  data.table(group = "colon", gsm = col$gsm, donor = sub("^GSM[0-9]+_(GTEX-[A-Z0-9]+)-.*", "\\1", basename(sapply(col$files, `[`, 1))),
+             file = file.path(D0, "gtex_colon_rrbs", basename(sapply(col$files, `[`, 2)))),
+  data.table(group = "esophagus control", gsm = eso$gsm, donor = eso$donor,
+             file = file.path(D0, "gtex_eso_controls", basename(sapply(eso$files, `[`, 2)))))
+pla[, file := file.path(D0, "gse149438_plasma_mhap", paste0(SRA, ".mhap.gz"))]
+stopifnot(nrow(pla) == 46, nrow(dev) == 57 + 29 + 8, all(file.exists(pla$file)), all(file.exists(dev$file)))
+
+# .mhap (chr, first CpG, last CpG, 0/1 string, count, strand) to .pat-like rows
+# (global CpG index of the first CpG, C/T string, count), both strands together.
+read_mhap <- function(f) {
+  m <- fread(cmd = sprintf("gzip -dc '%s'", f), header = FALSE, sep = "\t",
+             col.names = c("chr", "start", "end", "hap", "n", "strand"),
+             colClasses = c("character", "integer", "integer", "character", "integer", "character"))[chr %in% AUTO]
+  m[, k := match(chr, AUTO)]
+  m[, li := { p <- cpg[[k[1]]]; match(start, p) }, by = k]
+  m[, lj := { p <- cpg[[k[1]]]; match(end, p) }, by = k]
+  bad <- m[is.na(li) | is.na(lj) | (lj - li + 1L) != nchar(hap), .N]
+  if (bad) stop(sprintf("%s: %d lines do not map to the hg19 CpG list", basename(f), bad))
+  m[, .(chr, idx = I0[k] + li, pat = chartr("01", "TC", hap), n)]
+}
+read_pat <- function(f) fread(cmd = sprintf("gzip -dc '%s'", f), header = FALSE, sep = "\t",
+                              col.names = c("chr", "idx", "pat", "n"),
+                              colClasses = c("character", "integer", "character", "integer"))[chr %in% AUTO]
+site_counts <- function(p) {                 # per-CpG reads and methylated reads, global index
+  L <- nchar(p$pat); codes <- utf8ToInt(paste0(p$pat, collapse = ""))
+  row <- rep.int(seq_len(nrow(p)), L); off <- sequence(L) - 1L; k <- which(codes != 46L)
+  data.table(idx = p$idx[row[k]] + off[k], n = p$n[row[k]], m = codes[k] == 67L)[, .(N = sum(n), M = sum(n[m])), keyby = idx]
+}
+
+# ----------------------------------------------------------------
+# 1. genotype-like CpGs from the 46 plasma samples
+# ----------------------------------------------------------------
+cnt <- list(cov = integer(NCPG), low = integer(NCPG), mid = integer(NCPG), high = integer(NCPG), mid2 = integer(NCPG))
+psc <- vector("list", nrow(pla)); half <- vector("list", 2 * nrow(pla))
+t0 <- Sys.time()
+for (s in seq_len(nrow(pla))) {
+  p <- read_mhap(pla$file[s])
+  sc <- site_counts(p); psc[[s]] <- sc[N >= MINR]
+  set.seed(20261201L + s); n1 <- rbinom(nrow(p), p$n, 0.5)              # positive control (a)
+  h1 <- p[n1 > 0][, n := n1[n1 > 0]]; h2 <- p[p$n - n1 > 0][, n := (p$n - n1)[p$n - n1 > 0]]
+  half[[2 * s - 1]] <- site_counts(h1)[N >= MINR]; half[[2 * s]] <- site_counts(h2)[N >= MINR]
+  b <- psc[[s]]$M / psc[[s]]$N; i <- psc[[s]]$idx
+  cnt$cov[i] <- cnt$cov[i] + 1L; cnt$low[i] <- cnt$low[i] + (b < 0.15)
+  cnt$mid[i] <- cnt$mid[i] + (b >= 0.3 & b <= 0.7); cnt$high[i] <- cnt$high[i] + (b > 0.85)
+  cnt$mid2[i] <- cnt$mid2[i] + (b >= 0.2 & b <= 0.8)
+  if (s %% 10 == 0) cat(sprintf("plasma %d/%d (%.1f min)\n", s, nrow(pla), as.numeric(Sys.time() - t0, units = "mins")))
+}
+pick <- function(mi, gap_max) {
+  n <- cnt$cov; gap <- n - cnt$low - mi - cnt$high
+  which(n >= 32 & cnt$low >= 0.1 * n & mi >= 0.1 * n & cnt$high >= 0.1 * n & gap <= gap_max * n)
+}
+sites <- pick(cnt$mid, 0.10); rule <- "primary (middle 0.3-0.7, gap <= 10%)"
+if (length(sites) < 200) { sites <- pick(cnt$mid2, 0.15); rule <- "fallback (middle 0.2-0.8, gap <= 15%)" }
+cat("genotype-like CpGs:", length(sites), "using the", rule, "rule\n")
+rm(cnt); invisible(gc())
+
+# ----------------------------------------------------------------
+# 2. calls at those sites for every sample, then concordance
+# ----------------------------------------------------------------
+call_at <- function(sc) { at <- match(sites, sc$idx); h <- which(!is.na(at)); b <- sc$M[at[h]] / sc$N[at[h]]
+  g <- rep(NA_integer_, length(sites))
+  g[h] <- fifelse(b < 0.15, 0L, fifelse(b >= 0.3 & b <= 0.7, 1L, fifelse(b > 0.85, 2L, NA_integer_))); g }
+smp <- rbind(data.table(group = "plasma", gsm = pla$Sample_GEO, donor = NA_character_, half = 0L, of = seq_len(nrow(pla))),
+             data.table(group = "plasma half", gsm = rep(pla$Sample_GEO, each = 2), donor = NA_character_,
+                        half = rep(1:2, nrow(pla)), of = rep(seq_len(nrow(pla)), each = 2)),
+             dev[, .(group, gsm, donor, half = 0L, of = NA_integer_)])
+G <- matrix(NA_integer_, length(sites), nrow(smp))
+for (s in seq_len(nrow(pla))) G[, s] <- call_at(psc[[s]])
+for (s in seq_along(half)) G[, nrow(pla) + s] <- call_at(half[[s]])
+rm(psc, half); invisible(gc())
+for (s in seq_len(nrow(dev))) G[, 3 * nrow(pla) + s] <- call_at(site_counts(read_pat(dev$file[s]))[N >= MINR])
+cat(sprintf("calls done (%.1f min)\n", as.numeric(Sys.time() - t0, units = "mins")))
+
+pairs <- CJ(a = seq_len(nrow(smp)), b = seq_len(nrow(smp)))[a < b]
+pairs[, `:=`(ga = smp$group[a], gb = smp$group[b])]
+pairs <- pairs[!(ga == "plasma half" & gb == "plasma half" & smp$of[a] != smp$of[b])]    # halves only with their twin
+pairs <- pairs[!((ga == "plasma half") != (gb == "plasma half"))]                          # halves never against others
+pairs <- pairs[!(ga != "plasma" & gb != "plasma" & ga != "plasma half")                     # development pairs: only the
+               | (smp$donor[a] == smp$donor[b] & !is.na(smp$donor[a]) & !is.na(smp$donor[b]))]  # same-donor controls (b)
+pairs[, c("compared", "concordance") := {
+  v <- mapply(function(x, y) { k <- !is.na(G[, x]) & !is.na(G[, y]); c(sum(k), if (any(k)) mean(G[k, x] == G[k, y]) else NA_real_) }, a, b)
+  list(v[1, ], v[2, ])
+}]
+pairs[, type := fcase(
+  ga == "plasma half", "halves of one plasma sample (positive control a)",
+  ga == "plasma" & gb == "plasma", "plasma vs plasma",
+  ga == "plasma" | gb == "plasma", paste("plasma vs", fifelse(ga == "plasma", gb, ga)),
+  default = "same GTEx donor (positive control b)")]
+cmp <- pairs[compared >= MINSITES]
+q3 <- function(x, f) if (length(x)) round(f(x), 3) else NA_real_
+summ <- pairs[, .(pairs = .N, comparable = sum(compared >= MINSITES),
+                  min = q3(concordance[compared >= MINSITES], min), median = q3(concordance[compared >= MINSITES], median),
+                  max = q3(concordance[compared >= MINSITES], max),
+                  at_or_above_0.8 = sum(compared >= MINSITES & concordance >= SAME),
+                  median_sites = median(compared)), by = type][order(type)]
+summ[, `:=`(genotype_like_sites = length(sites), site_rule = rule)]
+fwrite(summ, file.path(res, "Task62_IdentityScreen.csv"))
+cat("\nconcordance by pair type:\n"); print(summ[, !c("site_rule")])
+
+pa <- cmp[type == "halves of one plasma sample (positive control a)"]
+ctrl_a <- nrow(pa) >= 30 && all(pa$concordance >= SAME)
+pb <- cmp[type == "same GTEx donor (positive control b)"]
+ctrl_b <- nrow(pb) >= 5 && all(pb$concordance >= SAME)
+cat("positive control (a), halves of one sample:", ctrl_a, "(", nrow(pa), "comparable )\n")
+cat("positive control (b), same GTEx donor:", ctrl_b, "(", nrow(pb), "comparable )\n")
+
+# ----------------------------------------------------------------
+# 3. which plasma samples are kept
+# ----------------------------------------------------------------
+keep <- pla[, .(gsm = Sample_GEO, srx = SRA, kept = TRUE, reason = "independent")]
+dm <- cmp[grepl("^plasma vs ", type) & type != "plasma vs plasma" & concordance >= SAME]
+for (k in seq_len(nrow(dm))) { s <- if (dm$ga[k] == "plasma") dm$a[k] else dm$b[k]
+  keep[gsm == smp$gsm[s], `:=`(kept = FALSE, reason = "matches a development sample")] }
+pp <- cmp[type == "plasma vs plasma" & concordance >= SAME]
+for (k in seq_len(nrow(pp))) { later <- max(smp$gsm[pp$a[k]], smp$gsm[pp$b[k]])
+  keep[gsm == later & kept == TRUE, `:=`(kept = FALSE, reason = "matches another plasma sample")] }
+if (!ctrl_a) keep[, `:=`(kept = FALSE, reason = "screen failed positive control (a)")]
+fwrite(keep, file.path(res, "Task62_PlasmaSamples.csv"))
+n_dev_cmp <- cmp[grepl("^plasma vs ", type) & type != "plasma vs plasma", .N]
+cat("\nplasma-development comparisons with at least", MINSITES, "sites:", n_dev_cmp, "of",
+    pairs[grepl("^plasma vs ", type) & type != "plasma vs plasma", .N], "\n")
+cat("cross-cohort check", if (ctrl_b) "possible" else "NOT possible from these sites (stated as a limit)", "\n")
+cat("plasma samples kept:", sum(keep$kept), "of", nrow(keep), "->",
+    if (sum(keep$kept) >= 30) "second external cohort accepted" else "second external test UNMET", "\n")
+
+# ----------------------------------------------------------------
+# 4. figure
+# ----------------------------------------------------------------
+SURF <- "#fcfcfb"; INK <- "#0b0b0b"; INK2 <- "#52514e"; MUTED <- "#898781"; GRID <- "#e1e0d9"; BLUE <- "#2a78d6"; RED <- "#d03b3b"
+lv <- c("halves of one plasma sample (positive control a)", "same GTEx donor (positive control b)", "plasma vs plasma",
+        "plasma vs colon", "plasma vs blood (GSE233417)", "plasma vs esophagus control")
+f44 <- cmp[type %in% lv][, type := factor(type, levels = rev(lv))]
+p44 <- ggplot(f44, aes(concordance, type)) +
+  geom_vline(xintercept = SAME, colour = RED, linetype = "dashed", linewidth = 0.5) +
+  geom_jitter(height = 0.18, width = 0, colour = BLUE, alpha = 0.5, size = 1.4) +
+  labs(title = "Are the 46 plasma controls different people, from each other and from the development samples?",
+       subtitle = sprintf("Share of %s genotype-like CpGs with the same call (pairs with at least %d sites). Dashed line: 0.8, the same-person rule.",
+                          format(length(sites), big.mark = ","), MINSITES),
+       x = "Concordance of genotype-like calls", y = NULL,
+       caption = "Source: Results/Task62_IdentityScreen.csv (Task 62)") +
+  theme_minimal(base_size = 10) +
+  theme(plot.background = element_rect(fill = SURF, colour = NA), panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(), panel.grid.major.x = element_line(colour = GRID, linewidth = 0.3),
+        plot.title = element_text(colour = INK, face = "bold", size = 12), plot.title.position = "plot",
+        plot.subtitle = element_text(colour = INK2, size = 9), plot.caption = element_text(colour = MUTED, hjust = 0),
+        plot.caption.position = "plot", axis.text = element_text(colour = INK2))
+ggsave(file.path(res, "Fig44_PlasmaIdentityScreen.png"), p44, width = 10, height = 4.8, dpi = 200, bg = SURF)
+cat("\ndone\n")
