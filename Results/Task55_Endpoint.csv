@@ -1,0 +1,2 @@
+stratum,level,pairs,delta_mse_cov,mean_loss_raw,mean_loss_cor,relative_change,share_cor_closer,delta_mse_d2,mean_noise_A,mean_raw_cov_A,mean_ref_cov,mean_cor_cov_A
+all pairs,all,2972692,-2.506e-05,6.12e-05,3.613e-05,-0.4095,0.4392,-0.0004882,0.0025,0.004498,0.001996,0.001998

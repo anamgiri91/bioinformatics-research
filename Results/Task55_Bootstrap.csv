@@ -1,0 +1,2 @@
+subsample_pairs,point_estimate_subsample,point_estimate_all_pairs,bias_corrected_lo95,bias_corrected_hi95,plain_percentile_lo95,plain_percentile_hi95,draws,mean_failed_pairs_per_draw
+118729,-2.562e-05,-2.506e-05,-3.034e-05,-1.981e-05,-2.289e-05,-1.236e-05,2000,0
