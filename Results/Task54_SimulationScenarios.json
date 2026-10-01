@@ -1,0 +1,452 @@
+{
+ "task": 54,
+ "plan": "plan_shared_read_noise.md section 7",
+ "declared_at": "2026-10-01T10:25:03-05:00",
+ "note": "Declared before any of these scenarios was run. The calibration subset is fixed here, before its coverage is seen.",
+ "cohorts_per_scenario": 2000,
+ "bootstrap_draws": 2000,
+ "master_seed": 20261001,
+ "min_eligible_donors": 20,
+ "latent_definitions": {
+  "constant": "p_i = p_j = 0.5 for every donor",
+  "independent": "logit p_i, logit p_j iid Normal(0, 1)",
+  "positive": "logit-normal, means (0, 0), SD 1, correlation 0.7",
+  "inverse": "logit-normal, means (0, 0), SD 1, correlation -0.7",
+  "low_spread": "logit-normal, means (0, 0), SD 0.15, correlation 0.7",
+  "extreme_means": "logit-normal, means (-3, -3), SD 0.5, correlation 0.7",
+  "mean_offset": "logit-normal, means (-0.5, 0.5), SD 1, correlation 0.9"
+ },
+ "depth_definitions": {
+  "2/3/5/10/30": "both sites that many fragments",
+  "5/30": "site i 5, site j 30",
+  "heterogeneous": "per donor, both sites 2 + NegBin(mean 10, size 2)"
+ },
+ "shared_definition": "r = round(shared * min(N_i, N_j)) fragments call both sites; the rest call one site",
+ "coupling_definition": "q11 = (1 - |eta|) p_i p_j + |eta| q_bound; q_bound = min(p_i, p_j) if eta >= 0 else max(0, p_i + p_j - 1)",
+ "violation_definitions": {
+  "pcr_duplicates": "each fragment is copied 1 + Poisson(0.3) times with identical calls",
+  "nonrepresentative_shared": "shared fragments use logit p + 0.5 at both sites",
+  "conversion_errors": "each unmethylated call read as methylated w.p. 0.02, each methylated call read as unmethylated w.p. 0.02",
+  "state_dependent_loss": "methylated calls lost w.p. 0.20, unmethylated w.p. 0.05",
+  "informative_coverage": "site depth 4 + Poisson(12 p) per donor and site; r = round(min depth)",
+  "cell_mixture": "each donor a mixture of cell A (both sites methylated w.p. 0.9) and cell B (0.1), fraction ~ Beta(2, 5); each fragment comes from one cell"
+ },
+ "targets": {
+  "conditional": "T (covariance, n-1), T_ii, T_jj, Q = mean (p_i - p_j)^2 over the eligible donors",
+  "population": "Cov(p_i, p_j), Var, E[(p_i - p_j)^2] from 4,000,000 latent draws"
+ },
+ "calibration_subset": [
+  "base",
+  "depth_3",
+  "depth_30",
+  "donors_20",
+  "donors_100",
+  "eta_-1.0",
+  "latent_independent",
+  "latent_constant",
+  "latent_low_spread"
+ ],
+ "calibration_method": "2,000 whole-donor percentile bootstrap draws; 95% intervals for the population covariance and population squared disagreement, raw and corrected",
+ "scenarios": [
+  {
+   "donors": 29,
+   "depth": "10",
+   "shared": 1.0,
+   "latent": "positive",
+   "eta": 0.5,
+   "violation": "none",
+   "scenario": "base",
+   "group": "core"
+  },
+  {
+   "donors": 20,
+   "depth": "10",
+   "shared": 1.0,
+   "latent": "positive",
+   "eta": 0.5,
+   "violation": "none",
+   "scenario": "donors_20",
+   "group": "core"
+  },
+  {
+   "donors": 50,
+   "depth": "10",
+   "shared": 1.0,
+   "latent": "positive",
+   "eta": 0.5,
+   "violation": "none",
+   "scenario": "donors_50",
+   "group": "core"
+  },
+  {
+   "donors": 100,
+   "depth": "10",
+   "shared": 1.0,
+   "latent": "positive",
+   "eta": 0.5,
+   "violation": "none",
+   "scenario": "donors_100",
+   "group": "core"
+  },
+  {
+   "donors": 29,
+   "depth": "2",
+   "shared": 1.0,
+   "latent": "positive",
+   "eta": 0.5,
+   "violation": "none",
+   "scenario": "depth_2",
+   "group": "core"
+  },
+  {
+   "donors": 29,
+   "depth": "3",
+   "shared": 1.0,
+   "latent": "positive",
+   "eta": 0.5,
+   "violation": "none",
+   "scenario": "depth_3",
+   "group": "core"
+  },
+  {
+   "donors": 29,
+   "depth": "5",
+   "shared": 1.0,
+   "latent": "positive",
+   "eta": 0.5,
+   "violation": "none",
+   "scenario": "depth_5",
+   "group": "core"
+  },
+  {
+   "donors": 29,
+   "depth": "30",
+   "shared": 1.0,
+   "latent": "positive",
+   "eta": 0.5,
+   "violation": "none",
+   "scenario": "depth_30",
+   "group": "core"
+  },
+  {
+   "donors": 29,
+   "depth": "5/30",
+   "shared": 1.0,
+   "latent": "positive",
+   "eta": 0.5,
+   "violation": "none",
+   "scenario": "depth_5_30",
+   "group": "core"
+  },
+  {
+   "donors": 29,
+   "depth": "heterogeneous",
+   "shared": 1.0,
+   "latent": "positive",
+   "eta": 0.5,
+   "violation": "none",
+   "scenario": "depth_heterogeneous",
+   "group": "core"
+  },
+  {
+   "donors": 29,
+   "depth": "10",
+   "shared": 0.0,
+   "latent": "positive",
+   "eta": 0.5,
+   "violation": "none",
+   "scenario": "shared_0.0",
+   "group": "core"
+  },
+  {
+   "donors": 29,
+   "depth": "10",
+   "shared": 0.25,
+   "latent": "positive",
+   "eta": 0.5,
+   "violation": "none",
+   "scenario": "shared_0.25",
+   "group": "core"
+  },
+  {
+   "donors": 29,
+   "depth": "10",
+   "shared": 0.5,
+   "latent": "positive",
+   "eta": 0.5,
+   "violation": "none",
+   "scenario": "shared_0.5",
+   "group": "core"
+  },
+  {
+   "donors": 29,
+   "depth": "10",
+   "shared": 1.0,
+   "latent": "constant",
+   "eta": 0.5,
+   "violation": "none",
+   "scenario": "latent_constant",
+   "group": "core"
+  },
+  {
+   "donors": 29,
+   "depth": "10",
+   "shared": 1.0,
+   "latent": "independent",
+   "eta": 0.5,
+   "violation": "none",
+   "scenario": "latent_independent",
+   "group": "core"
+  },
+  {
+   "donors": 29,
+   "depth": "10",
+   "shared": 1.0,
+   "latent": "inverse",
+   "eta": 0.5,
+   "violation": "none",
+   "scenario": "latent_inverse",
+   "group": "core"
+  },
+  {
+   "donors": 29,
+   "depth": "10",
+   "shared": 1.0,
+   "latent": "low_spread",
+   "eta": 0.5,
+   "violation": "none",
+   "scenario": "latent_low_spread",
+   "group": "core"
+  },
+  {
+   "donors": 29,
+   "depth": "10",
+   "shared": 1.0,
+   "latent": "extreme_means",
+   "eta": 0.5,
+   "violation": "none",
+   "scenario": "latent_extreme_means",
+   "group": "core"
+  },
+  {
+   "donors": 29,
+   "depth": "10",
+   "shared": 1.0,
+   "latent": "mean_offset",
+   "eta": 0.5,
+   "violation": "none",
+   "scenario": "latent_mean_offset",
+   "group": "core"
+  },
+  {
+   "donors": 29,
+   "depth": "10",
+   "shared": 1.0,
+   "latent": "positive",
+   "eta": -1.0,
+   "violation": "none",
+   "scenario": "eta_-1.0",
+   "group": "core"
+  },
+  {
+   "donors": 29,
+   "depth": "10",
+   "shared": 1.0,
+   "latent": "positive",
+   "eta": -0.5,
+   "violation": "none",
+   "scenario": "eta_-0.5",
+   "group": "core"
+  },
+  {
+   "donors": 29,
+   "depth": "10",
+   "shared": 1.0,
+   "latent": "positive",
+   "eta": 0.0,
+   "violation": "none",
+   "scenario": "eta_0.0",
+   "group": "core"
+  },
+  {
+   "donors": 29,
+   "depth": "10",
+   "shared": 1.0,
+   "latent": "positive",
+   "eta": 1.0,
+   "violation": "none",
+   "scenario": "eta_1.0",
+   "group": "core"
+  },
+  {
+   "donors": 29,
+   "depth": "10",
+   "shared": 1.0,
+   "latent": "constant",
+   "eta": -1.0,
+   "violation": "none",
+   "scenario": "latent_constant_eta_-1.0",
+   "group": "interaction"
+  },
+  {
+   "donors": 29,
+   "depth": "10",
+   "shared": 1.0,
+   "latent": "constant",
+   "eta": 1.0,
+   "violation": "none",
+   "scenario": "latent_constant_eta_1.0",
+   "group": "interaction"
+  },
+  {
+   "donors": 29,
+   "depth": "10",
+   "shared": 1.0,
+   "latent": "independent",
+   "eta": -1.0,
+   "violation": "none",
+   "scenario": "latent_independent_eta_-1.0",
+   "group": "interaction"
+  },
+  {
+   "donors": 29,
+   "depth": "10",
+   "shared": 1.0,
+   "latent": "independent",
+   "eta": 1.0,
+   "violation": "none",
+   "scenario": "latent_independent_eta_1.0",
+   "group": "interaction"
+  },
+  {
+   "donors": 29,
+   "depth": "10",
+   "shared": 1.0,
+   "latent": "inverse",
+   "eta": -1.0,
+   "violation": "none",
+   "scenario": "latent_inverse_eta_-1.0",
+   "group": "interaction"
+  },
+  {
+   "donors": 29,
+   "depth": "10",
+   "shared": 1.0,
+   "latent": "inverse",
+   "eta": 1.0,
+   "violation": "none",
+   "scenario": "latent_inverse_eta_1.0",
+   "group": "interaction"
+  },
+  {
+   "donors": 29,
+   "depth": "3",
+   "shared": 0.5,
+   "latent": "positive",
+   "eta": 0.5,
+   "violation": "none",
+   "scenario": "depth_3_shared_0.5",
+   "group": "interaction"
+  },
+  {
+   "donors": 29,
+   "depth": "30",
+   "shared": 0.5,
+   "latent": "positive",
+   "eta": 0.5,
+   "violation": "none",
+   "scenario": "depth_30_shared_0.5",
+   "group": "interaction"
+  },
+  {
+   "donors": 100,
+   "depth": "3",
+   "shared": 1.0,
+   "latent": "positive",
+   "eta": 0.5,
+   "violation": "none",
+   "scenario": "donors_100_depth_3",
+   "group": "interaction"
+  },
+  {
+   "donors": 29,
+   "depth": "30",
+   "shared": 1.0,
+   "latent": "low_spread",
+   "eta": 0.5,
+   "violation": "none",
+   "scenario": "low_spread_depth_30",
+   "group": "interaction"
+  },
+  {
+   "donors": 29,
+   "depth": "10",
+   "shared": 1.0,
+   "latent": "low_spread",
+   "eta": 1.0,
+   "violation": "none",
+   "scenario": "low_spread_eta_1",
+   "group": "interaction"
+  },
+  {
+   "donors": 29,
+   "depth": "10",
+   "shared": 1.0,
+   "latent": "positive",
+   "eta": 0.5,
+   "violation": "pcr_duplicates",
+   "scenario": "violation_pcr_duplicates",
+   "group": "violation"
+  },
+  {
+   "donors": 29,
+   "depth": "10",
+   "shared": 1.0,
+   "latent": "positive",
+   "eta": 0.5,
+   "violation": "nonrepresentative_shared",
+   "scenario": "violation_nonrepresentative_shared",
+   "group": "violation"
+  },
+  {
+   "donors": 29,
+   "depth": "10",
+   "shared": 1.0,
+   "latent": "positive",
+   "eta": 0.5,
+   "violation": "conversion_errors",
+   "scenario": "violation_conversion_errors",
+   "group": "violation"
+  },
+  {
+   "donors": 29,
+   "depth": "10",
+   "shared": 1.0,
+   "latent": "positive",
+   "eta": 0.5,
+   "violation": "state_dependent_loss",
+   "scenario": "violation_state_dependent_loss",
+   "group": "violation"
+  },
+  {
+   "donors": 29,
+   "depth": "10",
+   "shared": 1.0,
+   "latent": "positive",
+   "eta": 0.5,
+   "violation": "informative_coverage",
+   "scenario": "violation_informative_coverage",
+   "group": "violation"
+  },
+  {
+   "donors": 29,
+   "depth": "10",
+   "shared": 1.0,
+   "latent": "positive",
+   "eta": 0.5,
+   "violation": "cell_mixture",
+   "scenario": "violation_cell_mixture",
+   "group": "violation"
+  }
+ ]
+}
