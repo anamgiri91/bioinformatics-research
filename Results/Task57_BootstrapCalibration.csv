@@ -1,0 +1,13 @@
+scenario,interval,donors,replicates,bootstrap_draws,mean_pairs,target_mean_endpoint,sd_endpoint,coverage_95,coverage_mcse,share_upper_below_0,mean_interval_width
+coupled_29,percentile (plan),29,300,400,1965,-6.221e-05,1.07e-05,0.6667,0.0126,0.89,5.661e-05
+coupled_29,bias-corrected percentile,29,300,400,1965,-6.221e-05,1.07e-05,0.9967,0.0126,1,5.661e-05
+coupled_29,"normal, bootstrap SE",29,300,400,1965,-6.221e-05,1.07e-05,0.9967,0.0126,1,5.709e-05
+coupled_29,"donor-only, bias-corrected",29,300,400,1965,-6.221e-05,1.07e-05,0.8833,0.0126,1,3.572e-05
+coupled_57,percentile (plan),57,300,400,2000,-6.94e-05,9.979e-06,0.8233,0.0126,1,4.301e-05
+coupled_57,bias-corrected percentile,57,300,400,2000,-6.94e-05,9.979e-06,0.96,0.0126,1,4.301e-05
+coupled_57,"normal, bootstrap SE",57,300,400,2000,-6.94e-05,9.979e-06,0.96,0.0126,1,4.346e-05
+coupled_57,"donor-only, bias-corrected",57,300,400,2000,-6.94e-05,9.979e-06,0.67,0.0126,1,1.965e-05
+null_57,percentile (plan),57,300,400,2000,6.011e-06,1.163e-06,0.38,0.0126,0,1.207e-05
+null_57,bias-corrected percentile,57,300,400,2000,6.011e-06,1.163e-06,1,0.0126,0,1.207e-05
+null_57,"normal, bootstrap SE",57,300,400,2000,6.011e-06,1.163e-06,1,0.0126,0,1.215e-05
+null_57,"donor-only, bias-corrected",57,300,400,2000,6.011e-06,1.163e-06,1,0.0126,0,8.473e-06
