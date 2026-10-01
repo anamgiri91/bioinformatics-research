@@ -1,0 +1,4 @@
+hypothesis,subset,pairs,mean_linkage,lo95_mean,hi95_mean,share_positive,spearman_with_distance,lo95_rho,hi95_rho,holds
+H8,all,4323033,0.0362,0.0355,0.037,0.669,0.0265,0.0229,0.0301,FALSE
+H8,first,2161513,0.0352,0.034,0.0363,0.6604,0.0223,0.0172,0.0276,FALSE
+H8,second,2161520,0.0373,0.0362,0.0383,0.6775,0.0304,0.0238,0.0356,FALSE

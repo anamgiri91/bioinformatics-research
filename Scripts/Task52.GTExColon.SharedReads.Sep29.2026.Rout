@@ -1,0 +1,208 @@
+freeze verified
+PASS: 150 exact comparisons against expanded whole-block bootstrap, including ties and medians
+adjacent pairs within 200 bp with read-level linkage: 4323033 
+  bootstrap mean 100 / 1000 on 4323033 pairs
+  bootstrap mean 200 / 1000 on 4323033 pairs
+  bootstrap mean 300 / 1000 on 4323033 pairs
+  bootstrap mean 400 / 1000 on 4323033 pairs
+  bootstrap mean 500 / 1000 on 4323033 pairs
+  bootstrap mean 600 / 1000 on 4323033 pairs
+  bootstrap mean 700 / 1000 on 4323033 pairs
+  bootstrap mean 800 / 1000 on 4323033 pairs
+  bootstrap mean 900 / 1000 on 4323033 pairs
+  bootstrap mean 1000 / 1000 on 4323033 pairs
+  bootstrap spearman 100 / 1000 on 4323033 pairs
+  bootstrap spearman 200 / 1000 on 4323033 pairs
+  bootstrap spearman 300 / 1000 on 4323033 pairs
+  bootstrap spearman 400 / 1000 on 4323033 pairs
+  bootstrap spearman 500 / 1000 on 4323033 pairs
+  bootstrap spearman 600 / 1000 on 4323033 pairs
+  bootstrap spearman 700 / 1000 on 4323033 pairs
+  bootstrap spearman 800 / 1000 on 4323033 pairs
+  bootstrap spearman 900 / 1000 on 4323033 pairs
+  bootstrap spearman 1000 / 1000 on 4323033 pairs
+  bootstrap mean 100 / 1000 on 2161513 pairs
+  bootstrap mean 200 / 1000 on 2161513 pairs
+  bootstrap mean 300 / 1000 on 2161513 pairs
+  bootstrap mean 400 / 1000 on 2161513 pairs
+  bootstrap mean 500 / 1000 on 2161513 pairs
+  bootstrap mean 600 / 1000 on 2161513 pairs
+  bootstrap mean 700 / 1000 on 2161513 pairs
+  bootstrap mean 800 / 1000 on 2161513 pairs
+  bootstrap mean 900 / 1000 on 2161513 pairs
+  bootstrap mean 1000 / 1000 on 2161513 pairs
+  bootstrap spearman 100 / 1000 on 2161513 pairs
+  bootstrap spearman 200 / 1000 on 2161513 pairs
+  bootstrap spearman 300 / 1000 on 2161513 pairs
+  bootstrap spearman 400 / 1000 on 2161513 pairs
+  bootstrap spearman 500 / 1000 on 2161513 pairs
+  bootstrap spearman 600 / 1000 on 2161513 pairs
+  bootstrap spearman 700 / 1000 on 2161513 pairs
+  bootstrap spearman 800 / 1000 on 2161513 pairs
+  bootstrap spearman 900 / 1000 on 2161513 pairs
+  bootstrap spearman 1000 / 1000 on 2161513 pairs
+  bootstrap mean 100 / 1000 on 2161520 pairs
+  bootstrap mean 200 / 1000 on 2161520 pairs
+  bootstrap mean 300 / 1000 on 2161520 pairs
+  bootstrap mean 400 / 1000 on 2161520 pairs
+  bootstrap mean 500 / 1000 on 2161520 pairs
+  bootstrap mean 600 / 1000 on 2161520 pairs
+  bootstrap mean 700 / 1000 on 2161520 pairs
+  bootstrap mean 800 / 1000 on 2161520 pairs
+  bootstrap mean 900 / 1000 on 2161520 pairs
+  bootstrap mean 1000 / 1000 on 2161520 pairs
+  bootstrap spearman 100 / 1000 on 2161520 pairs
+  bootstrap spearman 200 / 1000 on 2161520 pairs
+  bootstrap spearman 300 / 1000 on 2161520 pairs
+  bootstrap spearman 400 / 1000 on 2161520 pairs
+  bootstrap spearman 500 / 1000 on 2161520 pairs
+  bootstrap spearman 600 / 1000 on 2161520 pairs
+  bootstrap spearman 700 / 1000 on 2161520 pairs
+  bootstrap spearman 800 / 1000 on 2161520 pairs
+  bootstrap spearman 900 / 1000 on 2161520 pairs
+  bootstrap spearman 1000 / 1000 on 2161520 pairs
+
+H8: read-level linkage of adjacent CpGs within 200 bp
+   hypothesis subset   pairs mean_linkage lo95_mean hi95_mean share_positive
+       <char> <char>   <int>        <num>     <num>     <num>          <num>
+1:         H8    all 4323033       0.0362    0.0355    0.0370         0.6690
+2:         H8  first 2161513       0.0352    0.0340    0.0363         0.6604
+3:         H8 second 2161520       0.0373    0.0362    0.0383         0.6775
+   spearman_with_distance lo95_rho hi95_rho  holds
+                    <num>    <num>    <num> <lgcl>
+1:                 0.0265   0.0229   0.0301  FALSE
+2:                 0.0223   0.0172   0.0276  FALSE
+3:                 0.0304   0.0238   0.0356  FALSE
+         bin   pairs mean_linkage median_gap
+      <fctr>   <int>        <num>      <num>
+1:    (0,10] 1869727       0.0359          5
+2:   (10,20]  885080       0.0396         15
+3:   (20,40]  865839       0.0362         28
+4:   (40,60]  354783       0.0338         48
+5:  (60,100]  242404       0.0331         75
+6: (100,150]   78160       0.0294        117
+7: (150,200]   27040       0.0273        171
+
+low-spread cohort pairs within 200 bp with linkage: 911729 of 915852 
+  bootstrap gain_difference 100 / 1000 on 911729 pairs
+  bootstrap gain_difference 200 / 1000 on 911729 pairs
+  bootstrap gain_difference 300 / 1000 on 911729 pairs
+  bootstrap gain_difference 400 / 1000 on 911729 pairs
+  bootstrap gain_difference 500 / 1000 on 911729 pairs
+  bootstrap gain_difference 600 / 1000 on 911729 pairs
+  bootstrap gain_difference 700 / 1000 on 911729 pairs
+  bootstrap gain_difference 800 / 1000 on 911729 pairs
+  bootstrap gain_difference 900 / 1000 on 911729 pairs
+  bootstrap gain_difference 1000 / 1000 on 911729 pairs
+  bootstrap gain_difference 100 / 1000 on 461445 pairs
+  bootstrap gain_difference 200 / 1000 on 461445 pairs
+  bootstrap gain_difference 300 / 1000 on 461445 pairs
+  bootstrap gain_difference 400 / 1000 on 461445 pairs
+  bootstrap gain_difference 500 / 1000 on 461445 pairs
+  bootstrap gain_difference 600 / 1000 on 461445 pairs
+  bootstrap gain_difference 700 / 1000 on 461445 pairs
+  bootstrap gain_difference 800 / 1000 on 461445 pairs
+  bootstrap gain_difference 900 / 1000 on 461445 pairs
+  bootstrap gain_difference 1000 / 1000 on 461445 pairs
+  bootstrap gain_difference 100 / 1000 on 450284 pairs
+  bootstrap gain_difference 200 / 1000 on 450284 pairs
+  bootstrap gain_difference 300 / 1000 on 450284 pairs
+  bootstrap gain_difference 400 / 1000 on 450284 pairs
+  bootstrap gain_difference 500 / 1000 on 450284 pairs
+  bootstrap gain_difference 600 / 1000 on 450284 pairs
+  bootstrap gain_difference 700 / 1000 on 450284 pairs
+  bootstrap gain_difference 800 / 1000 on 450284 pairs
+  bootstrap gain_difference 900 / 1000 on 450284 pairs
+  bootstrap gain_difference 1000 / 1000 on 450284 pairs
+
+H9: held-out prediction gain of low-spread pairs, above vs below median linkage
+   hypothesis subset  pairs median_linkage gain_above gain_below difference
+       <char> <char>  <int>          <num>      <num>      <num>      <num>
+1:         H9    all 911729         0.0020    0.00185   -0.00013    0.00198
+2:         H9  first 461445         0.0019    0.00184   -0.00013    0.00197
+3:         H9 second 450284         0.0021    0.00185   -0.00013    0.00198
+      lo95    hi95  holds
+     <num>   <num> <lgcl>
+1: 0.00192 0.00204   TRUE
+2: 0.00189 0.00206   TRUE
+3: 0.00190 0.00207   TRUE
+
+Exploratory, all cohort pairs within 200 bp: Spearman(linkage, held-out gain) = 0.5528 over 1560416 pairs
+
+Verdicts:
+   hypothesis holds_everywhere
+       <char>           <lgcl>
+1:         H8            FALSE
+2:         H9             TRUE
+  bootstrap mean 100 / 1000 on 1869727 pairs
+  bootstrap mean 200 / 1000 on 1869727 pairs
+  bootstrap mean 300 / 1000 on 1869727 pairs
+  bootstrap mean 400 / 1000 on 1869727 pairs
+  bootstrap mean 500 / 1000 on 1869727 pairs
+  bootstrap mean 600 / 1000 on 1869727 pairs
+  bootstrap mean 700 / 1000 on 1869727 pairs
+  bootstrap mean 800 / 1000 on 1869727 pairs
+  bootstrap mean 900 / 1000 on 1869727 pairs
+  bootstrap mean 1000 / 1000 on 1869727 pairs
+  bootstrap mean 100 / 1000 on 885080 pairs
+  bootstrap mean 200 / 1000 on 885080 pairs
+  bootstrap mean 300 / 1000 on 885080 pairs
+  bootstrap mean 400 / 1000 on 885080 pairs
+  bootstrap mean 500 / 1000 on 885080 pairs
+  bootstrap mean 600 / 1000 on 885080 pairs
+  bootstrap mean 700 / 1000 on 885080 pairs
+  bootstrap mean 800 / 1000 on 885080 pairs
+  bootstrap mean 900 / 1000 on 885080 pairs
+  bootstrap mean 1000 / 1000 on 885080 pairs
+  bootstrap mean 100 / 1000 on 865839 pairs
+  bootstrap mean 200 / 1000 on 865839 pairs
+  bootstrap mean 300 / 1000 on 865839 pairs
+  bootstrap mean 400 / 1000 on 865839 pairs
+  bootstrap mean 500 / 1000 on 865839 pairs
+  bootstrap mean 600 / 1000 on 865839 pairs
+  bootstrap mean 700 / 1000 on 865839 pairs
+  bootstrap mean 800 / 1000 on 865839 pairs
+  bootstrap mean 900 / 1000 on 865839 pairs
+  bootstrap mean 1000 / 1000 on 865839 pairs
+  bootstrap mean 100 / 1000 on 354783 pairs
+  bootstrap mean 200 / 1000 on 354783 pairs
+  bootstrap mean 300 / 1000 on 354783 pairs
+  bootstrap mean 400 / 1000 on 354783 pairs
+  bootstrap mean 500 / 1000 on 354783 pairs
+  bootstrap mean 600 / 1000 on 354783 pairs
+  bootstrap mean 700 / 1000 on 354783 pairs
+  bootstrap mean 800 / 1000 on 354783 pairs
+  bootstrap mean 900 / 1000 on 354783 pairs
+  bootstrap mean 1000 / 1000 on 354783 pairs
+  bootstrap mean 100 / 1000 on 242404 pairs
+  bootstrap mean 200 / 1000 on 242404 pairs
+  bootstrap mean 300 / 1000 on 242404 pairs
+  bootstrap mean 400 / 1000 on 242404 pairs
+  bootstrap mean 500 / 1000 on 242404 pairs
+  bootstrap mean 600 / 1000 on 242404 pairs
+  bootstrap mean 700 / 1000 on 242404 pairs
+  bootstrap mean 800 / 1000 on 242404 pairs
+  bootstrap mean 900 / 1000 on 242404 pairs
+  bootstrap mean 1000 / 1000 on 242404 pairs
+  bootstrap mean 100 / 1000 on 78160 pairs
+  bootstrap mean 200 / 1000 on 78160 pairs
+  bootstrap mean 300 / 1000 on 78160 pairs
+  bootstrap mean 400 / 1000 on 78160 pairs
+  bootstrap mean 500 / 1000 on 78160 pairs
+  bootstrap mean 600 / 1000 on 78160 pairs
+  bootstrap mean 700 / 1000 on 78160 pairs
+  bootstrap mean 800 / 1000 on 78160 pairs
+  bootstrap mean 900 / 1000 on 78160 pairs
+  bootstrap mean 1000 / 1000 on 78160 pairs
+  bootstrap mean 100 / 1000 on 27040 pairs
+  bootstrap mean 200 / 1000 on 27040 pairs
+  bootstrap mean 300 / 1000 on 27040 pairs
+  bootstrap mean 400 / 1000 on 27040 pairs
+  bootstrap mean 500 / 1000 on 27040 pairs
+  bootstrap mean 600 / 1000 on 27040 pairs
+  bootstrap mean 700 / 1000 on 27040 pairs
+  bootstrap mean 800 / 1000 on 27040 pairs
+  bootstrap mean 900 / 1000 on 27040 pairs
+  bootstrap mean 1000 / 1000 on 27040 pairs
+
+done
