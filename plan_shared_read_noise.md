@@ -1,9 +1,13 @@
 # Item 5 plan: correcting shared-fragment sampling error in inter-donor CpG covariance
 
-Updated: 2026-10-01. **Status: detailed development proposal; not a frozen
-validation protocol, an established novel method, or completed external
-validation.** The outlier-analysis roadmap stays in [plan.md](plan.md); this
-file is the separate plan for the shared-read noise work.
+Updated: 2026-10-01. **Status: development plan, carried out through phase H
+on 2026-10-01 (Tasks 53 to 60).** The locked external test (Task 59) met its
+primary criterion in one external cohort from the same study. The method is
+still not established as new, and the section 6 comparisons of correlation,
+pair ranking and existing error models are not done. Results are in
+[results.md](results.md) section 16. The outlier-analysis roadmap stays in
+[plan.md](plan.md); this file is the separate plan for the shared-read noise
+work.
 
 The research question is whether per-donor joint methylation states on shared
 DNA fragments improve estimation of latent CpG covariance and agreement across
