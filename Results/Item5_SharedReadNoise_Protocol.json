@@ -1,0 +1,66 @@
+{
+  "status": "exploratory simulation; separate from frozen validation",
+  "seed": 20260930,
+  "replicates": 20000,
+  "patients": 29,
+  "scenarios": [
+    {
+      "scenario": "constant_linked",
+      "latent": "constant",
+      "depth": "10",
+      "overlap": 1,
+      "coupling": 0.8
+    },
+    {
+      "scenario": "independent_linked",
+      "latent": "independent",
+      "depth": "10",
+      "overlap": 1,
+      "coupling": 0.8
+    },
+    {
+      "scenario": "independent_partial_overlap",
+      "latent": "independent",
+      "depth": "20_30",
+      "overlap": 0.5,
+      "coupling": 0.8
+    },
+    {
+      "scenario": "independent_no_overlap",
+      "latent": "independent",
+      "depth": "10",
+      "overlap": 0,
+      "coupling": 0.8
+    },
+    {
+      "scenario": "independent_heterogeneous_depth",
+      "latent": "independent",
+      "depth": "heterogeneous",
+      "overlap": 0.5,
+      "coupling": 0.8
+    },
+    {
+      "scenario": "linear_linked",
+      "latent": "linear",
+      "depth": "10",
+      "overlap": 1,
+      "coupling": 0.8
+    },
+    {
+      "scenario": "linear_heterogeneous_depth",
+      "latent": "linear",
+      "depth": "heterogeneous",
+      "overlap": 0.5,
+      "coupling": 0.8
+    },
+    {
+      "scenario": "inverse_linked",
+      "latent": "inverse",
+      "depth": "10",
+      "overlap": 1,
+      "coupling": 0.8
+    }
+  ],
+  "target": "conditional latent sample covariance and mean squared difference",
+  "rule": "retain signed corrected moments; do not clip or conceal invalid corrected correlations"
+}

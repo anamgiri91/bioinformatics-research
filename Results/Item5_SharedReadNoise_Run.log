@@ -1,0 +1,40 @@
+PASS: exact three-fragment enumeration for variance, covariance and squared disagreement
+Completed constant_linked 
+Completed independent_linked 
+Completed independent_partial_overlap 
+Completed independent_no_overlap 
+Completed independent_heterogeneous_depth 
+Completed linear_linked 
+Completed linear_heterogeneous_depth 
+Completed inverse_linked 
+                          scenario  raw_cov_bias corrected_cov_bias
+                            <char>         <num>              <num>
+1:                 constant_linked  2.003402e-02       3.287137e-05
+2:              independent_linked  1.463769e-02      -3.932363e-05
+3:     independent_partial_overlap  2.429140e-03      -1.390535e-05
+4:          independent_no_overlap -3.041860e-06      -3.041860e-06
+5: independent_heterogeneous_depth  1.457184e-03       1.474037e-05
+6:                   linear_linked  1.839628e-02       5.162271e-05
+7:      linear_heterogeneous_depth  1.787424e-03      -1.947966e-05
+8:                  inverse_linked  1.309822e-02       4.815264e-05
+   median_observed_r share_corrected_nonpositive_variance
+               <num>                                <num>
+1:      8.072744e-01                              0.67455
+2:      4.047568e-01                              0.13845
+3:      1.066576e-01                              0.00570
+4:     -7.574951e-18                              0.13605
+5:      7.365380e-02                              0.00125
+6:      8.413195e-01                              0.19490
+7:      7.052622e-01                              0.00570
+8:     -8.883915e-03                              0.14185
+   share_corrected_outside_unit
+                          <num>
+1:                      0.20765
+2:                      0.11045
+3:                      0.01545
+4:                      0.12630
+5:                      0.00345
+6:                      0.50440
+7:                      0.61155
+8:                      0.45435
+done
