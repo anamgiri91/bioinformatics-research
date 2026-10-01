@@ -1,0 +1,41 @@
+analysis,set,flags,replicated,excess,lo95,hi95
+primary: normal flags >= 0.10,all,209147,0.3555,0.2481,0.0953,0.3424
+primary: normal flags >= 0.10,run,28237,0.4724,0.3474,0.1405,0.4684
+primary: normal flags >= 0.10,adjacency,64286,0.444,0.3305,0.1233,0.4389
+primary: normal flags >= 0.10,similarity,58380,0.4546,0.3461,0.1349,0.4555
+primary: normal flags >= 0.10,similarity_0.3,64247,0.4443,0.3337,0.128,0.4398
+primary: normal flags >= 0.10,similarity_0.7,48482,0.4818,0.3796,0.1498,0.4877
+primary: normal flags >= 0.10,topK_support,28237,,0.4875,0.1758,0.607
+primary: normal flags >= 0.10,topK_size,28237,,0.2378,0.1468,0.3126
+primary: normal flags >= 0.10,diff_primary,,,0.1401,-0.0077,0.1906
+primary: normal flags >= 0.10,diff_size,,,0.2497,-0.0416,0.3548
+"secondary: all normal flags, no floor",all,511941,0.2639,0.1917,0.0595,0.286
+"secondary: all normal flags, no floor",run,45002,0.4576,0.3617,0.1468,0.4748
+"secondary: all normal flags, no floor",adjacency,116030,0.4008,0.3165,0.1132,0.4208
+"secondary: all normal flags, no floor",similarity,104499,0.417,0.3356,0.1233,0.4401
+"secondary: all normal flags, no floor",similarity_0.3,114335,0.4063,0.3232,0.1168,0.4259
+"secondary: all normal flags, no floor",similarity_0.7,88786,0.4396,0.3632,0.1281,0.4726
+"secondary: all normal flags, no floor",topK_support,45002,,0.4616,0.1458,0.5741
+"secondary: all normal flags, no floor",topK_size,45002,,0.2279,0.1332,0.307
+"secondary: all normal flags, no floor",diff_primary,,,0.0999,-0.0241,0.1452
+"secondary: all normal flags, no floor",diff_size,,,0.2338,-0.0645,0.3326
+secondary: primary set without Zhou M_general probes,all,201616,0.354,0.2461,0.0927,0.3415
+secondary: primary set without Zhou M_general probes,run,27749,0.4713,0.3464,0.1386,0.4677
+secondary: primary set without Zhou M_general probes,adjacency,62696,0.4433,0.3296,0.1214,0.4391
+secondary: primary set without Zhou M_general probes,similarity,56999,0.4541,0.3453,0.1341,0.4558
+secondary: primary set without Zhou M_general probes,similarity_0.3,62550,0.4432,0.3323,0.1253,0.4388
+secondary: primary set without Zhou M_general probes,similarity_0.7,47563,0.4815,0.3791,0.1487,0.4885
+secondary: primary set without Zhou M_general probes,topK_support,27749,,0.4884,0.1752,0.6085
+secondary: primary set without Zhou M_general probes,topK_size,27749,,0.2326,0.1423,0.3093
+secondary: primary set without Zhou M_general probes,diff_primary,,,0.1421,-0.0067,0.1929
+secondary: primary set without Zhou M_general probes,diff_size,,,0.2558,-0.0382,0.3616
+"secondary: tumour flags >= 0.10, replicated in the matched normal",all,1646808,0.0431,0.0308,0.0068,0.0604
+"secondary: tumour flags >= 0.10, replicated in the matched normal",run,569459,0.0367,0.0244,0.0054,0.0474
+"secondary: tumour flags >= 0.10, replicated in the matched normal",adjacency,845777,0.0414,0.0289,0.0058,0.0554
+"secondary: tumour flags >= 0.10, replicated in the matched normal",similarity,639456,0.047,0.0337,0.0064,0.0654
+"secondary: tumour flags >= 0.10, replicated in the matched normal",similarity_0.3,776790,0.0437,0.0309,0.0059,0.0597
+"secondary: tumour flags >= 0.10, replicated in the matched normal",similarity_0.7,450495,0.0541,0.0402,0.0074,0.0791
+"secondary: tumour flags >= 0.10, replicated in the matched normal",topK_support,569459,,0.0357,0.0066,0.0697
+"secondary: tumour flags >= 0.10, replicated in the matched normal",topK_size,569459,,0.0245,0.0077,0.0448
+"secondary: tumour flags >= 0.10, replicated in the matched normal",diff_primary,,,0.0113,-0.0012,0.0266
+"secondary: tumour flags >= 0.10, replicated in the matched normal",diff_size,,,0.0112,-0.0048,0.0333

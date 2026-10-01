@@ -1,0 +1,2 @@
+analysis,min,median,max,n_below_0,top4_patient_share_of_flags
+"exploratory: leave one patient out, primary difference",0.1067,0.1403,0.1657,0,0.4849

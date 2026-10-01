@@ -1,0 +1,2 @@
+K,run_rule_excess,topK_support_excess,difference,lo95,hi95,success
+28237,0.3474,0.4875,0.1401,-0.0077,0.1906,FALSE
