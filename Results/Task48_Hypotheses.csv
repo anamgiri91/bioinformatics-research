@@ -1,0 +1,37 @@
+hypothesis,a,b,cohort,subset,cells,a_wins,share,holds
+H1,Codex F,F no distance,Alive,all,57,0,0,FALSE
+H1,Codex F,F no distance,Alive,even,57,0,0,FALSE
+H1,Codex F,F no distance,Alive,odd,57,0,0,FALSE
+H1,Codex F,F no distance,Dead,all,52,5,0.0962,FALSE
+H1,Codex F,F no distance,Dead,even,52,5,0.0962,FALSE
+H1,Codex F,F no distance,Dead,odd,52,5,0.0962,FALSE
+H2,New C,Codex F,Alive,all,57,22,0.386,TRUE
+H2,New C,Codex F,Alive,even,57,22,0.386,TRUE
+H2,New C,Codex F,Alive,odd,57,21,0.3684,TRUE
+H2,New C,Codex F,Dead,all,52,14,0.2692,TRUE
+H2,New C,Codex F,Dead,even,52,13,0.25,TRUE
+H2,New C,Codex F,Dead,odd,52,14,0.2692,TRUE
+H3,New C,New C with dCor,Alive,all,58,1,0.0172,TRUE
+H3,New C,New C with dCor,Alive,even,58,0,0,TRUE
+H3,New C,New C with dCor,Alive,odd,58,0,0,TRUE
+H3,New C,New C with dCor,Dead,all,52,0,0,TRUE
+H3,New C,New C with dCor,Dead,even,52,0,0,TRUE
+H3,New C,New C with dCor,Dead,odd,52,0,0,TRUE
+H4,F+,Codex F,Alive,all,18,,0.00034,TRUE
+H4,F+,Codex F,Alive,even,18,,0.00035,TRUE
+H4,F+,Codex F,Alive,odd,18,,0.00031,TRUE
+H4,F+,Codex F,Dead,all,18,,0.00024,TRUE
+H4,F+,Codex F,Dead,even,18,,0.00024,TRUE
+H4,F+,Codex F,Dead,odd,18,,0.00026,TRUE
+H5,F guarded,Codex F,Alive,all,57,0,0,TRUE
+H5,F guarded,Codex F,Alive,even,57,0,0,TRUE
+H5,F guarded,Codex F,Alive,odd,57,0,0,TRUE
+H5,F guarded,Codex F,Dead,all,52,0,0,TRUE
+H5,F guarded,Codex F,Dead,even,52,0,0,TRUE
+H5,F guarded,Codex F,Dead,odd,52,0,0,TRUE
+H6,flagged,unflagged,Alive,all,3,2,0.6667,FALSE
+H6,flagged,unflagged,Alive,even,3,2,0.6667,FALSE
+H6,flagged,unflagged,Alive,odd,3,2,0.6667,FALSE
+H6,flagged,unflagged,Dead,all,3,2,0.6667,FALSE
+H6,flagged,unflagged,Dead,even,3,2,0.6667,FALSE
+H6,flagged,unflagged,Dead,odd,3,2,0.6667,FALSE

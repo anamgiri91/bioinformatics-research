@@ -1,0 +1,313 @@
+# ================================================================
+# Task 48 - Step 2 of the frozen plan: do the Task 46 findings hold
+#           on new data? TCGA-BRCA 450K normal breast
+# Date: Sep 29, 2026
+#
+# Runs section 3 of Results/Task47_FrozenProtocol.md (frozen in
+# commit a832294) exactly. The script first checks that the frozen
+# files are unchanged.
+#
+# DATA
+#   Primary: the 53 "Alive" normal samples. Second: the 32 "Dead"
+#   normal samples. Neither was used to build a similarity score.
+#   Probes: the 380,355 filtered probes on autosomes, at their hg38
+#   CpG position (Zhou HM450 manifest, CpG_beg + 1). Each probe is
+#   paired with the next probe on the same chromosome.
+#
+# TEST (the Task 46 test, frozen)
+#   10 patient folds, seed 20260929. Scores use training patients
+#   only. Outcomes on the held-out patients: agreement error |x - y|
+#   and prediction gain (straight line fitted on training patients),
+#   each averaged over the fold's held-out patients. Every formula
+#   family is traced over the frozen length-scale grid and judged on
+#   its top 10% of pairs (ties split evenly). Two curves are compared
+#   at six error levels over the middle 80% of their overlap.
+#   Halves: odd and even autosomes.
+#
+# HYPOTHESES (frozen; Task 46 result in brackets)
+#   H1 the distance weight helps F            [F won 66 of 85]
+#   H2 F beats the planned New C              [New C won 23 of 81]
+#   H3 dCor beats shrunk Spearman in New C    [shrunk won 8 of 77]
+#   H4 the sign guard is free                 [at most 0.00001]
+#   H5 the spread guard costs gain            [guarded won 12 of 85]
+#   H6 flagged pairs behave worse at matched spread
+#      (not unique = Zhou M_nonuniq, poor mapping = Zhou M_mapping,
+#       SINE = RepeatMasker hg38; Zhou M_general reported only)
+#   A hypothesis replicates if it holds genome-wide and in both halves.
+#
+# INPUTS
+#   ~/Downloads/tcga_brca_380355cg/Sorted.BRCA.53Alive.Normal.*.txt
+#   ~/Downloads/tcga_brca_380355cg/Sorted.BRCA.32Dead.Normal.*.txt
+#   Data/zhou_HM450/HM450.hg38.manifest.tsv.gz, HM450.hg38.mask.tsv.gz
+#   Data/annotation/rmsk_hg38.txt.gz (downloaded once from UCSC)
+#
+# OUTPUTS (Results/)
+#   Task48_Hypotheses.csv          each hypothesis, cohort and half: holds?
+#   Task48_Matched.csv             the curve comparisons, every error level
+#   Task48_Frontier.csv            each family over length scales (fold means)
+#   Task48_Frontier_Folds.csv      the same, every fold
+#   Task48_Reliability_SpreadMatched.csv   H6 in detail
+#   Task48_DistanceDecay.csv       neighbour Spearman by gap (exploratory)
+#   Fig35_450K_Frontier.png        the curves, Alive cohort, all autosomes
+# ================================================================
+
+suppressPackageStartupMessages({ library(data.table); library(matrixStats); library(ggplot2); library(jsonlite) })
+
+pick_dir <- function(...) { for (d in c(...)) if (dir.exists(d)) return(d)
+  stop("no candidate directory exists") }
+repo_dir <- pick_dir("/mmfs1/home/wln26/Experiments.Outlier.July31.2026",
+                     path.expand("~/Desktop/bioinformatics-research"))
+tcga_dir <- pick_dir(path.expand("~/Downloads/tcga_brca_380355cg"),
+                     "/home/s_s355/research3.data/TCGA/filter.BRCA.UCEC.Aug17.2022")
+res <- file.path(repo_dir, "Results"); ann_dir <- file.path(repo_dir, "Data", "annotation")
+r4 <- function(x) round(x, 4)
+
+# ----------------------------------------------------------------
+# 0. the freeze is intact
+# ----------------------------------------------------------------
+proto <- fromJSON(file.path(res, "Task47_FrozenProtocol.json"))
+for (f in names(proto$files_sha256))
+  stopifnot(digest::digest(file = file.path(repo_dir, f), algo = "sha256") == proto$files_sha256[[f]])
+source(file.path(repo_dir, "Scripts", "Task47.FrozenScore.Sep29.2026.R"))
+P <- proto$shared_test_design
+ELL <- as.numeric(P$ell_grid_bp)          # "Inf" parses to Inf
+TOP <- P$top_fraction; SEED <- proto$step2_tcga_450k$seed; NFOLD <- proto$step2_tcga_450k$folds
+stopifnot(identical(ELL[length(ELL)], Inf), TOP == 0.10, NFOLD == 10, SEED == 20260929)
+cat("freeze verified; length-scale grid:", paste(ELL, collapse = ", "), "\n")
+
+# ----------------------------------------------------------------
+# 1. data, positions, pairs, flags
+# ----------------------------------------------------------------
+read_cohort <- function(file, prefix) {
+  d <- fread(file.path(tcga_dir, file), showProgress = FALSE)
+  samp <- grep(paste0("^", prefix, "[0-9]+$"), names(d), value = TRUE)
+  list(id = d$Composite.Element.REF, beta = as.matrix(d[, ..samp]))
+}
+alive <- read_cohort("Sorted.BRCA.53Alive.Normal.380355cg.75col.May28.2026.txt", "N")
+dead  <- read_cohort("Sorted.BRCA.32Dead.Normal.380355cg.54col.May28.2026.txt", "ND")
+stopifnot(ncol(alive$beta) == 53, ncol(dead$beta) == 32, identical(alive$id, dead$id),
+          !anyNA(alive$beta), !anyNA(dead$beta))
+
+man <- fread(file.path(repo_dir, "Data", "zhou_HM450", "HM450.hg38.manifest.tsv.gz"),
+             select = c("Probe_ID", "CpG_chrm", "CpG_beg"))
+mk <- fread(file.path(repo_dir, "Data", "zhou_HM450", "HM450.hg38.mask.tsv.gz"),
+            select = c("Probe_ID", "maskUniq", "M_general"))
+pr <- data.table(id = alive$id, row = seq_along(alive$id))[man, on = c(id = "Probe_ID"), nomatch = NULL]
+n_in <- nrow(pr)
+pr <- pr[CpG_chrm %in% paste0("chr", 1:22) & !is.na(CpG_beg)]
+pr[, `:=`(chrn = as.integer(sub("chr", "", CpG_chrm)), pos = CpG_beg + 1L)]
+pr <- mk[pr, on = c(Probe_ID = "id")]           # the mask file lists only masked probes;
+setnames(pr, "Probe_ID", "id")                  # a probe it does not list has no mask
+pr[, `:=`(not_unique = grepl("M_nonuniq", maskUniq), poor_mapping = grepl("M_mapping", maskUniq),
+          general = M_general %in% TRUE)]
+
+# RepeatMasker hg38, SINE only, downloaded once
+rm_file <- file.path(ann_dir, "rmsk_hg38.txt.gz")
+if (!file.exists(rm_file))
+  download.file("https://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/rmsk.txt.gz", rm_file, mode = "wb", quiet = TRUE)
+rmk <- fread(rm_file, header = FALSE, select = c(6, 7, 8, 12),
+             col.names = c("chrom", "start", "end", "repClass"))[repClass == "SINE" & chrom %in% paste0("chr", 1:22)]
+rmk[, `:=`(chrn = as.integer(sub("chr", "", chrom)), s1 = start + 1L, e1 = end)]   # 0-based half open to 1-based
+setkey(rmk, chrn, s1, e1)
+q <- pr[, .(id, chrn, s1 = pos, e1 = pos)]; setkey(q, chrn, s1, e1)
+ov <- foverlaps(q, rmk[, .(chrn, s1, e1)], type = "within", nomatch = NULL)
+pr[, SINE := id %in% ov$id]
+
+setorder(pr, chrn, pos)
+pr[, `:=`(nxt = shift(row, -1L), gap = shift(pos, -1L) - pos,
+          nxt_id = shift(id, -1L)), by = chrn]
+pairs <- pr[!is.na(nxt)]
+nx <- match(pairs$nxt_id, pr$id)
+pairs[, `:=`(flag_not_unique = not_unique | pr$not_unique[nx], flag_poor_mapping = poor_mapping | pr$poor_mapping[nx],
+             flag_SINE = SINE | pr$SINE[nx], flag_general = general | pr$general[nx])]
+stopifnot(all(pairs$gap >= 0))
+cat("probes in the manifest:", n_in, " on autosomes:", nrow(pr), " pairs:", nrow(pairs),
+    " gap 0:", sum(pairs$gap == 0), " median gap:", median(pairs$gap), "bp\n")
+cat("flagged pairs  not unique:", sum(pairs$flag_not_unique), " poor mapping:", sum(pairs$flag_poor_mapping),
+    " SINE:", sum(pairs$flag_SINE), " M_general:", sum(pairs$flag_general), "\n")
+gap <- as.numeric(pairs$gap)
+half <- fifelse(pairs$chrn %% 2 == 1, "odd", "even")
+SUBSETS <- list(all = rep(TRUE, nrow(pairs)), odd = half == "odd", even = half == "even")
+
+# ----------------------------------------------------------------
+# 2. the test
+# ----------------------------------------------------------------
+top_mean <- function(s, y, K) {               # mean y over the K highest s; ties split evenly
+  t <- -sort(-s, partial = K)[K]
+  above <- s > t; tied <- s == t
+  (sum(y[above]) + (K - sum(above)) * mean(y[tied])) / K
+}
+outcomes <- function(Xt, Yt, Xk, Yk) {        # sums over the held-out patients
+  mx <- rowMeans(Xt); my <- rowMeans(Yt)
+  vx <- rowMeans((Xt - mx)^2); vy <- rowMeans((Yt - my)^2); cxy <- rowMeans((Xt - mx) * (Yt - my))
+  bxy <- ifelse(vy > 0, cxy / vy, 0); byx <- ifelse(vx > 0, cxy / vx, 0)
+  xhat <- pmin(1, pmax(0, mx + bxy * (Yk - my))); yhat <- pmin(1, pmax(0, my + byx * (Xk - mx)))
+  list(A = rowSums(abs(Xk - Yk)),
+       B = rowSums(((abs(Xk - mx) - abs(Xk - xhat)) + (abs(Yk - my) - abs(Yk - yhat))) / 2),
+       n = ncol(Xk))
+}
+FAMILIES <- c("Codex F", "F no distance", "F+", "F guarded", "New C", "New C with dCor")
+
+run_cohort <- function(B, cohort) {
+  X <- B[pairs$row, ]; Y <- B[pairs$nxt, ]
+  n <- ncol(X); set.seed(SEED); fold_of <- sample(rep(seq_len(NFOLD), length.out = n))
+  A_tot <- B_tot <- numeric(nrow(X))
+  fr <- rbindlist(lapply(seq_len(NFOLD), function(f) {
+    tr <- which(fold_of != f); te <- which(fold_of == f)
+    Xt <- X[, tr]; Yt <- Y[, tr]
+    sc <- score_F_plus(Xt, Yt, gap)
+    S <- sc$S; E <- sc$E; Ep <- sc$E_plus
+    S_asin <- 1 - rowMeans(abs(asin(sqrt(Xt)) - asin(sqrt(Yt)))) / (pi / 2)
+    m <- pmin(rowSums(abs(Xt - rowMedians(Xt)) > 0.1), rowSums(abs(Yt - rowMedians(Yt)) > 0.1))
+    D <- pmax(sc$spearman, 0); D[is.na(D)] <- 0; D <- D * m / (m + 3)
+    cc <- rowMaxs(Xt) == rowMins(Xt) & rowMaxs(Yt) == rowMins(Yt)
+    o <- outcomes(Xt, Yt, X[, te, drop = FALSE], Y[, te, drop = FALSE])
+    A_tot <<- A_tot + o$A; B_tot <<- B_tot + o$B
+    Af <- o$A / o$n; Bf <- o$B / o$n
+    out <- rbindlist(lapply(ELL, function(l) {
+      w <- if (l == 0) as.numeric(gap == 0) else exp(-gap / l); cbar <- mean(w)
+      rule <- function(Sx, v) fifelse(cc, Sx, Sx * v)
+      fam <- list(`Codex F` = S * (w + (1 - w) * E), `F no distance` = S * (cbar + (1 - cbar) * E),
+                  `F+` = S * (w + (1 - w) * Ep), `F guarded` = S * (w + (1 - w) * Ep * m / (m + 3)),
+                  `New C` = rule(S_asin, w + (1 - w) * D), `New C with dCor` = rule(S_asin, w + (1 - w) * E))
+      rbindlist(lapply(names(SUBSETS), function(sn) {
+        ix <- SUBSETS[[sn]]; K <- ceiling(TOP * sum(ix))
+        rbindlist(lapply(FAMILIES, function(fm) data.table(
+          subset = sn, family = fm, ell = l, mean_w = cbar,
+          error = top_mean(fam[[fm]][ix], Af[ix], K), gain = top_mean(fam[[fm]][ix], Bf[ix], K))))
+      }))
+    }))
+    cat(sprintf("  %s fold %d of %d done\n", cohort, f, NFOLD))
+    out[, fold := f]
+  }))
+  list(fr = fr[, cohort := cohort], A = A_tot / n, B = B_tot / n,
+       spread = (rowSds(X) + rowSds(Y)) / 2, sp_full = spearman_rows(X, Y))
+}
+t0 <- Sys.time()
+runs <- list(Alive = run_cohort(alive$beta, "Alive"), Dead = run_cohort(dead$beta, "Dead"))
+cat("both cohorts in", round(as.numeric(Sys.time() - t0, units = "mins"), 1), "min\n")
+fr_folds <- rbindlist(lapply(runs, `[[`, "fr"))
+fwrite(fr_folds, file.path(res, "Task48_Frontier_Folds.csv"))
+fr <- fr_folds[, .(mean_w = r4(mean_w[1]), error = round(mean(error), 5), gain = round(mean(gain), 5),
+                   error_lo = round(min(error), 5), error_hi = round(max(error), 5),
+                   gain_lo = round(min(gain), 5), gain_hi = round(max(gain), 5)), by = .(cohort, subset, family, ell)]
+fwrite(fr, file.path(res, "Task48_Frontier.csv"))
+
+# ----------------------------------------------------------------
+# 3. H1, H2, H3, H5: curves compared at the same agreement error
+# ----------------------------------------------------------------
+QUESTIONS <- list(H1 = c("Codex F", "F no distance", "more"), H2 = c("New C", "Codex F", "less"),
+                  H3 = c("New C", "New C with dCor", "less"), H5 = c("F guarded", "Codex F", "less"))
+at_error <- function(A, B, target) {
+  if (target < min(A) || target > max(A)) return(NA_real_)
+  o <- order(A); approx(A[o], B[o], xout = target, ties = mean)$y
+}
+matched <- rbindlist(lapply(names(QUESTIONS), function(h) {
+  q <- QUESTIONS[[h]]
+  rbindlist(lapply(c("Alive", "Dead"), function(co) rbindlist(lapply(names(SUBSETS), function(sn) {
+    cur <- fr[cohort == co & subset == sn]
+    ra <- range(cur[family == q[1], error]); rb <- range(cur[family == q[2], error])
+    lo <- max(ra[1], rb[1]); hi <- min(ra[2], rb[2])
+    if (!(hi > lo)) return(data.table(hypothesis = h, a = q[1], b = q[2], cohort = co, subset = sn,
+                                      level = NA_real_, folds = 0L, a_wins = 0L, gain_a = NA_real_, gain_b = NA_real_))
+    lv <- seq(lo + 0.1 * (hi - lo), hi - 0.1 * (hi - lo), length.out = 6)
+    ff <- fr_folds[cohort == co & subset == sn & family %in% q[1:2]]
+    g <- ff[, .(level = lv, gain = vapply(lv, function(t) at_error(error, gain, t), 0)), by = .(fold, family)]
+    w <- dcast(g, fold + level ~ family, value.var = "gain")
+    setnames(w, q[1:2], c("ga", "gb"))
+    w[, .(hypothesis = h, a = q[1], b = q[2], cohort = co, subset = sn, folds = sum(!is.na(ga) & !is.na(gb)),
+          a_wins = sum(ga > gb, na.rm = TRUE), gain_a = round(mean(ga, na.rm = TRUE), 5),
+          gain_b = round(mean(gb, na.rm = TRUE), 5)), by = level]
+  }))))
+}))
+fwrite(matched, file.path(res, "Task48_Matched.csv"))
+
+hyp <- matched[, .(cells = sum(folds), a_wins = sum(a_wins)), by = .(hypothesis, a, b, cohort, subset)]
+hyp[, share := r4(a_wins / cells)]
+hyp[, holds := mapply(function(h, s) if (QUESTIONS[[h]][3] == "more") s > 0.5 else s < 0.5, hypothesis, share)]
+
+# H4: F+ within 0.0005 of Codex F in both outcomes at every length scale
+h4 <- dcast(fr[family %in% c("Codex F", "F+")], cohort + subset + ell ~ family, value.var = c("error", "gain"))
+setnames(h4, c("cohort", "subset", "ell", "eF", "eP", "gF", "gP"))
+h4s <- h4[, .(hypothesis = "H4", a = "F+", b = "Codex F", cells = .N,
+              a_wins = NA_integer_, share = round(max(abs(eP - eF), abs(gP - gF)), 6)), by = .(cohort, subset)]
+h4s[, holds := share < 0.0005]
+
+# ----------------------------------------------------------------
+# 4. H6: flagged pairs at matched spread (20 bins)
+# ----------------------------------------------------------------
+FLAGS <- c(not_unique = "flag_not_unique", poor_mapping = "flag_poor_mapping", SINE = "flag_SINE",
+           M_general = "flag_general")
+rel <- rbindlist(lapply(names(runs), function(co) {
+  rr <- runs[[co]]
+  rbindlist(lapply(names(SUBSETS), function(sn) {
+    ix <- SUBSETS[[sn]]
+    sb <- 1L + floor(20 * (frank(rr$spread[ix], ties.method = "first") - 1) / sum(ix))
+    rbindlist(lapply(names(FLAGS), function(fl) {
+      f <- pairs[[FLAGS[[fl]]]][ix]
+      t <- data.table(sb, f, A = rr$A[ix], B = rr$B[ix])[, .(A = mean(A), B = mean(B), n = .N), by = .(sb, f)]
+      w <- merge(t[f == TRUE], t[f == FALSE], by = "sb", suffixes = c("_f", "_o"))
+      if (!nrow(w)) return(NULL)
+      data.table(cohort = co, subset = sn, flag = fl, flagged_pairs = sum(f),
+                 error_diff = round(sum(w$n_f * (w$A_f - w$A_o)) / sum(w$n_f), 5),
+                 gain_diff = round(sum(w$n_f * (w$B_f - w$B_o)) / sum(w$n_f), 5),
+                 bins_worse_error = sum(w$A_f > w$A_o), bins_lower_gain = sum(w$B_f < w$B_o), bins = nrow(w))
+    }))
+  }))
+}))
+rel[, holds := error_diff > 0 & gain_diff < 0 & bins_worse_error >= 12 & bins_lower_gain >= 12]
+fwrite(rel, file.path(res, "Task48_Reliability_SpreadMatched.csv"))
+h6 <- rel[flag != "M_general", .(hypothesis = "H6", a = "flagged", b = "unflagged", cells = .N,
+                                  a_wins = sum(holds), share = r4(mean(holds)), holds = all(holds)),
+          by = .(cohort, subset)]
+
+hyps <- rbind(hyp, h4s, h6, use.names = TRUE)
+setorder(hyps, hypothesis, cohort, subset)
+fwrite(hyps, file.path(res, "Task48_Hypotheses.csv"))
+cat("\nFrozen hypotheses on the 450K (share = share of cells where a beats b; H4 = largest difference;",
+    "H6 = share of flags meeting the rule):\n")
+print(hyps)
+verdict <- hyps[, .(replicates = all(holds)), by = .(hypothesis, cohort)]
+cat("\nReplicates (holds genome-wide and in both halves):\n"); print(dcast(verdict, hypothesis ~ cohort, value.var = "replicates"))
+cat("\nH6 in detail:\n"); print(rel)
+
+# ----------------------------------------------------------------
+# 5. exploratory: how neighbour Spearman falls with gap
+# ----------------------------------------------------------------
+decay <- rbindlist(lapply(names(runs), function(co)
+  data.table(cohort = co, bin = cut(gap, c(-1, 10, 20, 50, 100, 200, 500, 1000, 5000, 1e5, Inf)), gap, sp = runs[[co]]$sp_full)[
+    !is.na(sp), .(pairs = .N, median_gap = as.numeric(median(gap)), median_spearman = r4(median(sp))), by = .(cohort, bin)]))
+setorder(decay, cohort, bin)
+fwrite(decay, file.path(res, "Task48_DistanceDecay.csv"))
+cat("\nExploratory: neighbour Spearman by gap:\n"); print(dcast(decay, bin ~ cohort, value.var = "median_spearman"))
+
+# ----------------------------------------------------------------
+# 6. figure: the curves, Alive cohort, all autosomes
+# ----------------------------------------------------------------
+SURF <- "#fcfcfb"; INK <- "#0b0b0b"; INK2 <- "#52514e"; MUTED <- "#898781"; GRID <- "#e1e0d9"
+FCOL <- c(`Codex F` = "#52514e", `F no distance` = "#52514e", `F+` = "#2a78d6", `F guarded` = "#eb6834",
+          `New C` = "#1baf7a", `New C with dCor` = "#4a3aa7")
+FLT <- c(`Codex F` = "solid", `F no distance` = "22", `F+` = "13", `F guarded` = "solid",
+         `New C` = "solid", `New C with dCor` = "solid")
+DRAW <- c("Codex F", "F no distance", "F guarded", "New C", "New C with dCor", "F+")   # F+ last, on top
+f35 <- fr[cohort == "Alive" & subset == "all"][, family := factor(family, levels = DRAW)][order(family, -ell)]
+p35 <- ggplot(f35, aes(error, gain, colour = family, linetype = family)) +
+  geom_path(linewidth = 0.8, lineend = "round") +
+  geom_point(data = f35[ell == 200], shape = 21, fill = SURF, stroke = 1, size = 2.4, show.legend = FALSE) +
+  scale_colour_manual(values = FCOL) + scale_linetype_manual(values = FLT) +
+  labs(title = "The frozen test on new data: TCGA-BRCA 450K, 53 normal breast samples",
+       subtitle = paste0("Each curve moves from agreement alone toward agreement times co-methylation as the length ",
+                         "scale shrinks. Open dot: 200 bp (the frozen F+).\nTop 10% of ", format(nrow(pairs), big.mark = ","),
+                         " consecutive autosomal probe pairs, mean over 10 patient folds. F+ is drawn dotted on top of Codex F."),
+       x = "Held-out agreement error |x - y| (lower is better)", y = "Held-out prediction gain (higher is better)",
+       caption = "Source: Results/Task48_Frontier.csv (Task 48, frozen plan of Task 47)") +
+  theme_minimal(base_size = 11) +
+  theme(plot.background = element_rect(fill = SURF, colour = NA),
+        panel.grid.major = element_line(colour = GRID, linewidth = 0.3), panel.grid.minor = element_blank(),
+        plot.title = element_text(colour = INK, face = "bold", size = 13), plot.title.position = "plot",
+        plot.subtitle = element_text(colour = INK2, size = 9.5), plot.caption = element_text(colour = MUTED, hjust = 0),
+        plot.caption.position = "plot", legend.position = "top", legend.justification = "left",
+        legend.title = element_blank(), legend.key.width = unit(28, "pt"),
+        axis.text = element_text(colour = INK2), axis.title = element_text(colour = INK2))
+ggsave(file.path(res, "Fig35_450K_Frontier.png"), p35, width = 10, height = 6.6, dpi = 200, bg = SURF)
+cat("\ndone\n")

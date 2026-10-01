@@ -1,0 +1,145 @@
+level,hypothesis,a,b,cohort,subset,folds,a_wins,gain_a,gain_b
+0.014122,H1,Codex F,F no distance,Alive,all,9,0,0.00395,0.0062
+0.0219812,H1,Codex F,F no distance,Alive,all,10,0,0.00896,0.01284
+0.0298404,H1,Codex F,F no distance,Alive,all,10,0,0.01345,0.01841
+0.0376996,H1,Codex F,F no distance,Alive,all,10,0,0.01826,0.02247
+0.0455588,H1,Codex F,F no distance,Alive,all,10,0,0.02308,0.02546
+0.053418,H1,Codex F,F no distance,Alive,all,8,0,0.0273,0.0283
+0.014056,H1,Codex F,F no distance,Alive,odd,9,0,0.00381,0.00602
+0.0219696,H1,Codex F,F no distance,Alive,odd,10,0,0.0087,0.01259
+0.0298832,H1,Codex F,F no distance,Alive,odd,10,0,0.01314,0.01807
+0.0377968,H1,Codex F,F no distance,Alive,odd,10,0,0.01789,0.02205
+0.0457104,H1,Codex F,F no distance,Alive,odd,10,0,0.02263,0.02499
+0.053624,H1,Codex F,F no distance,Alive,odd,8,0,0.02678,0.02778
+0.014182,H1,Codex F,F no distance,Alive,even,9,0,0.00408,0.00638
+0.0219772,H1,Codex F,F no distance,Alive,even,10,0,0.00925,0.01311
+0.0297724,H1,Codex F,F no distance,Alive,even,10,0,0.01376,0.01877
+0.0375676,H1,Codex F,F no distance,Alive,even,10,0,0.01868,0.02292
+0.0453628,H1,Codex F,F no distance,Alive,even,10,0,0.02358,0.02597
+0.053158,H1,Codex F,F no distance,Alive,even,8,0,0.02788,0.02888
+0.013014,H1,Codex F,F no distance,Dead,all,9,4,0.0063,0.00693
+0.0174844,H1,Codex F,F no distance,Dead,all,10,0,0.00899,0.01057
+0.0219548,H1,Codex F,F no distance,Dead,all,10,0,0.01092,0.01366
+0.0264252,H1,Codex F,F no distance,Dead,all,10,0,0.01298,0.01604
+0.0308956,H1,Codex F,F no distance,Dead,all,9,1,0.01463,0.01772
+0.035366,H1,Codex F,F no distance,Dead,all,4,0,0.01889,0.026
+0.012986,H1,Codex F,F no distance,Dead,odd,9,4,0.00626,0.00688
+0.0175236,H1,Codex F,F no distance,Dead,odd,10,0,0.00892,0.01051
+0.0220612,H1,Codex F,F no distance,Dead,odd,10,0,0.01082,0.01356
+0.0265988,H1,Codex F,F no distance,Dead,odd,10,0,0.01286,0.0159
+0.0311364,H1,Codex F,F no distance,Dead,odd,9,1,0.0145,0.01758
+0.035674,H1,Codex F,F no distance,Dead,odd,4,0,0.01889,0.02584
+0.013038,H1,Codex F,F no distance,Dead,even,9,4,0.00634,0.00697
+0.0174348,H1,Codex F,F no distance,Dead,even,10,0,0.00905,0.01062
+0.0218316,H1,Codex F,F no distance,Dead,even,10,0,0.01105,0.01376
+0.0262284,H1,Codex F,F no distance,Dead,even,10,0,0.0131,0.01618
+0.0306252,H1,Codex F,F no distance,Dead,even,9,1,0.01477,0.01788
+0.035022,H1,Codex F,F no distance,Dead,even,4,0,0.01893,0.02615
+0.015193,H2,New C,Codex F,Alive,all,9,9,0.00735,0.00465
+0.0228618,H2,New C,Codex F,Alive,all,10,10,0.01128,0.00948
+0.0305306,H2,New C,Codex F,Alive,all,10,3,0.01373,0.01385
+0.0381994,H2,New C,Codex F,Alive,all,10,0,0.01604,0.01859
+0.0458682,H2,New C,Codex F,Alive,all,10,0,0.01941,0.02325
+0.053537,H2,New C,Codex F,Alive,all,8,0,0.02331,0.02735
+0.015136,H2,New C,Codex F,Alive,odd,9,9,0.00715,0.00449
+0.0228576,H2,New C,Codex F,Alive,odd,10,10,0.01101,0.0092
+0.0305792,H2,New C,Codex F,Alive,odd,10,2,0.01338,0.01355
+0.0383008,H2,New C,Codex F,Alive,odd,10,0,0.0157,0.01822
+0.0460224,H2,New C,Codex F,Alive,odd,10,0,0.01908,0.0228
+0.053744,H2,New C,Codex F,Alive,odd,8,0,0.0229,0.02683
+0.015262,H2,New C,Codex F,Alive,even,9,9,0.00758,0.00482
+0.0228652,H2,New C,Codex F,Alive,even,10,10,0.01156,0.00979
+0.0304684,H2,New C,Codex F,Alive,even,10,3,0.01411,0.01417
+0.0380716,H2,New C,Codex F,Alive,even,10,0,0.01644,0.01902
+0.0456748,H2,New C,Codex F,Alive,even,10,0,0.0197,0.02375
+0.053278,H2,New C,Codex F,Alive,even,8,0,0.02368,0.02793
+0.014301,H2,New C,Codex F,Dead,all,9,9,0.00778,0.00705
+0.0185426,H2,New C,Codex F,Dead,all,10,4,0.00974,0.00948
+0.0227842,H2,New C,Codex F,Dead,all,10,1,0.01045,0.01128
+0.0270258,H2,New C,Codex F,Dead,all,10,0,0.01089,0.01328
+0.0312674,H2,New C,Codex F,Dead,all,9,0,0.01119,0.01476
+0.035509,H2,New C,Codex F,Dead,all,4,0,0.01152,0.01899
+0.014291,H2,New C,Codex F,Dead,odd,9,9,0.00775,0.007
+0.0185966,H2,New C,Codex F,Dead,odd,10,4,0.00967,0.00942
+0.0229022,H2,New C,Codex F,Dead,odd,10,1,0.01036,0.01116
+0.0272078,H2,New C,Codex F,Dead,odd,10,0,0.01079,0.01316
+0.0315134,H2,New C,Codex F,Dead,odd,9,0,0.01106,0.01462
+0.035819,H2,New C,Codex F,Dead,odd,4,0,0.01142,0.01898
+0.014325,H2,New C,Codex F,Dead,even,9,8,0.0078,0.00711
+0.018493,H2,New C,Codex F,Dead,even,10,4,0.00982,0.00957
+0.022661,H2,New C,Codex F,Dead,even,10,1,0.01056,0.01142
+0.026829,H2,New C,Codex F,Dead,even,10,0,0.01102,0.01341
+0.030997,H2,New C,Codex F,Dead,even,9,0,0.01133,0.0149
+0.035165,H2,New C,Codex F,Dead,even,4,0,0.01163,0.01903
+0.015719,H3,New C,New C with dCor,Alive,all,9,1,0.00768,0.00792
+0.0242294,H3,New C,New C with dCor,Alive,all,10,0,0.0118,0.01238
+0.0327398,H3,New C,New C with dCor,Alive,all,10,0,0.01436,0.01572
+0.0412502,H3,New C,New C with dCor,Alive,all,10,0,0.0172,0.0199
+0.0497606,H3,New C,New C with dCor,Alive,all,10,0,0.02136,0.02446
+0.058271,H3,New C,New C with dCor,Alive,all,9,0,0.02543,0.02863
+0.015675,H3,New C,New C with dCor,Alive,odd,9,0,0.00748,0.00772
+0.024259,H3,New C,New C with dCor,Alive,odd,10,0,0.01152,0.01208
+0.032843,H3,New C,New C with dCor,Alive,odd,10,0,0.01401,0.01537
+0.041427,H3,New C,New C with dCor,Alive,odd,10,0,0.01693,0.01951
+0.050011,H3,New C,New C with dCor,Alive,odd,10,0,0.02104,0.02402
+0.058595,H3,New C,New C with dCor,Alive,odd,9,0,0.02503,0.02806
+0.015781,H3,New C,New C with dCor,Alive,even,9,0,0.00792,0.00815
+0.0242146,H3,New C,New C with dCor,Alive,even,10,0,0.01209,0.01271
+0.0326482,H3,New C,New C with dCor,Alive,even,10,0,0.01476,0.01611
+0.0410818,H3,New C,New C with dCor,Alive,even,10,0,0.01753,0.02034
+0.0495154,H3,New C,New C with dCor,Alive,even,10,0,0.02168,0.02498
+0.057949,H3,New C,New C with dCor,Alive,even,9,0,0.02588,0.02926
+0.014596,H3,New C,New C with dCor,Dead,all,9,0,0.0079,0.00878
+0.0193096,H3,New C,New C with dCor,Dead,all,10,0,0.00991,0.0114
+0.0240232,H3,New C,New C with dCor,Dead,all,10,0,0.01059,0.01284
+0.0287368,H3,New C,New C with dCor,Dead,all,10,0,0.01102,0.01451
+0.0334504,H3,New C,New C with dCor,Dead,all,9,0,0.01135,0.01596
+0.038164,H3,New C,New C with dCor,Dead,all,4,0,0.01183,0.02068
+0.014581,H3,New C,New C with dCor,Dead,odd,9,0,0.00787,0.00873
+0.0193506,H3,New C,New C with dCor,Dead,odd,10,0,0.00982,0.01128
+0.0241202,H3,New C,New C with dCor,Dead,odd,10,0,0.01049,0.01269
+0.0288898,H3,New C,New C with dCor,Dead,odd,10,0,0.01089,0.01436
+0.0336594,H3,New C,New C with dCor,Dead,odd,9,0,0.01123,0.01577
+0.038429,H3,New C,New C with dCor,Dead,odd,4,0,0.01175,0.02058
+0.014624,H3,New C,New C with dCor,Dead,even,9,0,0.00793,0.00886
+0.0192704,H3,New C,New C with dCor,Dead,even,10,0,0.01,0.01153
+0.0239168,H3,New C,New C with dCor,Dead,even,10,0,0.0107,0.01299
+0.0285632,H3,New C,New C with dCor,Dead,even,10,0,0.01116,0.01469
+0.0332096,H3,New C,New C with dCor,Dead,even,9,0,0.01148,0.01614
+0.037856,H3,New C,New C with dCor,Dead,even,4,0,0.01192,0.02085
+0.014122,H5,F guarded,Codex F,Alive,all,9,0,0.0035,0.00395
+0.0219812,H5,F guarded,Codex F,Alive,all,10,0,0.00772,0.00896
+0.0298404,H5,F guarded,Codex F,Alive,all,10,0,0.01114,0.01345
+0.0376996,H5,F guarded,Codex F,Alive,all,10,0,0.01464,0.01826
+0.0455588,H5,F guarded,Codex F,Alive,all,10,0,0.01922,0.02308
+0.053418,H5,F guarded,Codex F,Alive,all,8,0,0.02365,0.0273
+0.014056,H5,F guarded,Codex F,Alive,odd,9,0,0.00338,0.00381
+0.0219696,H5,F guarded,Codex F,Alive,odd,10,0,0.00745,0.0087
+0.0298832,H5,F guarded,Codex F,Alive,odd,10,0,0.0108,0.01314
+0.0377968,H5,F guarded,Codex F,Alive,odd,10,0,0.01438,0.01789
+0.0457104,H5,F guarded,Codex F,Alive,odd,10,0,0.01894,0.02263
+0.053624,H5,F guarded,Codex F,Alive,odd,8,0,0.02323,0.02678
+0.014182,H5,F guarded,Codex F,Alive,even,9,0,0.00364,0.00408
+0.0219772,H5,F guarded,Codex F,Alive,even,10,0,0.00802,0.00925
+0.0297724,H5,F guarded,Codex F,Alive,even,10,0,0.01154,0.01376
+0.0375676,H5,F guarded,Codex F,Alive,even,10,0,0.01502,0.01868
+0.0453628,H5,F guarded,Codex F,Alive,even,10,0,0.01959,0.02358
+0.053158,H5,F guarded,Codex F,Alive,even,8,0,0.02406,0.02788
+0.013014,H5,F guarded,Codex F,Dead,all,9,0,0.00517,0.0063
+0.0174844,H5,F guarded,Codex F,Dead,all,10,0,0.00708,0.00899
+0.0219548,H5,F guarded,Codex F,Dead,all,10,0,0.00816,0.01092
+0.0264252,H5,F guarded,Codex F,Dead,all,10,0,0.00902,0.01298
+0.0308956,H5,F guarded,Codex F,Dead,all,9,0,0.00973,0.01463
+0.035366,H5,F guarded,Codex F,Dead,all,4,0,0.0105,0.01889
+0.012986,H5,F guarded,Codex F,Dead,odd,9,0,0.00515,0.00626
+0.0175236,H5,F guarded,Codex F,Dead,odd,10,0,0.00705,0.00892
+0.0220612,H5,F guarded,Codex F,Dead,odd,10,0,0.00809,0.01082
+0.0265988,H5,F guarded,Codex F,Dead,odd,10,0,0.00895,0.01286
+0.0311364,H5,F guarded,Codex F,Dead,odd,9,0,0.00967,0.0145
+0.035674,H5,F guarded,Codex F,Dead,odd,4,0,0.01048,0.01889
+0.013038,H5,F guarded,Codex F,Dead,even,9,0,0.00519,0.00634
+0.0174348,H5,F guarded,Codex F,Dead,even,10,0,0.00715,0.00905
+0.0218316,H5,F guarded,Codex F,Dead,even,10,0,0.00826,0.01105
+0.0262284,H5,F guarded,Codex F,Dead,even,10,0,0.00914,0.0131
+0.0306252,H5,F guarded,Codex F,Dead,even,9,0,0.00982,0.01477
+0.035022,H5,F guarded,Codex F,Dead,even,4,0,0.01052,0.01893
