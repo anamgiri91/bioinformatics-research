@@ -11,6 +11,9 @@ Not finding a matching paper does not prove the method is new.
 - **Abstract or a published summary only:** Guo et al., DNAmBERT, epiG,
   dSOMNiBUS, Buonaccorsi et al., Buffalo & Coop (as Simon & Coop describe
   it), molecular cross-validation and data thinning.
+- **Section 4 (the three further areas):** CompDTUme was checked in its
+  source code. sleuth, SOMNiBUS and Affinito et al. were checked from their
+  abstracts or published summaries.
 
 ## The exact question
 
@@ -49,14 +52,31 @@ covariance of neighbouring CpGs across people?
 | Batson, Royer & Webber 2019, bioRxiv 10.1101/786269 (molecular cross-validation) | Splits each cell's molecules at random into two groups, which act as two independent draws. One fits a denoiser, the other checks it | The same idea as the A/B/C benchmark. Here the split is by fragment, in three parts, and the reference is a B-by-C cross covariance |
 | Neufeld, Dharamshi, Gao & Witten 2024, *JMLR* 25(57):1-35 (data thinning) | General theory for splitting an observation into independent parts that sum to it, for Poisson, binomial and other convolution-closed distributions | Our fragment split is a case of this. It gives independent parts only if fragments are independent molecules, so leftover PCR copies would break it |
 
+## 4. Further search: the three remaining areas
+
+Done later on 2026-10-01, after the external test.
+
+| Area | Work | What it does | How it differs |
+|---|---|---|---|
+| Other count data with shared reads | **Young, Van Buren & Rashid 2024, *Biostatistics* 25(2):559 (CompDTUme)** | Differential transcript usage. Each sample's error covariance between transcript proportions is estimated from the quantifier's inferential replicates (Gibbs or bootstrap). The mean of these matrices is subtracted from the across-sample covariance (`UpdatedCovAlt <- SigmaTildeAltNewModeling - mean.withinhat` in the package code). Results with a negative variance are left undefined | **The same moment correction, including the off-diagonal error covariance that ambiguous reads create.** The error covariance comes from resampling a quantification model, not from a closed-form count estimate. The target is a test of transcript usage, not co-methylation |
+| Other count data with shared reads | Pimentel et al. 2017, *Nature Methods* 14:687-690 (sleuth) | Uses bootstrap replicates to separate inferential variance from biological variance | The variance part only |
+| Models that may be the same | Zhao et al. 2021, *Biometrics* 77(2):424 (SOMNiBUS), and dSOMNiBUS (2024) | Hierarchical binomial regression for regions, with smooth effects along the genome, read depth and error terms | Model latent levels along the genome; no use of the joint read states of two CpGs across donors was found |
+| Co-methylation with distance | Affinito et al. 2020, *Genomics* 112(1):144-150 | Co-methylation of nearby CpGs falls with distance, in ultra-deep targeted bisulfite data | Describes co-methylation; does not correct for shared reads |
+| Tool documentation | coMethDMR, comb-p, DMRcate | Their inputs are per-site betas, counts or p-values | These inputs carry no joint read states, so they cannot make this correction. Fragment-level tools (wgbstools, the mHap tools) compute within-sample measures |
+
+Not searched further: allele-specific expression, pooled sequencing and
+metagenomics. These may hold more examples of the same correction.
+
 ## What was not found
 
-No paper was found that does both of these:
+No paper was found that does both of these for methylation:
 
 1. estimates, per donor, the covariance that shared fragments add to two
-   CpGs' betas from their joint read states; and
+   CpGs' betas, in closed form from their joint read states; and
 2. subtracts its mean from the across-donor covariance and squared
-   disagreement.
+   disagreement of neighbouring CpGs.
+
+The subtraction itself is not new: CompDTUme does it for transcripts.
 
 ## A bounded statement of the possible contribution
 
@@ -71,6 +91,9 @@ No paper was found that does both of these:
 
 What is not new:
 
+- **Subtracting the mean within-sample error covariance, off-diagonal terms
+  included, from the across-sample covariance.** CompDTUme does this for
+  transcript proportions, with error covariances from resampling.
 - **The general idea of removing shared sampling noise from a
   covariance.** Population genetics does this for allele-frequency changes
   (Buffalo & Coop).
@@ -85,22 +108,18 @@ What is not new:
 - **Splitting molecules to evaluate a method.** Molecular
   cross-validation and data thinning do this.
 
-What may be new is the missing piece Saccenti et al. point to: an estimate
-of the error covariance. For bisulfite reads, each donor's joint read states
-give it directly. Also possibly new is applying all of this to neighbouring
-CpGs, and checking the result on independent fragments.
+What may be new is narrow. The first part is the estimate of the error
+covariance, the piece Saccenti et al. point to. For bisulfite reads, each
+donor's joint read states give an unbiased closed-form estimate, with no
+resampling model. The second part is applying the correction to
+neighbouring CpGs and checking it on independent fragments. This is closer
+to a useful application than to a new statistical method.
 
 ## What a reviewer could still find
 
-- **Shared-read covariance in other count data.** Allele-specific
-  expression, isoform quantification (reads that fit two isoforms) and
-  pooled sequencing all have reads shared between two quantities. These
-  were not searched in depth.
-- **Methods in tool documentation.** Something in a DMR or co-methylation
-  tool's documentation rather than a paper, for example coMethDMR, comb-p
-  or DMRcate.
-- **Unchecked mathematical equivalence.** A latent-variable model that
-  amounts to the same correction, for example a binomial mixed model with
-  correlated random effects.
-
-A search of those three areas should be done before submission.
+- **More examples of the subtraction** in allele-specific expression,
+  pooled sequencing or metagenomics. These would not change the
+  conclusion, which already treats the subtraction as known.
+- **A methylation model that uses joint read states across donors,** for
+  example a bivariate binomial mixed model of the 2 x 2 read table. None
+  was found.

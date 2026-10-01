@@ -1644,6 +1644,11 @@ fields. Each citation and claim is in `Results/Task60_PriorArt.md`, with how
 it was checked (full text or abstract).
 
 - **What is not new.**
+  - Subtracting the mean within-sample error covariance from the covariance
+    across samples, including the error covariance between two quantities.
+    CompDTUme (Young, Van Buren & Rashid 2024) does this for transcript
+    proportions. Its error covariances come from the quantifier's
+    resampled estimates. This is the closest work found.
   - Removing shared sampling noise from a covariance. Population genetics
     does this for allele-frequency changes over time (Buffalo & Coop 2020).
   - Correcting a correlation for correlated error, once the error
@@ -1657,15 +1662,22 @@ it was checked (full text or abstract).
     this for MBD-seq, and merges such sites.
   - Splitting molecules at random to check a method. This is molecular
     cross-validation (2019) and data thinning (2024).
-- **What may be new.** Saccenti et al. say the error covariance is the hard
-  part to estimate. For bisulfite reads, each donor's joint read states give
-  it directly. No paper was found that uses them to correct the covariance
-  of neighbouring CpGs across people.
-- **Not yet searched in depth.** Three areas could still hold the same idea:
-  - other count data where reads are shared between two quantities
-    (allele-specific expression, isoforms, pooled sequencing);
-  - the documentation of co-methylation tools;
-  - models that may turn out to be mathematically the same.
+- **What may be new is narrow.**
+  - Saccenti et al. say the error covariance is the hard part to estimate.
+    For bisulfite reads, each donor's joint read states give an unbiased
+    closed-form estimate, with no resampling model.
+  - No paper was found that uses them to correct the covariance of
+    neighbouring CpGs across people.
+  - This is closer to a useful application than to a new statistical
+    method.
+- **The further search** covered three areas:
+  - other count data with shared reads, which found CompDTUme and sleuth;
+  - co-methylation tool documentation;
+  - methylation models that might be the same. The DMR models found
+    (SOMNiBUS, dSOMNiBUS) do not use joint read states.
+
+  Allele-specific expression, pooled sequencing and metagenomics were not
+  searched.
 
 Files: `Results/Task60_PriorArt.md`.
 
@@ -1682,12 +1694,14 @@ Files: `Results/Task60_PriorArt.md`.
 - **Not yet shown.**
   - Other labs, pipelines and assays.
   - Robustness when PCR copies remain.
-- **Possibly new, not proven new.** The pieces are known (16.9). Estimating
-  the error covariance from joint read states was not found.
+- **Possibly new, not proven new.** The subtraction is known: CompDTUme
+  does it for transcripts. What may be new is the closed-form estimate from
+  joint read states, and its use for neighbouring CpGs (16.9).
 
 ### 16.11 Still to do
 
-1. **Finish the prior-art search** in the three areas listed in 16.9.
+1. ~~**Finish the prior-art search.**~~ **Done** (16.9). It found
+   CompDTUme, which makes the novelty claim narrower.
 2. **Test on a second cohort from a different lab and pipeline.** This
    would remove the same-study limit.
 3. **Plan comparisons not yet done** (plan section 6):
