@@ -1,0 +1,9 @@
+Validated coordinate comparison: GTEX-117XS offset -1 
+Validated coordinate comparison: GTEX-117XS offset 0 
+Validated coordinate comparison: GTEX-117XS offset 1 
+Validated coordinate comparison: GTEX-117XS offset 100 
+Validated coordinate comparison: GTEX-14BIN offset -1 
+Validated coordinate comparison: GTEX-14BIN offset 0 
+Validated coordinate comparison: GTEX-14BIN offset 1 
+Validated coordinate comparison: GTEX-14BIN offset 100 
+PASS: frozen hashes, counts, genome-index coordinates and constant-predictor check
