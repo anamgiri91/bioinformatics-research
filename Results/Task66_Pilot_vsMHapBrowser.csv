@@ -1,0 +1,13 @@
+measure,value
+CpG sites called in our mHap-rule records,1669807
+CpG sites called in mHapBrowser's records,1713942
+sites in both,1651313
+"Pearson r of site depth, sites in both",0.9536
+"median depth ratio, ours / mHapBrowser",1
+"shared calls ratio ours / mHapBrowser, gap (0,10]",0.9183
+"shared calls ratio ours / mHapBrowser, gap (10,20]",0.9036
+"shared calls ratio ours / mHapBrowser, gap (20,40]",0.8861
+"shared calls ratio ours / mHapBrowser, gap (40,60]",0.8448
+"shared calls ratio ours / mHapBrowser, gap (60,100]",0.7609
+"shared calls ratio ours / mHapBrowser, gap (100,150]",0.4662
+"shared calls ratio ours / mHapBrowser, gap (150,200]",
