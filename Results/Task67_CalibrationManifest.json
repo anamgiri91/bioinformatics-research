@@ -1,0 +1,13 @@
+{
+  "status": "post-run reproducibility record; not a preregistration or external lock",
+  "recorded_utc": "2026-10-02T17:42:14.023527+00:00",
+  "simulated_datasets_per_scenario": 300,
+  "bootstrap_draws_per_dataset": 400,
+  "scope": "Known-target linear contrasts under adequate fixed coverage; nonlinear error endpoint and random coverage/missingness not calibrated",
+  "sha256": {
+    "Scripts/SharedReadNoise.Decay.R": "fd0204299b14122f611db587ff6ca649a7b27612c2b878eb2fd0fddac74757f4",
+    "Scripts/Task67.DecayCalibration.R": "948996312dfda7330ac19f70ca152ec4109dc81acae90a49bec2bdd0cec624cb",
+    "Results/Task67_CalibrationScenarios.csv": "3b94ac36b560e8dc1750c2f87948a1eb6b2e7e66e1340aa6d4e397f66d95a5a1",
+    "Results/Task67_DecayCalibration.csv": "fcc665b7975b253ac53f3ba6c0f82c1eb5683cc6ebc188235634a41c59c2bb47"
+  }
+}

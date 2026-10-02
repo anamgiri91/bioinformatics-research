@@ -1,5 +1,11 @@
 # Task 67: draft endpoint for the co-methylation decay analysis
 
+**Superseded on 2026-10-02.** The implemented development analysis uses an
+absolute contrast and count/sequence-based matching, replacing the ratio
+and observed methylation/spread matching below. See the
+[current report](Task67_DistanceDecay_Report.md). This historical draft
+was never locked and must not be used as the current external protocol.
+
 Draft written 2026-10-01. **It is not locked.** This is step 2 of the next
 steps in `plan_shared_read_noise.md`: pre-specify a standard analysis that
 the correction could change, before evaluating it on new data. It must

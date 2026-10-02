@@ -1,0 +1,5 @@
+name,donors,mu,a,rho_near,rho_far,eta_near,eta_far,depth
+flat_29,29,0.5,0.1,0.4,0.4,0.9,0.2,4
+decay_57,57,0.5,0.1,0.65,0.15,0.9,0.2,4
+sperm_like_52,52,0.85,0.03,0.65,0.15,0.9,0.2,2
+no_shared_noise_52,52,0.85,0.03,0.65,0.15,0,0,2

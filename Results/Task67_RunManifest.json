@@ -1,0 +1,11 @@
+{
+  "status": "post-result development, not a confirmatory lock",
+  "created": "2026-10-02 14:44:39",
+  "input_sha256": {
+    "Data/gtex_colon_rrbs/srb_pair_results.rds": "1680ae466026fdc432811cb770235edbf14f4e549771d8d6560cbaf5b04f9f16",
+    "Data/gtex_wbc_rrbs/srb_pair_results.rds": "b35513794eddf3c01495174a8801adc97c9f76aa78731730c5ce248a16d0741b",
+    "Data/hg19_seq/cpg_positions_hg19.rds": "b7b53bbb117adf43c765784fbf8f6bd618ce3726e03ae391252cc7032b5dd72d",
+    "Scripts/SharedReadNoise.Decay.R": "fd0204299b14122f611db587ff6ca649a7b27612c2b878eb2fd0fddac74757f4",
+    "Scripts/Task67.DistanceDecay.Oct02.2026.R": "d5b2ac6c1c87261371cfcca727b0ea166664b250be5dc37432969a7de61c5ece"
+  }
+}
