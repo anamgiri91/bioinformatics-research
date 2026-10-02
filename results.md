@@ -1644,6 +1644,12 @@ fields. Each citation and claim is in `Results/Task60_PriorArt.md`, with how
 it was checked (full text or abstract).
 
 - **What is not new.**
+  - **The estimator.** The per-donor term is the share of reads the two
+    sites have in common, times Weir's (1979) unbiased estimator of the
+    linkage coefficient D from the 2 x 2 table of shared reads. That shared
+    units add covariance in proportion to their overlap is a standard
+    result, for example for GWAS meta-analysis with overlapping subjects
+    (Lin & Sullivan 2009).
   - Subtracting the mean within-sample error covariance from the covariance
     across samples, including the error covariance between two quantities.
     CompDTUme (Young, Van Buren & Rashid 2024) does this for transcript
@@ -1662,14 +1668,20 @@ it was checked (full text or abstract).
     this for MBD-seq, and merges such sites.
   - Splitting molecules at random to check a method. This is molecular
     cross-validation (2019) and data thinning (2024).
-- **What may be new is narrow.**
-  - Saccenti et al. say the error covariance is the hard part to estimate.
-    For bisulfite reads, each donor's joint read states give an unbiased
-    closed-form estimate, with no resampling model.
-  - No paper was found that uses them to correct the covariance of
-    neighbouring CpGs across people.
-  - This is closer to a useful application than to a new statistical
-    method.
+- **What may be new is narrow, and it is not a method.**
+  - **The bias.** No paper was found that reports that shared reads
+    inflate the across-donor covariance of neighbouring CpGs in bisulfite
+    sequencing, or measures by how much.
+  - **Its effect.** It distorts the apparent fall of co-methylation with
+    distance.
+  - **The demonstration.** A textbook correction removes it, on reads that
+    share no fragments, in two locked tests.
+  - **Why the estimation step is easy here.** Saccenti et al. say the error
+    covariance is the hard part to estimate, but here the reads record it
+    directly.
+- **Every novelty claim was audited** (`Results/Task60_PriorArt.md`
+  section 6). One was wrong: an earlier version of this section said the
+  closed-form estimate itself might be new. It is not.
 - **The further search** covered three areas:
   - other count data with shared reads, which found CompDTUme and sleuth;
   - co-methylation tool documentation;
@@ -1914,9 +1926,11 @@ Files: `Scripts/Task65.SharedReadNoise.ExternalTest2.Oct01.2026.R` and
   - Tissues other than blood-derived samples and colon.
   - Whole-genome bisulfite data and long reads.
   - Robustness when PCR copies remain.
-- **Possibly new, not proven new.** The subtraction is known: CompDTUme
-  does it for transcripts. What may be new is the closed-form estimate from
-  joint read states, and its use for neighbouring CpGs (16.9).
+- **What may be new is the finding, not the method** (16.9). The
+  estimator and the subtraction are both known.
+  - The possible contribution is the bias itself and its size.
+  - It also includes the bias's effect on the distance curve, and the
+    locked demonstration that a textbook correction removes it.
 
 ### 16.14 Still to do
 

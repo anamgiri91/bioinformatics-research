@@ -67,30 +67,60 @@ Done later on 2026-10-01, after the external test.
 Not searched further: allele-specific expression, pooled sequencing and
 metagenomics. These may hold more examples of the same correction.
 
+## 5. The estimator itself is textbook
+
+Checked in the claims audit below. The per-donor term is
+
+    c_k = (r n11 - (n10 + n11)(n01 + n11)) / (N_i N_j (r - 1))
+        = [r / (N_i N_j)] x [(r n11 - n1. n.1) / (r (r - 1))]
+
+The second factor is Weir's unbiased estimator of the linkage
+disequilibrium coefficient D from a 2 x 2 table of r haplotypes (Weir
+1979, *Biometrics* 35(1):235-254), applied to the r shared reads. The first
+factor is the share of the two sites' reads that are shared.
+
+The fact that shared sampling units add covariance in proportion to their
+overlap is the standard result for estimates from overlapping samples. It
+is used, for example, for GWAS meta-analysis with overlapping subjects (Lin
+& Sullivan 2009, *American Journal of Human Genetics* 85(6):862-872).
+**So the formula is not new.**
+
 ## What was not found
 
 No paper was found that does both of these for methylation:
 
-1. estimates, per donor, the covariance that shared fragments add to two
-   CpGs' betas, in closed form from their joint read states; and
-2. subtracts its mean from the across-donor covariance and squared
-   disagreement of neighbouring CpGs.
+1. recognises that reads shared by two neighbouring CpGs inflate their
+   covariance across people; and
+2. removes it, using each donor's joint read states.
 
-The subtraction itself is not new: CompDTUme does it for transcripts.
+The subtraction is not new (CompDTUme does it for transcripts), and the
+estimator is not new (section 5).
 
 ## A bounded statement of the possible contribution
 
-> The correction is a count-based special case of correlated
-> measurement-error correction. Per-donor joint read states give an
-> unbiased estimate of the shared-read sampling covariance between adjacent
-> CpGs, and removing it gives unbiased covariance and squared disagreement
-> across donors under stated assumptions. A fragment-split benchmark, in
-> the spirit of molecular cross-validation and data thinning, with a
-> bootstrap interval calibrated in simulation, tests it against a
-> reference that shares no reads.
+Rewritten after the claims audit (section 6):
+
+> Reads shared by neighbouring CpGs inflate their covariance across people
+> in bisulfite sequencing. In colon, about 40% of the observed covariance
+> is this noise. In the test data, with a third of the reads, the observed
+> covariance is 2.4 to 3.5 times the noise-free value.
+>
+> A textbook correction removes it: the overlap fraction times Weir's
+> unbiased D, taken from each donor's shared reads. This is a count-based
+> special case of correlated measurement-error correction.
+>
+> It was checked on reads that share no fragments (a split in the spirit of
+> molecular cross-validation and data thinning). There were two tests,
+> each locked in advance, one of them in another lab's data. In both, the
+> corrected covariance matched the noise-free reference and the squared
+> error fell by 48%. The correction does not improve correlation estimates
+> or the ranking of similar pairs.
 
 What is not new:
 
+- **The estimator.** It is the overlap fraction times Weir's (1979) unbiased
+  D. The overlap principle is standard, for example in Lin & Sullivan
+  (2009).
 - **Subtracting the mean within-sample error covariance, off-diagonal terms
   included, from the across-sample covariance.** CompDTUme does this for
   transcript proportions, with error covariances from resampling.
@@ -108,12 +138,38 @@ What is not new:
 - **Splitting molecules to evaluate a method.** Molecular
   cross-validation and data thinning do this.
 
-What may be new is narrow. The first part is the estimate of the error
-covariance, the piece Saccenti et al. point to. For bisulfite reads, each
-donor's joint read states give an unbiased closed-form estimate, with no
-resampling model. The second part is applying the correction to
-neighbouring CpGs and checking it on independent fragments. This is closer
-to a useful application than to a new statistical method.
+What may be new is narrow, and it is not a method:
+- **The bias itself.** The finding is that reads shared by neighbouring
+  CpGs inflate their covariance across people in bisulfite sequencing, and
+  by how much. No paper reporting this was found.
+- **Its effect on a known result.** It changes the apparent fall of
+  co-methylation with distance.
+- **The demonstration that a textbook correction removes it.** This was
+  checked on reads that share no fragments, in two tests locked in
+  advance: one in the same study and one in another lab's data.
+
+The error covariance that Saccenti et al. call hard to estimate is easy
+here, because the reads record it directly.
+
+## 6. Audit of every novelty claim (2026-10-01)
+
+Done after the second external test, on request. The table covers each
+claim in results.md section 16, in this file, in LITERATURE.md, and in the
+answer given in the session ("did we find something meaningful?").
+
+| Claim | Where | Verdict | Evidence |
+|---|---|---|---|
+| Subtracting the mean within-sample error covariance is not new | results.md 16.9; this file | **Holds** | CompDTUme package code (`UpdatedCovAlt <- SigmaTildeAltNewModeling - mean.withinhat`); Buffalo & Coop, as described in Simon & Coop 2024 |
+| "What may be new is the closed-form estimate from joint read states" | results.md 16.9 and 16.13; this file; the session answer | **Wrong, corrected** | It is the overlap fraction times Weir's unbiased D (section 5). The overlap principle is standard (Lin & Sullivan 2009) |
+| No paper uses joint read states to correct the across-donor covariance of neighbouring CpGs | results.md 16.9; this file | **Holds, as a search result only** | Further checks found nothing (next rows) |
+| DMR and smoothing methods already handle this | (a search engine's summary, not a claim of ours) | **Not supported** | The dmrseq vignette notes that neighbouring CpGs are correlated but gives no read-level cause. LuxUS has only replicate and cytosine random effects. BSmooth and DSS model spatial correlation of true levels |
+| cfDNA work already shows fragment effects on co-methylation | (a search engine's summary) | **Different quantity** | FinaleMe (Liu et al. 2024, *Nature Communications*) relates mean methylation to fragment length within samples. It does not discuss covariance across samples |
+| Part of the apparent fall of co-methylation with distance is technical | results.md 16.3; the session answer | **Holds in our data; not found reported** | Colon: corrected covariance nearly flat within 200 bp. Plasma: observed covariance falls 85% over 200 bp, the noise-free reference about 47% |
+| How much of that fall is technical "depends on fragment length" | the session answer | **Too strong, softened** | The cohorts differ in tissue, assay and depth at once, so fragment length is not isolated. What the data show is that the noise term ends where molecules end: it is exactly 0 beyond 150 bp in cfDNA (about 167 bp fragments), and still present at 200 bp in RRBS |
+| Shared reads make the difference between two sites less noisy | results.md 16.11 | **Not a novelty claim** | It is the identity Var(e_i - e_j) = v_i + v_j - 2c |
+| The three-way fragment split | results.md 16.5 | **Not claimed new** | Molecular cross-validation (2019) and data thinning (2024) are cited as precedent |
+| epimutacions fixes its floor at one constant across all CpGs | LITERATURE.md | **Holds** | The package vignette's defaults: `beta$diff_threshold` = 0.1 and `quantile$offset_abs` = 0.15, one value for every CpG |
+| The item 5 similarity scores are not new | report.md; Item5_Novelty_Assessment.md and the other Codex notes | **Holds; these make no positive claim** | Their citations were not re-checked one by one |
 
 ## What a reviewer could still find
 
