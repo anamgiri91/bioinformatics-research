@@ -1,0 +1,4 @@
+comparator,folds,candidate_better_folds,mean_difference
+manhattan_raw,18,0,0.00351670159872992
+old_spatial_blend_100bp,18,18,-0.0200377391592456
+formula_100bp_uncorrected,18,3,0.000153834163783891

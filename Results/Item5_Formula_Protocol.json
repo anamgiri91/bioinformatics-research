@@ -1,0 +1,22 @@
+{
+  "date": "2026-09-29",
+  "formula": "F=S*(exp(-g/ell)+(1-exp(-g/ell))*E)",
+  "S": "1-mean(abs(x-y))",
+  "q": "ordinary sample dCor squared",
+  "q0": "tr(A)*tr(B)/((n-1)*sqrt(sum(A^2)*sum(B^2)))",
+  "E": "max(0,(q-q0)/(1-q0)); 0 credit if constant or q0=1; undefined statistic flagged",
+  "primary_ell_bp": 100,
+  "sensitivity_ell_bp": [50, 200],
+  "seed": {},
+  "scope": "All complete original-row adjacent pairs; held-patient comparisons on a common training-variable subset",
+  "endpoint": "Top 10% ranked pairs: absolute beta difference in each held-out patient",
+  "ties": "Ascending genomic position for every method",
+  "status": "New formula evaluated on an already examined cohort; exploratory development, not independent validation",
+  "tuning": "No parameter selected from this run; length scale copied from prior primary protocol",
+  "provenance": {
+    "input_md5": "2694e03ae196b462b5fc3b65a6337792",
+    "script_md5": "a39b5b4aae2dbdf436fd630de887b1af"
+  },
+  "prior_art": "Conditional null mean is the established RV expectation; see accompanying derivation/references",
+  "inference": "No p-value, population-correlation, biological-validation or novelty claim"
+}

@@ -1,0 +1,51 @@
+PASS: exact permutation mean, signed centering, symmetry, constants, bounds, distance monotonicity
+Computing candidate for 32664 pairs
+Completed held-patient fold 1 of 18
+Completed held-patient fold 2 of 18
+Completed held-patient fold 3 of 18
+Completed held-patient fold 4 of 18
+Completed held-patient fold 5 of 18
+Completed held-patient fold 6 of 18
+Completed held-patient fold 7 of 18
+Completed held-patient fold 8 of 18
+Completed held-patient fold 9 of 18
+Completed held-patient fold 10 of 18
+Completed held-patient fold 11 of 18
+Completed held-patient fold 12 of 18
+Completed held-patient fold 13 of 18
+Completed held-patient fold 14 of 18
+Completed held-patient fold 15 of 18
+Completed held-patient fold 16 of 18
+Completed held-patient fold 17 of 18
+Completed held-patient fold 18 of 18
+                      method folds mean_heldout_absolute_difference
+                      <char> <int>                            <num>
+1:             manhattan_raw    18                       0.01634605
+2:                  dcor_raw    18                       0.05518235
+3:                  gap_only    18                       0.04056341
+4:   old_spatial_blend_100bp    18                       0.03990049
+5:              formula_50bp    18                       0.02235668
+6:             formula_100bp    18                       0.01986275
+7:             formula_200bp    18                       0.01844437
+8: formula_100bp_uncorrected    18                       0.01970892
+   min_patient_mean_difference max_patient_mean_difference
+                         <num>                       <num>
+1:                 0.003172406                  0.03068075
+2:                 0.045399516                  0.07179990
+3:                 0.025955594                  0.05536068
+4:                 0.027942408                  0.05765642
+5:                 0.009713313                  0.03821357
+6:                 0.006745787                  0.03496592
+7:                 0.005068820                  0.03312374
+8:                 0.006545780                  0.03472712
+   median_selected_gap_bp
+                    <num>
+1:                      5
+2:                      6
+3:                      2
+4:                      4
+5:                      3
+6:                      3
+7:                      3
+8:                      3
+PASS: all baseline folds reproduced; scores bounded by Manhattan agreement
