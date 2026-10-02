@@ -1,11 +1,15 @@
 # Item 5 plan: correcting shared-fragment sampling error in inter-donor CpG covariance
 
 Updated: 2026-10-01. **Status: development plan, carried out through phase H
-on 2026-10-01 (Tasks 53 to 60).** The locked external test (Task 59) met its
-primary criterion in one external cohort from the same study. The method is
-still not established as new, and the section 6 comparisons of correlation,
-pair ranking and existing error models are not done. Results are in
-[results.md](results.md) section 16. The outlier-analysis roadmap stays in
+on 2026-10-01 (Tasks 53 to 65).** Two locked external tests met their primary
+criterion:
+- Task 59: blood, from the same study;
+- Task 65: plasma cfDNA from another lab, assay and pipeline.
+
+The section 6 comparisons are done (Tasks 63 and 65), and none favours the
+correction. A novelty audit (Results/Task60_PriorArt.md section 6) found the
+estimator and the subtraction both known. What may be new is the bias itself
+and its demonstration. Results are in [results.md](results.md) section 16. The outlier-analysis roadmap stays in
 [plan.md](plan.md); this file is the separate plan for the shared-read noise
 work.
 
