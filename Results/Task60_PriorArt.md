@@ -103,18 +103,19 @@ Rewritten after the claims audit (section 6):
 > Reads shared by neighbouring CpGs inflate their covariance across people
 > in bisulfite sequencing. In colon, about 40% of the observed covariance
 > is this noise. In the test data, with a third of the reads, the observed
-> covariance is 2.4 to 3.5 times the noise-free value.
+> covariance is 2.4 to 3.5 times the cross-partition reference mean.
 >
 > A textbook correction removes it: the overlap fraction times Weir's
 > unbiased D, taken from each donor's shared reads. This is a count-based
 > special case of correlated measurement-error correction.
 >
-> It was checked on reads that share no fragments (a split in the spirit of
-> molecular cross-validation and data thinning). There were two tests,
-> each locked in advance, one of them in another lab's data. In both, the
-> corrected covariance matched the noise-free reference and the squared
-> error fell by 48%. The correction does not improve correlation estimates
-> or the ranking of similar pairs.
+> There were two tests against cross-partition references, each locked in
+> advance, one of them in another lab's data. In both, the corrected and
+> reference covariance means agreed closely and reference squared error
+> fell by about 48%. Plasma's unmerged mate records can cross partitions,
+> so its reference is not proven free of shared-fragment noise. The
+> correction does not improve the tested correlation or pair-ranking
+> endpoints.
 
 What is not new:
 
@@ -144,9 +145,11 @@ What may be new is narrow, and it is not a method:
   by how much. No paper reporting this was found.
 - **Its effect on a known result.** It changes the apparent fall of
   co-methylation with distance.
-- **The demonstration that a textbook correction removes it.** This was
-  checked on reads that share no fragments, in two tests locked in
-  advance: one in the same study and one in another lab's data.
+- **The demonstration that a textbook correction lowers reference error.**
+  Two tests were locked in advance: one in the same study and one in
+  another lab's data. Their split references have different provenance
+  support; the plasma mate limitation prevents an unqualified claim of
+  physical-fragment independence.
 
 The error covariance that Saccenti et al. call hard to estimate is easy
 here, because the reads record it directly.
@@ -164,14 +167,18 @@ answer given in the session ("did we find something meaningful?").
 | No paper uses joint read states to correct the across-donor covariance of neighbouring CpGs | results.md 16.9; this file | **Holds, as a search result only** | Further checks found nothing (next rows) |
 | DMR and smoothing methods already handle this | (a search engine's summary, not a claim of ours) | **Not supported** | The dmrseq vignette notes that neighbouring CpGs are correlated but gives no read-level cause. LuxUS has only replicate and cytosine random effects. BSmooth and DSS model spatial correlation of true levels |
 | cfDNA work already shows fragment effects on co-methylation | (a search engine's summary) | **Different quantity** | FinaleMe (Liu et al. 2024, *Nature Communications*) relates mean methylation to fragment length within samples. It does not discuss covariance across samples |
-| Part of the apparent fall of co-methylation with distance is technical | results.md 16.3; the session answer | **Holds in our data; not found reported** | Colon: corrected covariance nearly flat within 200 bp. Plasma: observed covariance falls 85% over 200 bp, the noise-free reference about 47% |
-| How much of that fall is technical "depends on fragment length" | the session answer | **Too strong, softened** | The cohorts differ in tissue, assay and depth at once, so fragment length is not isolated. What the data show is that the noise term ends where molecules end: it is exactly 0 beyond 150 bp in cfDNA (about 167 bp fragments), and still present at 200 bp in RRBS |
+| Subtracting estimated shared-call noise changes the distance profile | results.md 16.3; the session answer | **Supported descriptively; not a controlled biological decay estimate** | Colon: corrected mean nearly flat within 200 bp. Plasma: observed mean falls 84.8%, corrected mean 42.4%, B/C mean 47.3%. Pair composition and depth differ between bins; plasma B/C independence is incomplete |
+| How much of that fall is technical "depends on fragment length" or "the noise term ends where molecules end" | the session answer | **Not established; corrected after the output audit** | Zero represented overlap and correction at 150–200 bp does not establish zero physical-fragment overlap. Unmerged mates can hide links. Cohorts also differ in tissue, assay and depth |
 | Shared reads make the difference between two sites less noisy | results.md 16.11 | **Not a novelty claim** | It is the identity Var(e_i - e_j) = v_i + v_j - 2c |
 | The three-way fragment split | results.md 16.5 | **Not claimed new** | Molecular cross-validation (2019) and data thinning (2024) are cited as precedent |
 | epimutacions fixes its floor at one constant across all CpGs | LITERATURE.md | **Holds** | The package vignette's defaults: `beta$diff_threshold` = 0.1 and `quantile$offset_abs` = 0.15, one value for every CpG |
 | The item 5 similarity scores are not new | report.md; Item5_Novelty_Assessment.md and the other Codex notes | **Holds; these make no positive claim** | Their citations were not re-checked one by one |
 
 ## What a reviewer could still find
+
+The post-result [completed-run audit](SharedReadNoise_CompletedRunAudit.md)
+qualifies the empirical reference and distance claims above. It does not
+change the literature equivalences or independently prove a novelty claim.
 
 - **More examples of the subtraction** in allele-specific expression,
   pooled sequencing or metagenomics. These would not change the

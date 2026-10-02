@@ -6,6 +6,13 @@ criterion:
 - Task 59: blood, from the same study;
 - Task 65: plasma cfDNA from another lab, assay and pipeline.
 
+The plasma files retain some mates as separate records, so the reference
+is not proven free of shared-fragment noise. The short-gap sensitivity
+passes but does not remove that limitation. The post-result
+[completed-run audit](Results/SharedReadNoise_CompletedRunAudit.md)
+verifies the saved arithmetic and both lock manifests. Its scope does not
+include raw-fragment reconstruction or a bootstrap rerun.
+
 The section 6 comparisons are done (Tasks 63 and 65), and none favours the
 correction. A novelty audit (Results/Task60_PriorArt.md section 6) found the
 estimator and the subtraction both known. What may be new is the bias itself
@@ -28,12 +35,12 @@ assumed in advance.
 |---|---|---|
 | Frozen score and validation | Task 47 protocol and subsequent analyses already exist | Preserve the original hypotheses and results; this proposal is separate |
 | GTEx colon cohort | GSE233417, RRBS, 29 donors; already examined | Use for development, not as untouched validation of a new method |
-| Shared-fragment moment derivation | Checked by exact enumeration and a simulation pilot | Supports the algebra under its assumptions, not real-data utility |
-| Existing simulation pilot | Eight scenarios, 20,000 simulated cohorts of 29 donors per scenario | Extend to negative within-fragment coupling, calibration, and misspecification |
-| Correlation stability | The pilot found nonpositive corrected variances and out-of-range ratios | Retain explicit failures; do not present a ready-made bounded coefficient |
-| Per-donor joint-count pipeline | Not implemented and audited for this proposal | Reconstruct the required counts; pooled linkage is insufficient |
-| Independent cohort and three-way benchmark | Not selected or completed | Select, freeze, and evaluate prospectively |
-| Novelty | Exact equivalence to prior methods remains unresolved | Use potential-contribution language |
+| Shared-fragment moment derivation | Implemented; 300 independent count, PAT, streaming and moment checks pass | Algebra holds under the stated sampling assumptions |
+| Simulation and calibration | Expanded grid (Task 54); three bootstrap calibration settings (Task 57) | Calibration is limited to the examined settings and uses an estimated target |
+| Correlation and ranking | Completed in colon and plasma (Tasks 63 and 65); no improvement established | Item 5 is not solved as a better similarity score |
+| Per-donor joint-count pipeline | Implemented for PAT and mHap records | Plasma has incomplete mate linkage; records cannot automatically be equated with physical fragments |
+| External benchmarks | Blood and plasma tests both meet their locked numerical criterion | Plasma's reference-independence requirement remains incompletely supported |
+| Novelty | Updated Task 60 audit identifies known estimator and subtraction identities | Possible contribution is the CpG-specific empirical finding; novelty is not established |
 
 Relevant project records:
 
@@ -531,7 +538,9 @@ Current wording for a proposal or manuscript:
 
 ## 12. Execution sequence and deliverables
 
-The following are planned deliverables, not files claimed to exist.
+The table preserves the original execution sequence. Tasks 53 to 65 now
+provide the corresponding implementation and evaluation outputs; the
+current evidence table above records the remaining qualifications.
 
 | Phase | Work | Required output / gate |
 |---|---|---|
@@ -558,8 +567,20 @@ duplicating whole cohorts in memory. Use new output locations for this project
 stage and preserve frozen Task 47 scores and validation outputs as historical
 records. Record deviations when fixes follow inspection of outcomes.
 
-**Immediate next step:** audit the GTEx PAT/alignment provenance and determine
-whether independent fragment units and per-donor joint counts can be recovered.
-Then implement the count rebuild and deterministic estimators. External data
-evaluation begins only after the development, calibration, and protocol-lock
-gates above are satisfied.
+**Next steps after Tasks 53 to 65:**
+
+1. Recover or verify whole-fragment identity for the plasma data before
+   treating its reference as independent. Obtain mate-aware alignments if
+   available, keep every physical fragment within one partition, and
+   quantify changes relative to the existing record-level analysis. This
+   will be a post-result sensitivity analysis, not a second untouched test.
+   If identity cannot be recovered, retain the limitation explicitly.
+2. Prespecify a standard-analysis endpoint: either a depth/composition-aware
+   co-methylation decay analysis or co-methylated-region calling. The saved
+   distance profiles are descriptive; zero represented overlap at 150–200
+   bp does not establish a physical fragment-length cutoff.
+3. Choose an independent WGBS cohort from metadata, requiring verified
+   whole-fragment identity, sufficient donors and coverage after splitting.
+   Check uncertainty calibration for its design, then lock inputs, code,
+   endpoint, eligible donor rules and the decision criterion before seeing
+   its pairwise outcomes. Do not reuse inspected plasma as new validation.

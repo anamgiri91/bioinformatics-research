@@ -1519,14 +1519,20 @@ global shift. This gives the data both spatial and donor dependence.
 | **Bias-corrected percentile** | **99.7%** | **96.0%** | **100%** |
 | Donor-only, bias-corrected | 88% | 67% | 100% |
 
-The numbers are coverage of the true average endpoint; the target is 95%.
+The numbers are empirical coverage about an average endpoint estimated from
+the same 300 simulation replicates in each scenario; the nominal target is
+95%. Each replicate used 400 bootstrap draws. This is a development
+calibration, not an independent check against an analytically known target.
 
 - **The plan's interval would have misled.** The endpoint is built from
   squared errors. Resampling donors adds variance to those squares, which
   shifts the whole bootstrap distribution upward.
-- **The bias-corrected interval does not mislead.** It covers 96% to 100%,
-  so if anything it is cautious. It never falsely showed a benefit in the
-  null, and it detected the real benefit in every replicate.
+- **The recentered interval covered 96% to 100% in these three scenarios.**
+  It never falsely showed a benefit in the simulated null. The protocol's
+  term "bias-corrected percentile" means subtracting the estimated
+  bootstrap mean shift from both percentile endpoints; it is not BCa.
+  This does not establish calibration for every coverage pattern, donor
+  count or violation of fragment independence, including unmerged mates.
 - **A donor-only bootstrap is not enough.** It ignores the variation
   between genomic blocks, and covers only 67% to 88%.
 - **It was adopted as version 2 of the protocol** before any external data
@@ -1674,8 +1680,9 @@ it was checked (full text or abstract).
     sequencing, or measures by how much.
   - **Its effect.** It distorts the apparent fall of co-methylation with
     distance.
-  - **The demonstration.** A textbook correction removes it, on reads that
-    share no fragments, in two locked tests.
+  - **The demonstration.** A textbook correction lowers error against the
+    specified split references in two locked tests. Plasma's unmerged
+    mates limit physical-fragment independence (16.12).
   - **Why the estimation step is easy here.** Saccenti et al. say the error
     covariance is the hard part to estimate, but here the reads record it
     directly.
@@ -1840,28 +1847,54 @@ donors.
 | Sensitivity: pairs at most 40 bp apart | not run | -3.8e-5 (-4.5e-5 to -3.2e-5) |
 | Squared disagreement | closer | closer (Delta MSE -6.3e-4) |
 
+The full plasma point estimate is -3.498e-5 across 995,729 pairs. The 2,000
+joint donor/1-Mb-block bootstrap draws use the locked deterministic subset
+of 39,792 eligible pairs with CpG index divisible by 25; its point estimate
+is -3.554e-5. The reported interval (-4.167e-5, -2.949e-5) therefore comes
+from this subset, not a bootstrap of all pairs. Blood similarly uses
+176,146 pairs for its interval. The plasma at-most-40-bp sensitivity has
+912,888 pairs, with an interval from the corresponding bootstrap subset.
+
+**Reference qualification, from the pre-test Task 64 protocol:** the
+upstream mHap pipeline leaves mates on separate lines when their CpG ranges
+do not overlap. Independent splitting of those lines can put calls from
+one physical fragment into both A and B/C, or both B and C. The correction
+can miss their covariance, and the reference can retain shared-fragment
+noise. Thus the measured 48.33% reduction is in error against the specified
+reference. Its interpretation as an unbiased comparison of latent
+covariance error requires fragment independence, which these files do not
+fully establish. The split-risk identity targets the latent covariance of
+the sampled eligible donors, not automatically a population covariance.
+
 What it shows:
 
 - **The correction passed a second locked test, on another lab's data.**
   - The lab, the assay (targeted capture of cfDNA) and the pipeline were
     all different.
   - The plain percentile interval also excludes 0 (-3.3e-5 to -2.1e-5).
-- **The unmerged-mates limit did not drive the result.** Pairs at most
-  40 bp apart, where that limit barely applies, give the same answer.
+- **The declared short-gap sensitivity gives the same direction.** Pairs
+  at most 40 bp apart meet the criterion too. This reduces concern about
+  distant unmerged mates, but does not prove physical-fragment independence
+  or quantify the remaining bias.
 - **The corrected covariance again matches the reference on average.**
   - Observed: 0.00446. Corrected: 0.00128. Reference: 0.00128.
-  - So the observed value is 3.5 times too large. In the A third of the
-    reads, 71% of it is shared-read noise.
-- **The noise ends where molecules end.** cfDNA fragments are about 167 bp
-  long.
-  - The noise term falls with distance and is exactly 0 for pairs 150 to
-    200 bp apart. No molecule covers both sites there, and the correction
-    changes nothing, as it should.
-  - In the RRBS cohorts it was still present at 200 bp.
+  - The observed mean is 3.48 times the reference mean; the estimated
+    correction is 71% of the observed mean in the A third of the reads.
+    Matching means does not imply per-pair recovery: 46.19% have lower
+    reference error, 30.27% higher error and 23.54% tie.
+- **The represented overlap ends before 200 bp in the eligible plasma
+  pairs.** All 1,548 pairs in the (150,200] bin have zero represented
+  overlap in A and exactly zero estimated correction. This does not prove
+  that no physical fragment spans both sites, or establish a fragment-length
+  cutoff: the files can lose the connection between unmerged mates. In the
+  RRBS cohorts a nonzero estimated term remained in this bin.
 - **The shape of the distance curve changes.** The observed covariance
-  falls 85% from 0-10 bp to 150-200 bp. The noise-free reference falls
-  about 47%.
-- **Every stratum with shared reads improves.**
+  falls 84.8% from (0,10] bp to (150,200] bp; the corrected mean falls
+  42.4% and the B/C reference mean 47.3%. The bins contain 525,074 and
+  1,548 pairs. These are descriptive differences between bins whose depth,
+  overlap and genomic composition differ; they do not isolate biological
+  decay or a causal effect of fragment length.
+- **Most strata improve; low-overlap strata have little benefit.**
   - By distance: -54% at 0 to 10 bp and -25% at 40 to 60 bp.
   - By depth: -47% to -49%.
   - Pairs that share under half of their reads show no real change.
@@ -1873,6 +1906,10 @@ What it shows:
   | Valid share | 93% | 8% | 13% | 64% converged (2,000 pairs) |
   | MSE against the reference, 23,100 common pairs | **0.221** | 0.350 | 0.400 | not run |
   | MSE, 166 pairs where all four are valid | **0.214** | 0.358 | 0.375 | 0.765 |
+
+  The ratio reference is defined for only 19.64% of all pairs and is itself
+  noisy. These errors are against that reference on selected valid pairs,
+  not a calibrated comparison against known latent correlations.
 
   | Ranking score (all pairs average: 1.1e-2) | Top 1% | Top 10% | Top 25% |
   |---|---|---|---|
@@ -1901,27 +1938,42 @@ Files: `Scripts/Task65.SharedReadNoise.ExternalTest2.Oct01.2026.R` and
 
 ![The second locked external test, by distance, depth and overlap](Results/Fig46_ExternalTest2.png)
 
+The original figure's phrase "independent reference" is subject to the
+mate limitation above. A descriptive view of the saved distance profiles
+is below; it adds no new hypothesis test.
+
+![Mean covariance by distance in blood and plasma, with the plasma reference limitation stated](Results/SharedReadNoise_CompletedRunAudit_Distance.png)
+
+The [completed-run audit](Results/SharedReadNoise_CompletedRunAudit.md)
+recomputed both external point estimates from saved pair-level outputs and
+verified all 117 recorded input/code hashes across the two lock manifests.
+It did not regenerate read partitions or bootstrap draws. The locks have
+local commits preceding the results; this is not public preregistration.
+
 ### 16.13 Where this leaves the work
 
-- **The problem is real.** Close CpGs are almost always read on the same
-  fragments. In colon with all reads, about 40% of their covariance across
-  people is read noise.
+- **The problem is measurable.** In the examined colon pairs with all
+  reads, the estimated shared-sampling term accounts for about 40% of
+  mean observed covariance. Its sign and size depend on joint read states;
+  physical overlap alone does not always inflate covariance.
 - **The correction works under its assumptions.** It uses each donor's joint
   read states. In simulation it is unbiased when the model holds.
-- **It works on real data.** Against a reference that shares no reads, it
-  cuts the squared error:
+- **Two locked tests met their stated covariance criterion.** Against the
+  specified cross-partition references, squared error fell:
   - by 41% in colon (development);
   - by 48% in blood (the first locked test, same study);
   - by 48% in plasma from another lab, assay and pipeline (the second
     locked test).
 
-  In both locked tests, the corrected covariance matched the noise-free
-  reference on average.
+  In both locked tests, the corrected and reference means agree closely.
+  Plasma's incomplete mate linkage limits the claim that its reference is
+  free of shared-fragment noise.
 - **It helps covariance, not correlation or ranking.** In development and
   in plasma:
   - a corrected correlation did worse than plain Pearson;
   - ranking pairs by the corrected disagreement found truly similar pairs
     less well than the observed disagreement (16.11, 16.12).
+  This does not establish an improved item 5 similarity score.
 - **Not yet shown.**
   - Tissues other than blood-derived samples and colon.
   - Whole-genome bisulfite data and long reads.
@@ -1930,7 +1982,8 @@ Files: `Scripts/Task65.SharedReadNoise.ExternalTest2.Oct01.2026.R` and
   estimator and the subtraction are both known.
   - The possible contribution is the bias itself and its size.
   - It also includes the bias's effect on the distance curve, and the
-    locked demonstration that a textbook correction removes it.
+    locked observation that a textbook correction lowers reference error,
+    with the plasma independence qualification in 16.12.
 
 ### 16.14 Still to do
 
@@ -1940,10 +1993,17 @@ Files: `Scripts/Task65.SharedReadNoise.ExternalTest2.Oct01.2026.R` and
    (16.10, 16.12). It met the locked primary criterion.
 3. ~~**The plan's section 6 comparisons.**~~ **Done** in development
    (16.11) and in the second cohort (16.12). None favours the correction.
-4. **To make the finding more useful** (not started):
-   - show that it changes a standard analysis, such as the fall of
-     co-methylation with distance, or calling co-methylated regions;
-   - add a whole-genome bisulfite cohort with long fragments.
+4. **Resolve fragment identity before strengthening the plasma claim.**
+   Recover both mates from alignments, if available, and partition whole
+   fragments; otherwise retain this unmet independence requirement.
+5. **Test the effect on a standard analysis.** The distance profiles above
+   are descriptive. Prespecify a depth/composition-aware decay analysis or
+   a co-methylated-region endpoint, its uncertainty and controls, before
+   evaluating it on new data.
+6. **Choose an independent WGBS cohort from metadata and lock its test.**
+   Require recoverable whole-fragment identity and sufficient donors and
+   split coverage. Extend interval calibration to that design. The already
+   inspected cohorts cannot serve as new untouched validation.
 
 ---
 
