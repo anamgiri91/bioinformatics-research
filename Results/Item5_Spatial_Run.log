@@ -1,0 +1,57 @@
+Computing raw-beta dependence for 32664 original-row pairs
+Completed held-patient fold 1 of 18 
+Completed held-patient fold 2 of 18 
+Completed held-patient fold 3 of 18 
+Completed held-patient fold 4 of 18 
+Completed held-patient fold 5 of 18 
+Completed held-patient fold 6 of 18 
+Completed held-patient fold 7 of 18 
+Completed held-patient fold 8 of 18 
+Completed held-patient fold 9 of 18 
+Completed held-patient fold 10 of 18 
+Completed held-patient fold 11 of 18 
+Completed held-patient fold 12 of 18 
+Completed held-patient fold 13 of 18 
+Completed held-patient fold 14 of 18 
+Completed held-patient fold 15 of 18 
+Completed held-patient fold 16 of 18 
+Completed held-patient fold 17 of 18 
+Completed held-patient fold 18 of 18 
+           method patient_folds min_eligible max_eligible
+           <char>         <int>        <int>        <int>
+1:       gap_only            18        30095        30694
+2:  manhattan_raw            18        30095        30694
+3:       dcor_raw            18        30095        30694
+4: unweighted_mix            18        30095        30694
+5:   spatial_50bp            18        30095        30694
+6:  spatial_100bp            18        30095        30694
+7:  spatial_200bp            18        30095        30694
+   mean_heldout_absolute_difference min_patient_mean_difference
+                              <num>                       <num>
+1:                       0.04056341                 0.025955594
+2:                       0.01634605                 0.003172406
+3:                       0.05518235                 0.045399516
+4:                       0.04272075                 0.032410904
+5:                       0.04031769                 0.026905360
+6:                       0.03990049                 0.027942408
+7:                       0.04006785                 0.028280240
+   max_patient_mean_difference median_selected_gap_bp
+                         <num>                  <num>
+1:                  0.05536068                      2
+2:                  0.03068075                      5
+3:                  0.07179990                      6
+4:                  0.05883998                      6
+5:                  0.05835378                      3
+6:                  0.05765642                      4
+7:                  0.05746914                      4
+   ell_bp eligible top_pairs overlap_with_unweighted_top rank_correlation
+    <num>    <int>     <num>                       <num>            <num>
+1:     50    30724      3073                   0.6309795        0.7322105
+2:    100    30724      3073                   0.7396681        0.8647477
+3:    200    30724      3073                   0.8317605        0.9462609
+   median_gap_selected median_gap_unweighted
+                 <int>                 <int>
+1:                   3                     6
+2:                   4                     6
+3:                   4                     6
+PASS: formula identity, symmetry, constants, true adjacency, and spatial permutation invariance

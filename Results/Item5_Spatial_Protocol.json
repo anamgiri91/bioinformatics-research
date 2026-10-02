@@ -1,0 +1,20 @@
+{
+  "date": "2026-09-29",
+  "seed": 202609291,
+  "question": "Does a fixed contextual affinity improve held-out absolute agreement ranking?",
+  "formula": "A=exp(-gap/ell)*(S_raw+dCor_raw)/2; S_raw=1-mean(abs(beta_i-beta_j))",
+  "primary_ell_bp": 100,
+  "sensitivity_ell_bp": [50, 200],
+  "quality_weight": 1,
+  "alpha": 0.5,
+  "selection_fraction": 0.1,
+  "folds": "Each of 18 patients held out once",
+  "target": "Absolute difference of the two CpGs in the held-out patient; lower is better",
+  "population": "Original-row consecutive CpG pairs complete in all 18 patients",
+  "common_set": "Within each fold, both training profiles must vary so dCor is defined",
+  "baselines": ["gap_only", "manhattan_raw", "dcor_raw", "unweighted_mix"],
+  "tie_rule": "Ascending genomic position, same deterministic rule for all methods",
+  "inference": "Descriptive patient-fold summaries only; shared sites and folds are dependent",
+  "limits": "Internal exploratory pilot on an already examined cohort; not external validation, biological truth, or a novel principle",
+  "script_md5": "b15b7715f89d12609ed671db220efa45"
+}
