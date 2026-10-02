@@ -1,0 +1,81 @@
+set,score,label,top_fraction,pairs,valid_share,mean_qref_top,mean_qref_all
+all pairs,neg_cor_d2,corrected squared disagreement (lower first),0.01,39792,1,0.00576934084640861,0.0108359967554966
+all pairs,neg_cor_d2,corrected squared disagreement (lower first),0.05,39792,1,0.00433403496860131,0.0108359967554966
+all pairs,neg_cor_d2,corrected squared disagreement (lower first),0.1,39792,1,0.00337810740357535,0.0108359967554966
+all pairs,neg_cor_d2,corrected squared disagreement (lower first),0.25,39792,1,0.00211866569252374,0.0108359967554966
+all pairs,neg_pos_cor_d2,"corrected, positive part (lower first)",0.01,39792,1,0.00132459419269201,0.0108359967554966
+all pairs,neg_pos_cor_d2,"corrected, positive part (lower first)",0.05,39792,1,0.00132459419269201,0.0108359967554966
+all pairs,neg_pos_cor_d2,"corrected, positive part (lower first)",0.1,39792,1,0.00132459419269201,0.0108359967554966
+all pairs,neg_pos_cor_d2,"corrected, positive part (lower first)",0.25,39792,1,0.00132459419269201,0.0108359967554966
+all pairs,neg_ub_cor_d2,"corrected, upper 95% bound (lower first)",0.01,39792,1,0.00207490086328702,0.0108359967554966
+all pairs,neg_ub_cor_d2,"corrected, upper 95% bound (lower first)",0.05,39792,1,0.000711948499021552,0.0108359967554966
+all pairs,neg_ub_cor_d2,"corrected, upper 95% bound (lower first)",0.1,39792,1,0.000435625822017957,0.0108359967554966
+all pairs,neg_ub_cor_d2,"corrected, upper 95% bound (lower first)",0.25,39792,1,0.000358640848384596,0.0108359967554966
+all pairs,neg_pos_ub_cor_d2,"corrected, positive part + 1.645 SE (lower first)",0.01,39792,1,0.000176339500868811,0.0108359967554966
+all pairs,neg_pos_ub_cor_d2,"corrected, positive part + 1.645 SE (lower first)",0.05,39792,1,0.000176339500868811,0.0108359967554966
+all pairs,neg_pos_ub_cor_d2,"corrected, positive part + 1.645 SE (lower first)",0.1,39792,1,0.000164132028181228,0.0108359967554966
+all pairs,neg_pos_ub_cor_d2,"corrected, positive part + 1.645 SE (lower first)",0.25,39792,1,0.000264243575670973,0.0108359967554966
+all pairs,neg_raw_d2,observed squared disagreement (lower first),0.01,39792,1,6.52882645315955e-05,0.0108359967554966
+all pairs,neg_raw_d2,observed squared disagreement (lower first),0.05,39792,1,7.62238842062491e-05,0.0108359967554966
+all pairs,neg_raw_d2,observed squared disagreement (lower first),0.1,39792,1,0.000142481657650692,0.0108359967554966
+all pairs,neg_raw_d2,observed squared disagreement (lower first),0.25,39792,1,0.000239396203717845,0.0108359967554966
+all pairs,S,agreement S = 1 - mean |x - y| (Manhattan),0.01,39792,1,6.52882645315955e-05,0.0108359967554966
+all pairs,S,agreement S = 1 - mean |x - y| (Manhattan),0.05,39792,1,7.88431702925319e-05,0.0108359967554966
+all pairs,S,agreement S = 1 - mean |x - y| (Manhattan),0.1,39792,1,0.00012055427390808,0.0108359967554966
+all pairs,S,agreement S = 1 - mean |x - y| (Manhattan),0.25,39792,1,0.000226513503702745,0.0108359967554966
+all pairs,F_plus,frozen score F+ (Task 47),0.01,39792,1,7.28710454259395e-05,0.0108359967554966
+all pairs,F_plus,frozen score F+ (Task 47),0.05,39792,1,0.00011259687457624,0.0108359967554966
+all pairs,F_plus,frozen score F+ (Task 47),0.1,39792,1,0.00015693460604101,0.0108359967554966
+all pairs,F_plus,frozen score F+ (Task 47),0.25,39792,1,0.000307133415903241,0.0108359967554966
+all pairs,spearman,Spearman,0.01,39792,0.926341978287093,0.00127568304430384,0.0108359967554966
+all pairs,spearman,Spearman,0.05,39792,0.926341978287093,0.00339556875641041,0.0108359967554966
+all pairs,spearman,Spearman,0.1,39792,0.926341978287093,0.00490558223745144,0.0108359967554966
+all pairs,spearman,Spearman,0.25,39792,0.926341978287093,0.00780596126035362,0.0108359967554966
+all pairs,dcor_E,distance correlation excess E,0.01,39792,1,0.000820535273504991,0.0108359967554966
+all pairs,dcor_E,distance correlation excess E,0.05,39792,1,0.00232967966417779,0.0108359967554966
+all pairs,dcor_E,distance correlation excess E,0.1,39792,1,0.00373196891626403,0.0108359967554966
+all pairs,dcor_E,distance correlation excess E,0.25,39792,1,0.00702849897708736,0.0108359967554966
+all pairs,xi,Chatterjee's xi (symmetric),0.01,39792,0.926341978287093,0.00098416389611924,0.0108359967554966
+all pairs,xi,Chatterjee's xi (symmetric),0.05,39792,0.926341978287093,0.0023281335673924,0.0108359967554966
+all pairs,xi,Chatterjee's xi (symmetric),0.1,39792,0.926341978287093,0.00402552455045895,0.0108359967554966
+all pairs,xi,Chatterjee's xi (symmetric),0.25,39792,0.926341978287093,0.00724850373877599,0.0108359967554966
+pairs that vary,neg_cor_d2,corrected squared disagreement (lower first),0.01,36861,1,0.00576520701683187,0.0116596048296025
+pairs that vary,neg_cor_d2,corrected squared disagreement (lower first),0.05,36861,1,0.00449546223111212,0.0116596048296025
+pairs that vary,neg_cor_d2,corrected squared disagreement (lower first),0.1,36861,1,0.00347252710730718,0.0116596048296025
+pairs that vary,neg_cor_d2,corrected squared disagreement (lower first),0.25,36861,1,0.0022281686314539,0.0116596048296025
+pairs that vary,neg_pos_cor_d2,"corrected, positive part (lower first)",0.01,36861,1,0.00153257470132387,0.0116596048296025
+pairs that vary,neg_pos_cor_d2,"corrected, positive part (lower first)",0.05,36861,1,0.00153257470132387,0.0116596048296025
+pairs that vary,neg_pos_cor_d2,"corrected, positive part (lower first)",0.1,36861,1,0.00153257470132387,0.0116596048296025
+pairs that vary,neg_pos_cor_d2,"corrected, positive part (lower first)",0.25,36861,1,0.00153257470132387,0.0116596048296025
+pairs that vary,neg_ub_cor_d2,"corrected, upper 95% bound (lower first)",0.01,36861,1,0.00228394945462393,0.0116596048296025
+pairs that vary,neg_ub_cor_d2,"corrected, upper 95% bound (lower first)",0.05,36861,1,0.000747537141258934,0.0116596048296025
+pairs that vary,neg_ub_cor_d2,"corrected, upper 95% bound (lower first)",0.1,36861,1,0.00045898771935756,0.0116596048296025
+pairs that vary,neg_ub_cor_d2,"corrected, upper 95% bound (lower first)",0.25,36861,1,0.000471717158898003,0.0116596048296025
+pairs that vary,neg_pos_ub_cor_d2,"corrected, positive part + 1.645 SE (lower first)",0.01,36861,1,0.000235933347180884,0.0116596048296025
+pairs that vary,neg_pos_ub_cor_d2,"corrected, positive part + 1.645 SE (lower first)",0.05,36861,1,0.000184106710285981,0.0116596048296025
+pairs that vary,neg_pos_ub_cor_d2,"corrected, positive part + 1.645 SE (lower first)",0.1,36861,1,0.000212163526545437,0.0116596048296025
+pairs that vary,neg_pos_ub_cor_d2,"corrected, positive part + 1.645 SE (lower first)",0.25,36861,1,0.000353171820575743,0.0116596048296025
+pairs that vary,neg_raw_d2,observed squared disagreement (lower first),0.01,36861,1,7.27714363747525e-05,0.0116596048296025
+pairs that vary,neg_raw_d2,observed squared disagreement (lower first),0.05,36861,1,0.000158801343071799,0.0116596048296025
+pairs that vary,neg_raw_d2,observed squared disagreement (lower first),0.1,36861,1,0.000199019880892036,0.0116596048296025
+pairs that vary,neg_raw_d2,observed squared disagreement (lower first),0.25,36861,1,0.000314690308556629,0.0116596048296025
+pairs that vary,S,agreement S = 1 - mean |x - y| (Manhattan),0.01,36861,1,5.41443653514738e-05,0.0116596048296025
+pairs that vary,S,agreement S = 1 - mean |x - y| (Manhattan),0.05,36861,1,0.000112279949337474,0.0116596048296025
+pairs that vary,S,agreement S = 1 - mean |x - y| (Manhattan),0.1,36861,1,0.000188039806789512,0.0116596048296025
+pairs that vary,S,agreement S = 1 - mean |x - y| (Manhattan),0.25,36861,1,0.000275538931330527,0.0116596048296025
+pairs that vary,F_plus,frozen score F+ (Task 47),0.01,36861,1,0.000123789063128588,0.0116596048296025
+pairs that vary,F_plus,frozen score F+ (Task 47),0.05,36861,1,0.000138105539098152,0.0116596048296025
+pairs that vary,F_plus,frozen score F+ (Task 47),0.1,36861,1,0.000208515604602688,0.0116596048296025
+pairs that vary,F_plus,frozen score F+ (Task 47),0.25,36861,1,0.000389481584498441,0.0116596048296025
+pairs that vary,spearman,Spearman,0.01,36861,1,0.00117929814686219,0.0116596048296025
+pairs that vary,spearman,Spearman,0.05,36861,1,0.00329212975839708,0.0116596048296025
+pairs that vary,spearman,Spearman,0.1,36861,1,0.00468675641841665,0.0116596048296025
+pairs that vary,spearman,Spearman,0.25,36861,1,0.00753073131425731,0.0116596048296025
+pairs that vary,dcor_E,distance correlation excess E,0.01,36861,1,0.000735779502133524,0.0116596048296025
+pairs that vary,dcor_E,distance correlation excess E,0.05,36861,1,0.0022612125349421,0.0116596048296025
+pairs that vary,dcor_E,distance correlation excess E,0.1,36861,1,0.00355090122072312,0.0116596048296025
+pairs that vary,dcor_E,distance correlation excess E,0.25,36861,1,0.00669697552703114,0.0116596048296025
+pairs that vary,xi,Chatterjee's xi (symmetric),0.01,36861,1,0.00103076831146219,0.0116596048296025
+pairs that vary,xi,Chatterjee's xi (symmetric),0.05,36861,1,0.00222551058836808,0.0116596048296025
+pairs that vary,xi,Chatterjee's xi (symmetric),0.1,36861,1,0.00385748448499833,0.0116596048296025
+pairs that vary,xi,Chatterjee's xi (symmetric),0.25,36861,1,0.00681860203562402,0.0116596048296025

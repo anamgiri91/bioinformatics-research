@@ -1,0 +1,2 @@
+donors,pairs,delta_mse_cov,bootstrap_pairs,bootstrap_on_all_pairs,subsample_estimate,lo95,hi95,plain_percentile_lo95,plain_percentile_hi95,relative_change,share_cor_closer,delta_mse_d2,mean_failed_pairs_per_draw,near_pairs,near_delta_mse_cov,near_lo95,near_hi95,verdict
+46,995729,-3.498e-05,39792,FALSE,-3.554e-05,-4.167e-05,-2.949e-05,-3.325e-05,-2.108e-05,-0.4833,0.4619,-0.0006269,0,912888,-3.752e-05,-4.466e-05,-3.155e-05,primary criterion met: correction closer to the independent reference

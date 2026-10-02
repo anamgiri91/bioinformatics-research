@@ -1,0 +1,467 @@
+
+R version 4.6.0 (2026-04-24) -- "Because it was There"
+Copyright (C) 2026 The R Foundation for Statistical Computing
+Platform: aarch64-apple-darwin23
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # ================================================================
+> # Task 65 - Second external test of the shared-read noise correction,
+> #           on the GSE149438 plasma controls kept by the Task 62 screen
+> #           (a different lab, assay and pipeline from GSE233417)
+> # Date: Oct 1, 2026
+> #
+> # Runs Results/Task64_LockedProtocol.md exactly. The script stops if
+> # the protocol, its JSON, the code it names, the sample list or any
+> # input file has changed since the lock (SHA-256 in
+> # Results/Task64_LockedProtocol.json).
+> #
+> # STEPS
+> #   1. Pair universe (counts only, no outcome): adjacent genome CpGs
+> #      within 200 bp on autosomes where at least 20 donors have at
+> #      least 6 reads at both sites.
+> #   2. Three-way split of every donor's molecules (seed split_seed +
+> #      1000 x donor + chromosome); A-only estimates; B/C reference.
+> #   3. Primary endpoint: mean dC = (Chat_A - R)^2 - (s_A - R)^2 over
+> #      pairs with 20+ eligible donors. 95% interval: 2,000 joint
+> #      bootstrap draws of donors and 1-Mb blocks within chromosomes,
+> #      bias-corrected percentile (version 2, Task 57), on the bootstrap
+> #      pair set: all pairs if there are at most 300,000, otherwise
+> #      every pair whose CpG index is divisible by 25. Primary
+> #      criterion: upper end below 0.
+> #   4. Secondary: disagreement endpoint; strata by distance, depth and
+> #      overlap; the declared sensitivity analysis on pairs at most
+> #      40 bp apart (Task 61: mates whose CpG ranges do not overlap are
+> #      two lines in .mhap), with its own interval from the same draws.
+> #   5. Section 6 comparisons with the Task 63 definitions: correlation
+> #      recovery, pair ranking (on the bootstrap pair set) and the
+> #      Ding & Gentleman baseline (2,000 pairs). Descriptive only.
+> #
+> # DRY RUN: `R CMD BATCH "--args --dry-run-colon" <this file>` runs
+> #   steps 1 to 5 on the GTEx colon development data instead, with no
+> #   lock check and outputs under Data/gtex_colon_rrbs/task65_dry_run/.
+> #   It uses chromosomes 21 and 22 only, and exists to test the code
+> #   before the lock.
+> #
+> # OUTPUTS
+> #   Data/gse149438_plasma_mhap/s6_pair_results.rds
+> #   Results/Task65_Primary.csv, Task65_ByStratum.csv,
+> #   Task65_CorrelationRecovery.csv, Task65_Ranking.csv,
+> #   Task65_MEcorBaseline.csv, Fig46_ExternalTest2.png
+> # ================================================================
+> 
+> suppressPackageStartupMessages({ library(data.table); library(jsonlite); library(ggplot2); library(MeasurementError.cor) })
+> pick_dir <- function(...) { for (d in c(...)) if (dir.exists(d)) return(d)
++   stop("no candidate directory exists") }
+> repo_dir <- pick_dir("/mmfs1/home/wln26/Experiments.Outlier.July31.2026",
++                      path.expand("~/Desktop/bioinformatics-research"))
+> DRY <- "--dry-run-colon" %in% commandArgs(TRUE)
+> res <- file.path(repo_dir, "Results")
+> 
+> # ----------------------------------------------------------------
+> # 0. the lock is intact (or the dry run's stand-in parameters)
+> # ----------------------------------------------------------------
+> if (!DRY) {
++   lock <- fromJSON(file.path(res, "Task64_LockedProtocol.json"))
++   for (f in names(lock$sha256))
++     stopifnot(digest::digest(file = file.path(repo_dir, f), algo = "sha256") == lock$sha256[[f]])
++   P <- lock$parameters; dat <- file.path(repo_dir, "Data", "gse149438_plasma_mhap"); outp <- res; tag <- "Task65"
++ } else {
++   P <- list(max_gap_bp = 200L, min_reads_per_part = 2L, min_donors = 20L, split_seed = 20261002L, bootstrap_seed = 20261003L,
++             bootstrap_draws = 200L, bootstrap_all_pairs_max = 300000L, bootstrap_subsample_every = 25L,
++             sensitivity_max_gap_bp = 40L, xi_seed = 20261205L, me_seed = 20261204L, me_pairs = 300L)
++   dat <- file.path(repo_dir, "Data", "gtex_colon_rrbs"); outp <- file.path(dat, "task65_dry_run"); tag <- "DryRun"
++   dir.create(outp, showWarnings = FALSE)
++ }
+> for (f in c("SharedReadNoise.Core.R", "SharedReadNoise.Benchmark.R", "Task47.FrozenScore.Sep29.2026.R",
++             "SharedReadNoise.Section6.R")) source(file.path(repo_dir, "Scripts", f))
+> AUTO <- paste0("chr", 1:22); s6 <- function(x) signif(x, 4); r4 <- function(x) round(x, 4)
+> CHR <- if (DRY) 21:22 else 1:22                   # the dry run uses two chromosomes, to be quick
+> cat(if (DRY) "DRY RUN on GTEx colon (development data)\n" else "lock verified\n")
+lock verified
+> 
+> cpg <- readRDS(file.path(repo_dir, "Data", "hg19_seq", "cpg_positions_hg19.rds"))
+> I0 <- c(0L, cumsum(lengths(cpg))[-22])
+> if (!DRY) {
++   kept <- fread(file.path(res, "Task62_PlasmaSamples.csv"))[kept == TRUE][order(gsm)]
++   files <- file.path(dat, paste0(kept$srx, ".mhap.gz")); stopifnot(length(files) == lock$donors)
++   read_donor <- function(f) {                     # .mhap -> .pat-like rows by chromosome (Task 62 reader)
++     m <- fread(cmd = sprintf("gzip -dc '%s'", f), header = FALSE, sep = "\t",
++                col.names = c("chr", "start", "end", "hap", "n", "strand"),
++                colClasses = c("character", "integer", "integer", "character", "integer", "character"))[chr %in% AUTO]
++     m[, k := match(chr, AUTO)]
++     m[, li := { p <- cpg[[k[1]]]; match(start, p) }, by = k]; m[, lj := { p <- cpg[[k[1]]]; match(end, p) }, by = k]
++     if (m[is.na(li) | is.na(lj) | (lj - li + 1L) != nchar(hap), .N]) stop(basename(f), ": lines off the hg19 CpG list")
++     p <- m[, .(chr, idx = I0[k] + li, pat = chartr("01", "TC", hap), n)]
++     split(p[, .(idx, pat, n)], p$chr)
++   }
++ } else {
++   samples <- fromJSON(file.path(dat, "colon_samples.json"))
++   files <- file.path(dat, basename(sapply(samples$files, `[`, 2)))
++   read_donor <- function(f) {
++     p <- fread(cmd = sprintf("gzip -dc '%s'", f), header = FALSE, sep = "\t", col.names = c("chr", "idx", "pat", "n"),
++                colClasses = c("character", "integer", "character", "integer"))
++     split(p[chr %in% AUTO, .(idx, pat, n)], p$chr[p$chr %in% AUTO])
++   }
++ }
+> D <- length(files); stopifnot(D >= 20, all(file.exists(files)))
+> 
+> # ----------------------------------------------------------------
+> # 1. pair universe from counts only
+> # ----------------------------------------------------------------
+> lookup <- lapply(cpg, function(p) { ok <- which(diff(p) <= P$max_gap_bp); v <- rep(NA_integer_, length(p)); v[ok] <- seq_along(ok); v })
+> deep <- lapply(lookup, function(v) integer(sum(!is.na(v))))
+> t0 <- Sys.time()
+> for (s in seq_len(D)) {
++   ps <- read_donor(files[s])
++   for (k in CHR) {
++     pk <- ps[[AUTO[k]]]; if (is.null(pk) || !nrow(pk)) next
++     pr <- srn_pat_counts(pk, I0[k], length(cpg[[k]]), cpg[[k]], max_gap = P$max_gap_bp)
++     pr <- pr[Ni >= 3L * P$min_reads_per_part & Nj >= 3L * P$min_reads_per_part]
++     if (!nrow(pr)) next
++     ix <- lookup[[k]][pr$idx - I0[k]]; deep[[k]][ix] <- deep[[k]][ix] + 1L
++   }
++   rm(ps); invisible(gc())
++ }
+> uni <- rbindlist(lapply(1:22, function(k) { r <- which(!is.na(lookup[[k]]))[deep[[k]] >= P$min_donors]
++   data.table(chrn = k, idx = I0[k] + r, pos = cpg[[k]][r], gap = cpg[[k]][r + 1L] - cpg[[k]][r]) }))
+> setkey(uni, chrn, idx); rm(deep, lookup); invisible(gc())
+> boot_all <- nrow(uni) <= P$bootstrap_all_pairs_max
+> cat("pair universe:", nrow(uni), "pairs (", round(as.numeric(Sys.time() - t0, units = "mins"), 1), "min ); bootstrap on",
++     if (boot_all) "all pairs\n" else paste("every", P$bootstrap_subsample_every, "th pair\n"))
+pair universe: 1311610 pairs ( 4.9 min ); bootstrap on every 25 th pair
+> 
+> # ----------------------------------------------------------------
+> # 2. split, count and accumulate
+> # ----------------------------------------------------------------
+> acc <- lapply(1:22, function(k) s6_accumulator(uni[chrn == k, .N]))
+> uidx <- lapply(1:22, function(k) uni[chrn == k, idx])
+> sub <- if (boot_all) uni[, .(chrn, idx, pos, gap)] else uni[idx %% P$bootstrap_subsample_every == 0L, .(chrn, idx, pos, gap)]
+> SM <- c("E", "xA", "yA", "vxA", "vyA", "cA", "biB", "bjB", "biC", "bjC")
+> subm <- setNames(lapply(SM, function(v) matrix(0, nrow(sub), D)), SM); sub_key <- paste(sub$chrn, sub$idx)
+> for (s in seq_len(D)) {
++   ps <- read_donor(files[s])
++   for (k in CHR) {
++     pk <- ps[[AUTO[k]]]; if (is.null(pk) || !nrow(pk)) next
++     m <- srb_donor_chr(pk, I0[k], length(cpg[[k]]), cpg[[k]], seed = P$split_seed + 1000L * s + k, max_gap = P$max_gap_bp)
++     if (is.null(m)) next
++     rows <- match(m$idx, uidx[[k]]); keep <- !is.na(rows); if (!any(keep)) next
++     m <- m[keep]; s6_update(acc[[k]], m, rows[keep])
++     at <- match(paste(k, m$idx), sub_key); h <- which(!is.na(at))
++     if (length(h)) { subm$E[at[h], s] <- 1; for (v in SM[-1]) subm[[v]][at[h], s] <- m[[v]][h] }
++   }
++   rm(ps); invisible(gc())
++   cat(sprintf("donor %2d/%d done (%.1f min)\n", s, D, as.numeric(Sys.time() - t0, units = "mins")))
++ }
+donor  1/46 done (5.1 min)
+donor  2/46 done (5.4 min)
+donor  3/46 done (6.7 min)
+donor  4/46 done (7.0 min)
+donor  5/46 done (7.3 min)
+donor  6/46 done (7.5 min)
+donor  7/46 done (9.8 min)
+donor  8/46 done (10.2 min)
+donor  9/46 done (12.1 min)
+donor 10/46 done (12.9 min)
+donor 11/46 done (13.2 min)
+donor 12/46 done (13.6 min)
+donor 13/46 done (28.0 min)
+donor 14/46 done (28.5 min)
+donor 15/46 done (32.5 min)
+donor 16/46 done (32.9 min)
+donor 17/46 done (50.7 min)
+donor 18/46 done (52.9 min)
+donor 19/46 done (53.5 min)
+donor 20/46 done (68.4 min)
+donor 21/46 done (68.9 min)
+donor 22/46 done (71.4 min)
+donor 23/46 done (71.8 min)
+donor 24/46 done (124.1 min)
+donor 25/46 done (128.2 min)
+donor 26/46 done (132.6 min)
+donor 27/46 done (133.1 min)
+donor 28/46 done (133.6 min)
+donor 29/46 done (134.2 min)
+donor 30/46 done (144.3 min)
+donor 31/46 done (144.8 min)
+donor 32/46 done (154.4 min)
+donor 33/46 done (164.5 min)
+donor 34/46 done (165.0 min)
+donor 35/46 done (169.3 min)
+donor 36/46 done (184.4 min)
+donor 37/46 done (185.0 min)
+donor 38/46 done (189.0 min)
+donor 39/46 done (194.8 min)
+donor 40/46 done (203.2 min)
+donor 41/46 done (203.7 min)
+donor 42/46 done (219.5 min)
+donor 43/46 done (249.9 min)
+donor 44/46 done (250.4 min)
+donor 45/46 done (307.5 min)
+donor 46/46 done (307.8 min)
+> est <- rbindlist(lapply(1:22, function(k) {
++   a <- copy(acc[[k]])[, `:=`(chrn = k, idx = uidx[[k]])]; keep <- a$n >= P$min_donors
++   cbind(a[keep, .(chrn, idx)], s6_finish(a[keep], min_donors = P$min_donors))
++ }))
+There were 50 or more warnings (use warnings() to see the first 50)
+> est <- uni[est, on = c("chrn", "idx")]
+> saveRDS(list(est = est, sub = sub, subm = subm, built = format(Sys.time())), file.path(dat, if (DRY) "task65_dry_run/s6_pair_results.rds" else "s6_pair_results.rds"))
+> 
+> # ----------------------------------------------------------------
+> # 3. primary endpoint and its interval; 4. the sensitivity subset
+> # ----------------------------------------------------------------
+> ok <- rowSums(subm$E) >= P$min_donors
+> E <- subm$E[ok, ]; sb <- sub[ok]; near <- sb$gap <= P$sensitivity_max_gap_bp
+> pre <- list(EX = E * subm$xA[ok, ], EY = E * subm$yA[ok, ], EXY = E * subm$xA[ok, ] * subm$yA[ok, ], EC = E * subm$cA[ok, ],
++             EBI = E * subm$biB[ok, ], ECJ = E * subm$bjC[ok, ], EBIC = E * subm$biB[ok, ] * subm$bjC[ok, ],
++             ECI = E * subm$biC[ok, ], EBJ = E * subm$bjB[ok, ], ECIB = E * subm$biC[ok, ] * subm$bjB[ok, ])
+> dC_w <- function(w) {
++   n <- drop(E %*% w); g <- function(M) drop(M %*% w); cv <- function(sxy, sx, sy) (sxy - sx * sy / n) / (n - 1)
++   W <- cv(g(pre$EXY), g(pre$EX), g(pre$EY)); U <- W - g(pre$EC) / n
++   R <- (cv(g(pre$EBIC), g(pre$EBI), g(pre$ECJ)) + cv(g(pre$ECIB), g(pre$ECI), g(pre$EBJ))) / 2
++   d <- (U - R)^2 - (W - R)^2; d[n < 2] <- NA_real_; d
++ }
+> blk <- paste(sb$chrn, (sb$pos - 1L) %/% 1e6L); blocks <- unique(data.table(chrn = sb$chrn, blk))
+> set.seed(P$bootstrap_seed)
+> bt <- vapply(seq_len(P$bootstrap_draws), function(b) {
++   w <- tabulate(sample.int(D, D, replace = TRUE), D)
++   bm <- blocks[, .(blk = sample(blk, .N, replace = TRUE)), by = chrn][, .N, by = blk]
++   bw <- bm$N[match(blk, bm$blk)]; bw[is.na(bw)] <- 0
++   d <- dC_w(w); k <- !is.na(d) & bw > 0; kn <- k & near
++   c(sum(bw[k] * d[k]) / sum(bw[k]), sum(bw[kn] * d[kn]) / sum(bw[kn]), sum(is.na(d)))
++ }, numeric(3))
+> d0 <- dC_w(rep(1, D)); sub_est <- mean(d0, na.rm = TRUE); near_est <- mean(d0[near], na.rm = TRUE)
+> bias <- mean(bt[1, ]) - sub_est; bias_n <- mean(bt[2, ]) - near_est
+> prim <- data.table(donors = D, pairs = nrow(est), delta_mse_cov = s6(mean(est$dC)), bootstrap_pairs = nrow(sb),
++                    bootstrap_on_all_pairs = boot_all, subsample_estimate = s6(sub_est),
++                    lo95 = s6(quantile(bt[1, ], 0.025) - bias), hi95 = s6(quantile(bt[1, ], 0.975) - bias),
++                    plain_percentile_lo95 = s6(quantile(bt[1, ], 0.025)), plain_percentile_hi95 = s6(quantile(bt[1, ], 0.975)),
++                    relative_change = r4(mean(est$dC) / mean(est$loss_raw)), share_cor_closer = r4(mean(est$loss_cor < est$loss_raw)),
++                    delta_mse_d2 = s6(mean(est$dD)), mean_failed_pairs_per_draw = r4(mean(bt[3, ])),
++                    near_pairs = sum(est$gap <= P$sensitivity_max_gap_bp),
++                    near_delta_mse_cov = s6(mean(est[gap <= P$sensitivity_max_gap_bp, dC])),
++                    near_lo95 = s6(quantile(bt[2, ], 0.025) - bias_n), near_hi95 = s6(quantile(bt[2, ], 0.975) - bias_n))
+> prim[, verdict := fcase(hi95 < 0, "primary criterion met: correction closer to the independent reference",
++                         lo95 > 0, "correction has higher error", default = "improvement not established")]
+> fwrite(prim, file.path(outp, paste0(tag, "_Primary.csv")))
+> cat("\nPRIMARY (locked):\n"); print(prim)
+
+PRIMARY (locked):
+   donors  pairs delta_mse_cov bootstrap_pairs bootstrap_on_all_pairs
+    <int>  <int>         <num>           <int>                 <lgcl>
+1:     46 995729    -3.498e-05           39792                  FALSE
+   subsample_estimate       lo95       hi95 plain_percentile_lo95
+                <num>      <num>      <num>                 <num>
+1:         -3.554e-05 -4.167e-05 -2.949e-05            -3.325e-05
+   plain_percentile_hi95 relative_change share_cor_closer delta_mse_d2
+                   <num>           <num>            <num>        <num>
+1:            -2.108e-05         -0.4833           0.4619   -0.0006269
+   mean_failed_pairs_per_draw near_pairs near_delta_mse_cov  near_lo95
+                        <num>      <int>              <num>      <num>
+1:                          0     912888         -3.752e-05 -4.466e-05
+    near_hi95
+        <num>
+1: -3.155e-05
+                                                                 verdict
+                                                                  <char>
+1: primary criterion met: correction closer to the independent reference
+> 
+> endpoint <- function(d) d[, .(pairs = .N, delta_mse_cov = s6(mean(dC)), relative_change = r4(mean(dC) / mean(loss_raw)),
++                               share_cor_closer = r4(mean(loss_cor < loss_raw)), delta_mse_d2 = s6(mean(dD)),
++                               mean_noise_A = s6(mean(mean_noise_A)), mean_raw_cov_A = s6(mean(raw_cov_A)),
++                               mean_ref_cov = s6(mean(ref_cov)), mean_cor_cov_A = s6(mean(cor_cov_A)))]
+> by_one <- function(name, lev) { d <- copy(est)[, level := lev]
++   d[, endpoint(.SD), by = level][order(level)][, `:=`(stratum = name, level = as.character(level))] }
+> strata <- rbindlist(list(endpoint(est)[, `:=`(stratum = "all pairs", level = "all")],
++   by_one("distance (bp)", cut(est$gap, c(0, 10, 20, 40, 60, 100, 150, 200))),
++   by_one("mean depth in A (reads)", cut(est$depth_A, c(2, 5, 10, 20, Inf), right = FALSE)),
++   by_one("overlap in A", cut(est$overlap_A, c(0, 0.25, 0.5, 0.75, 1.0001), right = FALSE))), use.names = TRUE)
+> setcolorder(strata, c("stratum", "level"))
+> fwrite(strata, file.path(outp, paste0(tag, "_ByStratum.csv")))
+> cat("\nSecondary, by stratum:\n"); print(strata[, .(stratum, level, pairs, delta_mse_cov, relative_change, share_cor_closer)])
+
+Secondary, by stratum:
+                    stratum      level  pairs delta_mse_cov relative_change
+                     <char>     <char>  <int>         <num>           <num>
+ 1:               all pairs        all 995729    -3.498e-05         -0.4833
+ 2:           distance (bp)     (0,10] 525074    -4.620e-05         -0.5350
+ 3:           distance (bp)    (10,20] 233590    -3.032e-05         -0.4571
+ 4:           distance (bp)    (20,40] 154224    -1.889e-05         -0.3568
+ 5:           distance (bp)    (40,60]  44883    -1.063e-05         -0.2519
+ 6:           distance (bp)   (60,100]  28425    -3.606e-06         -0.1102
+ 7:           distance (bp)  (100,150]   7985    -3.078e-08         -0.0012
+ 8:           distance (bp)  (150,200]   1548     0.000e+00          0.0000
+ 9: mean depth in A (reads)      [2,5) 119338    -5.304e-05         -0.4701
+10: mean depth in A (reads)     [5,10) 704463    -3.722e-05         -0.4876
+11: mean depth in A (reads)    [10,20) 169290    -1.337e-05         -0.4730
+12: mean depth in A (reads)   [20,Inf)   2638    -8.752e-06         -0.4865
+13:            overlap in A   [0,0.25)   3922     3.594e-07          0.0146
+14:            overlap in A [0.25,0.5)   6418    -2.188e-07         -0.0103
+15:            overlap in A [0.5,0.75)  32334    -4.883e-06         -0.1596
+16:            overlap in A   [0.75,1) 953055    -3.639e-05         -0.4894
+    share_cor_closer
+               <num>
+ 1:           0.4619
+ 2:           0.4804
+ 3:           0.4383
+ 4:           0.4455
+ 5:           0.4567
+ 6:           0.4595
+ 7:           0.3767
+ 8:           0.0000
+ 9:           0.3171
+10:           0.4626
+11:           0.5588
+12:           0.6152
+13:           0.1300
+14:           0.4342
+15:           0.4457
+16:           0.4640
+> 
+> # ----------------------------------------------------------------
+> # 5. section 6 comparisons (Task 63 definitions; descriptive)
+> # ----------------------------------------------------------------
+> corr <- s6_corr_table(est); fwrite(corr, file.path(outp, paste0(tag, "_CorrelationRecovery.csv")))
+> cat("\nCorrelation recovery:\n"); print(corr[, lapply(.SD, function(x) if (is.numeric(x)) s6(x) else x)])
+
+Correlation recovery:
+         estimator  pairs valid_share reference_defined_share common_pairs
+            <char>  <num>       <num>                   <num>        <num>
+1:         Pearson 995700     0.92760                  0.1964        23100
+2:   variance-only 995700     0.07788                  0.1964        23100
+3: full correction 995700     0.12780                  0.1964        23100
+   mse_common mean_error_common own_pairs mse_own
+        <num>             <num>     <num>   <num>
+1:     0.2209          -0.09519    194200  0.2341
+2:     0.3499           0.09291     25070  0.3766
+3:     0.3995          -0.15780     43170  0.3535
+> sp <- est[sub, on = c("chrn", "idx"), nomatch = NA]; okr <- !is.na(sp$n)
+> scores <- s6_scores(lapply(subm, function(M) M[okr, , drop = FALSE]), sp$gap[okr], sp$raw_d2_A[okr], sp$cor_d2_A[okr], P$xi_seed)
+> rk <- s6_rank_table(scores, sp$ref_d2[okr], varies = sp$var_x_A[okr] > 0 & sp$var_y_A[okr] > 0)
+> fwrite(rk, file.path(outp, paste0(tag, "_Ranking.csv")))
+> cat("\nPair ranking, mean reference squared disagreement of the top pairs:\n")
+
+Pair ranking, mean reference squared disagreement of the top pairs:
+> print(dcast(rk, set + label ~ top_fraction, value.var = "mean_qref_top", fun.aggregate = function(x) s6(x)))
+Key: <set, label>
+                set                                             label      0.01
+             <char>                                            <char>     <num>
+ 1:       all pairs                       Chatterjee's xi (symmetric) 9.842e-04
+ 2:       all pairs                                          Spearman 1.276e-03
+ 3:       all pairs        agreement S = 1 - mean |x - y| (Manhattan) 6.529e-05
+ 4:       all pairs      corrected squared disagreement (lower first) 5.769e-03
+ 5:       all pairs            corrected, positive part (lower first) 1.325e-03
+ 6:       all pairs corrected, positive part + 1.645 SE (lower first) 1.763e-04
+ 7:       all pairs          corrected, upper 95% bound (lower first) 2.075e-03
+ 8:       all pairs                     distance correlation excess E 8.205e-04
+ 9:       all pairs                         frozen score F+ (Task 47) 7.287e-05
+10:       all pairs       observed squared disagreement (lower first) 6.529e-05
+11: pairs that vary                       Chatterjee's xi (symmetric) 1.031e-03
+12: pairs that vary                                          Spearman 1.179e-03
+13: pairs that vary        agreement S = 1 - mean |x - y| (Manhattan) 5.414e-05
+14: pairs that vary      corrected squared disagreement (lower first) 5.765e-03
+15: pairs that vary            corrected, positive part (lower first) 1.533e-03
+16: pairs that vary corrected, positive part + 1.645 SE (lower first) 2.359e-04
+17: pairs that vary          corrected, upper 95% bound (lower first) 2.284e-03
+18: pairs that vary                     distance correlation excess E 7.358e-04
+19: pairs that vary                         frozen score F+ (Task 47) 1.238e-04
+20: pairs that vary       observed squared disagreement (lower first) 7.277e-05
+                set                                             label      0.01
+             <char>                                            <char>     <num>
+         0.05       0.1      0.25
+        <num>     <num>     <num>
+ 1: 2.328e-03 0.0040260 0.0072490
+ 2: 3.396e-03 0.0049060 0.0078060
+ 3: 7.884e-05 0.0001206 0.0002265
+ 4: 4.334e-03 0.0033780 0.0021190
+ 5: 1.325e-03 0.0013250 0.0013250
+ 6: 1.763e-04 0.0001641 0.0002642
+ 7: 7.119e-04 0.0004356 0.0003586
+ 8: 2.330e-03 0.0037320 0.0070280
+ 9: 1.126e-04 0.0001569 0.0003071
+10: 7.622e-05 0.0001425 0.0002394
+11: 2.226e-03 0.0038570 0.0068190
+12: 3.292e-03 0.0046870 0.0075310
+13: 1.123e-04 0.0001880 0.0002755
+14: 4.495e-03 0.0034730 0.0022280
+15: 1.533e-03 0.0015330 0.0015330
+16: 1.841e-04 0.0002122 0.0003532
+17: 7.475e-04 0.0004590 0.0004717
+18: 2.261e-03 0.0035510 0.0066970
+19: 1.381e-04 0.0002085 0.0003895
+20: 1.588e-04 0.0001990 0.0003147
+         0.05       0.1      0.25
+        <num>     <num>     <num>
+> set.seed(P$me_seed)
+> cand <- which(okr & !is.na(sp$rho_ref)); pick <- sort(sample(cand, min(P$me_pairs, length(cand))))
+> me <- rbindlist(lapply(pick, function(i) {
++   e <- subm$E[i, ] == 1
++   fit <- tryCatch(cor.me.vector(subm$xA[i, e], sqrt(subm$vxA[i, e]), subm$yA[i, e], sqrt(subm$vyA[i, e])), error = function(x) NULL)
++   data.table(row = i, me = if (is.null(fit) || fit$convergence != 0) NA_real_ else unname(fit$estimate["corr.true"]))
++ }))
+There were 12 warnings (use warnings() to see them)
+> me[, `:=`(rho_ref = sp$rho_ref[row], r_pearson = sp$r_pearson[row], r_vo = sp$r_vo[row], r_full = sp$r_full[row])]
+> v <- me[!is.na(me) & !is.na(r_pearson) & !is.na(r_vo) & !is.na(r_full)]
+> mtab <- data.table(estimator = c("Pearson", "variance-only", "full correction", "Ding & Gentleman (MeasurementError.cor)"),
++                    pairs_tried = nrow(me), valid_share = c(mean(!is.na(me$r_pearson)), mean(!is.na(me$r_vo)), mean(!is.na(me$r_full)),
++                                                            mean(!is.na(me$me))), common_pairs = nrow(v),
++                    mse_common = c(mean((v$r_pearson - v$rho_ref)^2), mean((v$r_vo - v$rho_ref)^2), mean((v$r_full - v$rho_ref)^2),
++                                   mean((v$me - v$rho_ref)^2)),
++                    mean_error_common = c(mean(v$r_pearson - v$rho_ref), mean(v$r_vo - v$rho_ref), mean(v$r_full - v$rho_ref),
++                                          mean(v$me - v$rho_ref)))
+> fwrite(mtab, file.path(outp, paste0(tag, "_MEcorBaseline.csv")))
+> cat("\nDing & Gentleman baseline:\n"); print(mtab[, lapply(.SD, function(x) if (is.numeric(x)) s6(x) else x)])
+
+Ding & Gentleman baseline:
+                                 estimator pairs_tried valid_share common_pairs
+                                    <char>       <num>       <num>        <num>
+1:                                 Pearson        2000      0.9945          166
+2:                           variance-only        2000      0.1325          166
+3:                         full correction        2000      0.2210          166
+4: Ding & Gentleman (MeasurementError.cor)        2000      0.6410          166
+   mse_common mean_error_common
+        <num>             <num>
+1:     0.2141          -0.07733
+2:     0.3584           0.07322
+3:     0.3747          -0.11330
+4:     0.7654           0.04565
+> 
+> # ----------------------------------------------------------------
+> # figure
+> # ----------------------------------------------------------------
+> SURF <- "#fcfcfb"; INK <- "#0b0b0b"; INK2 <- "#52514e"; MUTED <- "#898781"; GRID <- "#e1e0d9"; BLUE <- "#2a78d6"
+> f46 <- strata[stratum != "all pairs"][, `:=`(stratum = factor(stratum, levels = unique(stratum)), level = factor(level, levels = unique(level)))]
+> p46 <- ggplot(f46, aes(relative_change, level)) +
++   geom_vline(xintercept = 0, colour = MUTED, linewidth = 0.4) + geom_point(colour = BLUE, size = 3) +
++   facet_grid(stratum ~ ., scales = "free_y", space = "free_y") +
++   labs(title = if (DRY) "DRY RUN on GTEx colon (development data)" else
++          "Second external test (locked): is the corrected covariance closer to an independent reference?",
++        subtitle = paste0(D, if (DRY) " colon donors. " else " plasma cfDNA controls (GSE149438), another lab and pipeline. ",
++                          "Primary: ", prim$verdict, ".\nDelta MSE ", prim$delta_mse_cov, ", 95% interval ", prim$lo95, " to ", prim$hi95, "."),
++        x = "Relative change in squared error, corrected vs observed (left of 0 = correction helps)", y = NULL,
++        caption = paste0("Source: ", tag, "_Primary.csv and ", tag, "_ByStratum.csv (Task 65)")) +
++   theme_minimal(base_size = 10) +
++   theme(plot.background = element_rect(fill = SURF, colour = NA), panel.grid.minor = element_blank(),
++         panel.grid.major.y = element_blank(), panel.grid.major.x = element_line(colour = GRID, linewidth = 0.3),
++         strip.text.y = element_text(angle = 0, hjust = 0, face = "bold", colour = INK),
++         plot.title = element_text(colour = INK, face = "bold", size = 12), plot.title.position = "plot",
++         plot.subtitle = element_text(colour = INK2, size = 9), plot.caption = element_text(colour = MUTED, hjust = 0),
++         plot.caption.position = "plot", axis.text = element_text(colour = INK2))
+> ggsave(file.path(outp, if (DRY) "DryRun_Fig.png" else "Fig46_ExternalTest2.png"), p46, width = 10, height = 6, dpi = 200, bg = SURF)
+> cat("\ndone\n")
+
+done
+> 
+> proc.time()
+     user    system   elapsed 
+ 1532.594    37.470 18732.784 
