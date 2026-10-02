@@ -1,0 +1,3 @@
+donor,CpGs,mean_depth,median_depth,share_ge6,share_ge10,share_zero,pairs_within_200bp,mean_pair_eligibility_GSM5058020,mean_pair_eligibility_GSM5058029,share_pairs_both_sites_ge6_both_donors,expected_usable_pairs,expected_usable_share
+GSM5058020,27852739,2.91,2,0.158,0.0215,0.2075,23879355,0.0395,0.0309,0.0409,608312,0.0255
+GSM5058029,27852739,2.6,2,0.1275,0.0156,0.2368,23879355,0.0395,0.0309,0.0409,608312,0.0255

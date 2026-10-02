@@ -137,3 +137,44 @@ measured from alignments rather than assumed from the assay name.
 - SLURM and shell scripts pass `bash -n`.
 - No real sperm alignment or cluster resource measurement yet; SSH access
   is the immediate blocker.
+
+## Depth check from the study's own CpG reports (2026-10-02)
+
+Cluster access is blocked, so the pilot's main question, usable depth,
+was checked here instead. GEO publishes a Bismark CpG report for each
+sample, and the reports for the same two pilot donors (GSM5058020 and
+GSM5058029, about 260 MB each) were used.
+- **Read:** depth only, methylated plus unmethylated counts with both
+  strands combined, on autosomes.
+- **Not computed:** no methylation level or pair statistic.
+- **Script:** `Scripts/Task68.SpermDepthCheck.Oct02.2026.R`. Its outputs
+  are `Results/Task68_SpermDepthCheck.csv` and `_UsablePairs.csv`.
+
+| | GSM5058020 (low exposure) | GSM5058029 (high exposure) |
+|---|---|---|
+| Mean depth per CpG | 2.91 | 2.60 |
+| Median depth | 2 | 2 |
+| CpGs with at least 6 reads | 15.8% | 12.8% |
+| CpGs with at least 10 reads | 2.2% | 1.6% |
+| Chance the donor is eligible for a pair within 200 bp | 3.9% | 3.1% |
+
+- **Usable depth is below the published 4x:** about 3x per CpG after the
+  study's own processing.
+- **Projection to 52 donors.** About 608,000 of the 23.9 million pairs
+  within 200 bp (2.6%) would have at least 20 eligible donors. This
+  assumes the other 50 donors are covered like these two.
+  - Of the pairs with a projected chance above 0.5, 78% lie outside
+    repeats, at a typical depth of 8.5 reads (90th percentile 11).
+  - They span 2,759 1-Mb blocks. So they are the better-covered parts of
+    the genome, not repeat artefacts.
+- **The projection is optimistic.** It assumes close CpGs share all
+  their reads. Pairs that share fewer reads need both sites deep in
+  every part, which is rarer.
+- **What it means.** The sperm test would rest on a few percent of
+  pairs, from the better-covered regions, not on most pairs as in Tasks
+  59 and 65.
+- **The alternative.** GSE173787 (53 CD19+ B-cell samples, about 15x
+  raw, 316 GB) would make most pairs usable. But it mixes multiple
+  sclerosis patients and controls.
+- **The cluster pilot is still needed** to confirm this with
+  whole-fragment counts from our own pipeline.
