@@ -1,0 +1,181 @@
+subset,agreement_error,question,a,b,folds,folds_a_higher_gain,gain_a,gain_b
+all,0.016,"1 distance weight vs one weight, in Codex F",Codex F,"Codex F, no distance",9,7,0.0208,0.0195
+all,0.018,"1 distance weight vs one weight, in Codex F",Codex F,"Codex F, no distance",12,8,0.0188,0.0174
+all,0.02,"1 distance weight vs one weight, in Codex F",Codex F,"Codex F, no distance",15,12,0.0181,0.0167
+all,0.025,"1 distance weight vs one weight, in Codex F",Codex F,"Codex F, no distance",16,14,0.0229,0.0212
+all,0.03,"1 distance weight vs one weight, in Codex F",Codex F,"Codex F, no distance",18,16,0.0262,0.0245
+all,0.04,"1 distance weight vs one weight, in Codex F",Codex F,"Codex F, no distance",15,9,0.0322,0.0306
+first_half,0.016,"1 distance weight vs one weight, in Codex F",Codex F,"Codex F, no distance",9,6,0.0211,0.0198
+first_half,0.018,"1 distance weight vs one weight, in Codex F",Codex F,"Codex F, no distance",12,8,0.0183,0.0174
+first_half,0.02,"1 distance weight vs one weight, in Codex F",Codex F,"Codex F, no distance",14,11,0.0178,0.0171
+first_half,0.025,"1 distance weight vs one weight, in Codex F",Codex F,"Codex F, no distance",17,12,0.0201,0.0189
+first_half,0.03,"1 distance weight vs one weight, in Codex F",Codex F,"Codex F, no distance",17,13,0.0213,0.0199
+first_half,0.04,"1 distance weight vs one weight, in Codex F",Codex F,"Codex F, no distance",15,11,0.0279,0.0258
+second_half,0.016,"1 distance weight vs one weight, in Codex F",Codex F,"Codex F, no distance",9,6,0.0206,0.0187
+second_half,0.018,"1 distance weight vs one weight, in Codex F",Codex F,"Codex F, no distance",12,9,0.0187,0.0169
+second_half,0.02,"1 distance weight vs one weight, in Codex F",Codex F,"Codex F, no distance",15,11,0.0185,0.0167
+second_half,0.025,"1 distance weight vs one weight, in Codex F",Codex F,"Codex F, no distance",16,15,0.0245,0.0223
+second_half,0.03,"1 distance weight vs one weight, in Codex F",Codex F,"Codex F, no distance",17,14,0.0295,0.0262
+second_half,0.04,"1 distance weight vs one weight, in Codex F",Codex F,"Codex F, no distance",18,12,0.0401,0.0386
+all,0.016,"2 distance weight vs one weight, in New C",New C,"New C, no distance",8,1,0.0197,0.0207
+all,0.018,"2 distance weight vs one weight, in New C",New C,"New C, no distance",10,4,0.0176,0.0199
+all,0.02,"2 distance weight vs one weight, in New C",New C,"New C, no distance",14,6,0.0169,0.0178
+all,0.025,"2 distance weight vs one weight, in New C",New C,"New C, no distance",15,2,0.0218,0.024
+all,0.03,"2 distance weight vs one weight, in New C",New C,"New C, no distance",18,2,0.024,0.0267
+all,0.04,"2 distance weight vs one weight, in New C",New C,"New C, no distance",18,0,0.033,0.0372
+first_half,0.016,"2 distance weight vs one weight, in New C",New C,"New C, no distance",8,1,0.02,0.0215
+first_half,0.018,"2 distance weight vs one weight, in New C",New C,"New C, no distance",9,1,0.0187,0.0223
+first_half,0.02,"2 distance weight vs one weight, in New C",New C,"New C, no distance",14,4,0.0161,0.0174
+first_half,0.025,"2 distance weight vs one weight, in New C",New C,"New C, no distance",16,3,0.019,0.0225
+first_half,0.03,"2 distance weight vs one weight, in New C",New C,"New C, no distance",18,2,0.023,0.026
+first_half,0.04,"2 distance weight vs one weight, in New C",New C,"New C, no distance",18,2,0.0323,0.0362
+second_half,0.016,"2 distance weight vs one weight, in New C",New C,"New C, no distance",8,4,0.0198,0.0201
+second_half,0.018,"2 distance weight vs one weight, in New C",New C,"New C, no distance",11,6,0.0177,0.018
+second_half,0.02,"2 distance weight vs one weight, in New C",New C,"New C, no distance",12,2,0.0181,0.0201
+second_half,0.025,"2 distance weight vs one weight, in New C",New C,"New C, no distance",15,3,0.0213,0.0243
+second_half,0.03,"2 distance weight vs one weight, in New C",New C,"New C, no distance",17,4,0.0259,0.0285
+second_half,0.04,"2 distance weight vs one weight, in New C",New C,"New C, no distance",18,3,0.0341,0.0386
+all,0.016,"3 distance weight vs one weight, in C with dCor","New C, dCor excess","New C, dCor, no distance",8,7,0.0227,0.0214
+all,0.018,"3 distance weight vs one weight, in C with dCor","New C, dCor excess","New C, dCor, no distance",10,9,0.0216,0.0207
+all,0.02,"3 distance weight vs one weight, in C with dCor","New C, dCor excess","New C, dCor, no distance",14,11,0.0189,0.0181
+all,0.025,"3 distance weight vs one weight, in C with dCor","New C, dCor excess","New C, dCor, no distance",15,12,0.0247,0.0236
+all,0.03,"3 distance weight vs one weight, in C with dCor","New C, dCor excess","New C, dCor, no distance",18,12,0.0267,0.0261
+all,0.04,"3 distance weight vs one weight, in C with dCor","New C, dCor excess","New C, dCor, no distance",12,10,0.0331,0.0322
+first_half,0.016,"3 distance weight vs one weight, in C with dCor","New C, dCor excess","New C, dCor, no distance",8,6,0.0231,0.0218
+first_half,0.018,"3 distance weight vs one weight, in C with dCor","New C, dCor excess","New C, dCor, no distance",10,5,0.0212,0.0204
+first_half,0.02,"3 distance weight vs one weight, in C with dCor","New C, dCor excess","New C, dCor, no distance",13,8,0.018,0.0185
+first_half,0.025,"3 distance weight vs one weight, in C with dCor","New C, dCor excess","New C, dCor, no distance",15,11,0.0191,0.0182
+first_half,0.03,"3 distance weight vs one weight, in C with dCor","New C, dCor excess","New C, dCor, no distance",15,13,0.0199,0.0185
+first_half,0.04,"3 distance weight vs one weight, in C with dCor","New C, dCor excess","New C, dCor, no distance",7,5,0.0244,0.0233
+second_half,0.016,"3 distance weight vs one weight, in C with dCor","New C, dCor excess","New C, dCor, no distance",8,6,0.0226,0.0214
+second_half,0.018,"3 distance weight vs one weight, in C with dCor","New C, dCor excess","New C, dCor, no distance",11,7,0.0203,0.0189
+second_half,0.02,"3 distance weight vs one weight, in C with dCor","New C, dCor excess","New C, dCor, no distance",12,8,0.0218,0.0206
+second_half,0.025,"3 distance weight vs one weight, in C with dCor","New C, dCor excess","New C, dCor, no distance",15,11,0.026,0.0246
+second_half,0.03,"3 distance weight vs one weight, in C with dCor","New C, dCor excess","New C, dCor, no distance",17,13,0.0302,0.0285
+second_half,0.04,"3 distance weight vs one weight, in C with dCor","New C, dCor excess","New C, dCor, no distance",17,9,0.0402,0.04
+all,0.016,"4 distance as a prior vs no distance, in New C","New C, distance as a prior","New C, no distance",8,5,0.0208,0.0207
+all,0.018,"4 distance as a prior vs no distance, in New C","New C, distance as a prior","New C, no distance",10,5,0.0199,0.0199
+all,0.02,"4 distance as a prior vs no distance, in New C","New C, distance as a prior","New C, no distance",14,7,0.0177,0.0178
+all,0.025,"4 distance as a prior vs no distance, in New C","New C, distance as a prior","New C, no distance",15,9,0.0242,0.024
+all,0.03,"4 distance as a prior vs no distance, in New C","New C, distance as a prior","New C, no distance",18,11,0.0268,0.0267
+all,0.04,"4 distance as a prior vs no distance, in New C","New C, distance as a prior","New C, no distance",18,10,0.0374,0.0372
+first_half,0.016,"4 distance as a prior vs no distance, in New C","New C, distance as a prior","New C, no distance",8,3,0.0215,0.0215
+first_half,0.018,"4 distance as a prior vs no distance, in New C","New C, distance as a prior","New C, no distance",9,4,0.0204,0.0223
+first_half,0.02,"4 distance as a prior vs no distance, in New C","New C, distance as a prior","New C, no distance",13,9,0.019,0.0174
+first_half,0.025,"4 distance as a prior vs no distance, in New C","New C, distance as a prior","New C, no distance",16,9,0.0224,0.0225
+first_half,0.03,"4 distance as a prior vs no distance, in New C","New C, distance as a prior","New C, no distance",18,8,0.0261,0.026
+first_half,0.04,"4 distance as a prior vs no distance, in New C","New C, distance as a prior","New C, no distance",18,9,0.0366,0.0362
+second_half,0.016,"4 distance as a prior vs no distance, in New C","New C, distance as a prior","New C, no distance",8,6,0.0206,0.0201
+second_half,0.018,"4 distance as a prior vs no distance, in New C","New C, distance as a prior","New C, no distance",11,9,0.0187,0.018
+second_half,0.02,"4 distance as a prior vs no distance, in New C","New C, distance as a prior","New C, no distance",12,7,0.0204,0.0201
+second_half,0.025,"4 distance as a prior vs no distance, in New C","New C, distance as a prior","New C, no distance",15,11,0.0244,0.0243
+second_half,0.03,"4 distance as a prior vs no distance, in New C","New C, distance as a prior","New C, no distance",17,11,0.0292,0.0285
+second_half,0.04,"4 distance as a prior vs no distance, in New C","New C, distance as a prior","New C, no distance",18,12,0.0389,0.0386
+all,0.016,"5 asin(sqrt) vs raw beta, in New C",New C,"New C, raw-beta S",8,5,0.0197,0.0173
+all,0.018,"5 asin(sqrt) vs raw beta, in New C",New C,"New C, raw-beta S",11,9,0.0176,0.0154
+all,0.02,"5 asin(sqrt) vs raw beta, in New C",New C,"New C, raw-beta S",14,13,0.0169,0.015
+all,0.025,"5 asin(sqrt) vs raw beta, in New C",New C,"New C, raw-beta S",15,10,0.0218,0.0197
+all,0.03,"5 asin(sqrt) vs raw beta, in New C",New C,"New C, raw-beta S",18,12,0.024,0.0235
+all,0.04,"5 asin(sqrt) vs raw beta, in New C",New C,"New C, raw-beta S",18,11,0.033,0.0329
+first_half,0.016,"5 asin(sqrt) vs raw beta, in New C",New C,"New C, raw-beta S",8,6,0.02,0.0161
+first_half,0.018,"5 asin(sqrt) vs raw beta, in New C",New C,"New C, raw-beta S",10,9,0.0187,0.0151
+first_half,0.02,"5 asin(sqrt) vs raw beta, in New C",New C,"New C, raw-beta S",14,10,0.0161,0.0154
+first_half,0.025,"5 asin(sqrt) vs raw beta, in New C",New C,"New C, raw-beta S",17,13,0.019,0.0178
+first_half,0.03,"5 asin(sqrt) vs raw beta, in New C",New C,"New C, raw-beta S",18,11,0.023,0.0229
+first_half,0.04,"5 asin(sqrt) vs raw beta, in New C",New C,"New C, raw-beta S",18,13,0.0323,0.0322
+second_half,0.016,"5 asin(sqrt) vs raw beta, in New C",New C,"New C, raw-beta S",8,5,0.0198,0.0168
+second_half,0.018,"5 asin(sqrt) vs raw beta, in New C",New C,"New C, raw-beta S",11,9,0.0177,0.0153
+second_half,0.02,"5 asin(sqrt) vs raw beta, in New C",New C,"New C, raw-beta S",13,10,0.0181,0.0152
+second_half,0.025,"5 asin(sqrt) vs raw beta, in New C",New C,"New C, raw-beta S",16,8,0.0213,0.021
+second_half,0.03,"5 asin(sqrt) vs raw beta, in New C",New C,"New C, raw-beta S",17,10,0.0259,0.0237
+second_half,0.04,"5 asin(sqrt) vs raw beta, in New C",New C,"New C, raw-beta S",18,9,0.0341,0.0339
+all,0.016,"6 asin(sqrt) vs raw beta, in Codex F","New C, dCor excess",Codex F,8,3,0.0227,0.0208
+all,0.018,"6 asin(sqrt) vs raw beta, in Codex F","New C, dCor excess",Codex F,10,3,0.0216,0.0188
+all,0.02,"6 asin(sqrt) vs raw beta, in Codex F","New C, dCor excess",Codex F,14,6,0.0189,0.0181
+all,0.025,"6 asin(sqrt) vs raw beta, in Codex F","New C, dCor excess",Codex F,15,9,0.0247,0.0229
+all,0.03,"6 asin(sqrt) vs raw beta, in Codex F","New C, dCor excess",Codex F,18,12,0.0267,0.0262
+all,0.04,"6 asin(sqrt) vs raw beta, in Codex F","New C, dCor excess",Codex F,12,6,0.0331,0.0322
+first_half,0.016,"6 asin(sqrt) vs raw beta, in Codex F","New C, dCor excess",Codex F,8,4,0.0231,0.0211
+first_half,0.018,"6 asin(sqrt) vs raw beta, in Codex F","New C, dCor excess",Codex F,10,5,0.0212,0.0183
+first_half,0.02,"6 asin(sqrt) vs raw beta, in Codex F","New C, dCor excess",Codex F,14,8,0.018,0.0178
+first_half,0.025,"6 asin(sqrt) vs raw beta, in Codex F","New C, dCor excess",Codex F,15,9,0.0191,0.0201
+first_half,0.03,"6 asin(sqrt) vs raw beta, in Codex F","New C, dCor excess",Codex F,15,11,0.0199,0.0213
+first_half,0.04,"6 asin(sqrt) vs raw beta, in Codex F","New C, dCor excess",Codex F,7,4,0.0244,0.0279
+second_half,0.016,"6 asin(sqrt) vs raw beta, in Codex F","New C, dCor excess",Codex F,8,5,0.0226,0.0206
+second_half,0.018,"6 asin(sqrt) vs raw beta, in Codex F","New C, dCor excess",Codex F,11,6,0.0203,0.0187
+second_half,0.02,"6 asin(sqrt) vs raw beta, in Codex F","New C, dCor excess",Codex F,12,7,0.0218,0.0185
+second_half,0.025,"6 asin(sqrt) vs raw beta, in Codex F","New C, dCor excess",Codex F,15,7,0.026,0.0245
+second_half,0.03,"6 asin(sqrt) vs raw beta, in Codex F","New C, dCor excess",Codex F,17,11,0.0302,0.0295
+second_half,0.04,"6 asin(sqrt) vs raw beta, in Codex F","New C, dCor excess",Codex F,17,10,0.0402,0.0401
+all,0.016,"7 shrunk Spearman vs dCor, in New C",New C,"New C, dCor excess",8,0,0.0197,0.0227
+all,0.018,"7 shrunk Spearman vs dCor, in New C",New C,"New C, dCor excess",10,1,0.0176,0.0216
+all,0.02,"7 shrunk Spearman vs dCor, in New C",New C,"New C, dCor excess",14,3,0.0169,0.0189
+all,0.025,"7 shrunk Spearman vs dCor, in New C",New C,"New C, dCor excess",15,0,0.0218,0.0247
+all,0.03,"7 shrunk Spearman vs dCor, in New C",New C,"New C, dCor excess",18,3,0.024,0.0267
+all,0.04,"7 shrunk Spearman vs dCor, in New C",New C,"New C, dCor excess",12,1,0.033,0.0331
+first_half,0.016,"7 shrunk Spearman vs dCor, in New C",New C,"New C, dCor excess",8,1,0.02,0.0231
+first_half,0.018,"7 shrunk Spearman vs dCor, in New C",New C,"New C, dCor excess",10,1,0.0187,0.0212
+first_half,0.02,"7 shrunk Spearman vs dCor, in New C",New C,"New C, dCor excess",14,3,0.0161,0.018
+first_half,0.025,"7 shrunk Spearman vs dCor, in New C",New C,"New C, dCor excess",15,4,0.019,0.0191
+first_half,0.03,"7 shrunk Spearman vs dCor, in New C",New C,"New C, dCor excess",15,5,0.023,0.0199
+first_half,0.04,"7 shrunk Spearman vs dCor, in New C",New C,"New C, dCor excess",7,5,0.0323,0.0244
+second_half,0.016,"7 shrunk Spearman vs dCor, in New C",New C,"New C, dCor excess",8,2,0.0198,0.0226
+second_half,0.018,"7 shrunk Spearman vs dCor, in New C",New C,"New C, dCor excess",11,2,0.0177,0.0203
+second_half,0.02,"7 shrunk Spearman vs dCor, in New C",New C,"New C, dCor excess",12,4,0.0181,0.0218
+second_half,0.025,"7 shrunk Spearman vs dCor, in New C",New C,"New C, dCor excess",15,2,0.0213,0.026
+second_half,0.03,"7 shrunk Spearman vs dCor, in New C",New C,"New C, dCor excess",17,2,0.0259,0.0302
+second_half,0.04,"7 shrunk Spearman vs dCor, in New C",New C,"New C, dCor excess",17,1,0.0341,0.0402
+all,0.016,8 planned New C vs Codex F,New C,Codex F,8,2,0.0197,0.0208
+all,0.018,8 planned New C vs Codex F,New C,Codex F,11,2,0.0176,0.0188
+all,0.02,8 planned New C vs Codex F,New C,Codex F,14,6,0.0169,0.0181
+all,0.025,8 planned New C vs Codex F,New C,Codex F,15,6,0.0218,0.0229
+all,0.03,8 planned New C vs Codex F,New C,Codex F,18,5,0.024,0.0262
+all,0.04,8 planned New C vs Codex F,New C,Codex F,15,2,0.033,0.0322
+first_half,0.016,8 planned New C vs Codex F,New C,Codex F,8,1,0.02,0.0211
+first_half,0.018,8 planned New C vs Codex F,New C,Codex F,10,1,0.0187,0.0183
+first_half,0.02,8 planned New C vs Codex F,New C,Codex F,14,4,0.0161,0.0178
+first_half,0.025,8 planned New C vs Codex F,New C,Codex F,16,8,0.019,0.0201
+first_half,0.03,8 planned New C vs Codex F,New C,Codex F,17,6,0.023,0.0213
+first_half,0.04,8 planned New C vs Codex F,New C,Codex F,15,9,0.0323,0.0279
+second_half,0.016,8 planned New C vs Codex F,New C,Codex F,8,3,0.0198,0.0206
+second_half,0.018,8 planned New C vs Codex F,New C,Codex F,11,5,0.0177,0.0187
+second_half,0.02,8 planned New C vs Codex F,New C,Codex F,13,6,0.0181,0.0185
+second_half,0.025,8 planned New C vs Codex F,New C,Codex F,16,6,0.0213,0.0245
+second_half,0.03,8 planned New C vs Codex F,New C,Codex F,17,4,0.0259,0.0295
+second_half,0.04,8 planned New C vs Codex F,New C,Codex F,18,2,0.0341,0.0401
+all,0.016,"9 F, guarded vs Codex F","F, guarded",Codex F,9,2,0.0173,0.0208
+all,0.018,"9 F, guarded vs Codex F","F, guarded",Codex F,12,2,0.0154,0.0188
+all,0.02,"9 F, guarded vs Codex F","F, guarded",Codex F,15,1,0.015,0.0181
+all,0.025,"9 F, guarded vs Codex F","F, guarded",Codex F,16,3,0.0198,0.0229
+all,0.03,"9 F, guarded vs Codex F","F, guarded",Codex F,18,3,0.0232,0.0262
+all,0.04,"9 F, guarded vs Codex F","F, guarded",Codex F,15,1,0.0334,0.0322
+first_half,0.016,"9 F, guarded vs Codex F","F, guarded",Codex F,9,0,0.0161,0.0211
+first_half,0.018,"9 F, guarded vs Codex F","F, guarded",Codex F,12,0,0.0152,0.0183
+first_half,0.02,"9 F, guarded vs Codex F","F, guarded",Codex F,14,3,0.0152,0.0178
+first_half,0.025,"9 F, guarded vs Codex F","F, guarded",Codex F,17,6,0.0174,0.0201
+first_half,0.03,"9 F, guarded vs Codex F","F, guarded",Codex F,17,3,0.0222,0.0213
+first_half,0.04,"9 F, guarded vs Codex F","F, guarded",Codex F,15,5,0.0324,0.0279
+second_half,0.016,"9 F, guarded vs Codex F","F, guarded",Codex F,9,1,0.017,0.0206
+second_half,0.018,"9 F, guarded vs Codex F","F, guarded",Codex F,12,2,0.0153,0.0187
+second_half,0.02,"9 F, guarded vs Codex F","F, guarded",Codex F,15,3,0.0151,0.0185
+second_half,0.025,"9 F, guarded vs Codex F","F, guarded",Codex F,16,2,0.0208,0.0245
+second_half,0.03,"9 F, guarded vs Codex F","F, guarded",Codex F,17,2,0.0237,0.0295
+second_half,0.04,"9 F, guarded vs Codex F","F, guarded",Codex F,18,0,0.0346,0.0401
+all,0.016,"10 F, sign guard only vs Codex F","F, sign guard only",Codex F,9,0,0.0208,0.0208
+all,0.018,"10 F, sign guard only vs Codex F","F, sign guard only",Codex F,12,0,0.0188,0.0188
+all,0.02,"10 F, sign guard only vs Codex F","F, sign guard only",Codex F,15,0,0.0181,0.0181
+all,0.025,"10 F, sign guard only vs Codex F","F, sign guard only",Codex F,16,0,0.0229,0.0229
+all,0.03,"10 F, sign guard only vs Codex F","F, sign guard only",Codex F,18,0,0.0262,0.0262
+all,0.04,"10 F, sign guard only vs Codex F","F, sign guard only",Codex F,15,1,0.0322,0.0322
+first_half,0.016,"10 F, sign guard only vs Codex F","F, sign guard only",Codex F,9,0,0.0211,0.0211
+first_half,0.018,"10 F, sign guard only vs Codex F","F, sign guard only",Codex F,12,0,0.0183,0.0183
+first_half,0.02,"10 F, sign guard only vs Codex F","F, sign guard only",Codex F,14,0,0.0178,0.0178
+first_half,0.025,"10 F, sign guard only vs Codex F","F, sign guard only",Codex F,17,0,0.0201,0.0201
+first_half,0.03,"10 F, sign guard only vs Codex F","F, sign guard only",Codex F,17,0,0.0213,0.0213
+first_half,0.04,"10 F, sign guard only vs Codex F","F, sign guard only",Codex F,15,0,0.0279,0.0279
+second_half,0.016,"10 F, sign guard only vs Codex F","F, sign guard only",Codex F,9,0,0.0206,0.0206
+second_half,0.018,"10 F, sign guard only vs Codex F","F, sign guard only",Codex F,12,0,0.0187,0.0187
+second_half,0.02,"10 F, sign guard only vs Codex F","F, sign guard only",Codex F,15,0,0.0185,0.0185
+second_half,0.025,"10 F, sign guard only vs Codex F","F, sign guard only",Codex F,16,0,0.0245,0.0245
+second_half,0.03,"10 F, sign guard only vs Codex F","F, sign guard only",Codex F,17,0,0.0295,0.0295
+second_half,0.04,"10 F, sign guard only vs Codex F","F, sign guard only",Codex F,18,4,0.0401,0.0401

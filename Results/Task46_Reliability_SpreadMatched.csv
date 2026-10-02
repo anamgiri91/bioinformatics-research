@@ -1,0 +1,6 @@
+flag,flagged_pairs,matched_pairs,error_diff_raw,error_diff_matched,gain_diff_raw,gain_diff_matched,bins_flagged_worse_error,bins_flagged_lower_gain,bins
+in_repeat,6093,6093,0.0137,0.0042,-1e-04,-0.0023,15,18,20
+SINE,2864,2864,0.0344,0.0114,-1e-04,-0.005,17,19,20
+simple_or_low_complexity,1809,1809,-0.0424,-0.0079,-0.0095,0.0011,1,6,20
+low_map,4437,4437,0.0337,0.0108,0.0016,-0.0037,18,18,20
+not_unique,1544,1544,0.0334,0.0161,-0.0034,-0.0064,18,20,20
