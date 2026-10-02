@@ -1814,7 +1814,80 @@ Files: `Scripts/SharedReadNoise.Section6.R`,
 
 ### 16.12 The second external test (Task 65)
 
-Running under the Task 64 lock.
+The test ran once, under the Task 64 lock, on the 46 plasma controls. Of
+the 1,311,610 pairs in the universe, 995,729 had at least 20 eligible
+donors.
+
+| Locked outcome | Blood, same study (Task 59) | Plasma, another lab (Task 65) |
+|---|---|---|
+| Pairs | 4,408,849 | 995,729 |
+| Primary endpoint, Delta MSE | -9.3e-6 | -3.5e-5 |
+| 95% interval (bias-corrected) | -1.10e-5 to -8.2e-6 | -4.2e-5 to -2.9e-5 |
+| Verdict | met | **met** |
+| Change in squared error | -48% | -48% |
+| Sensitivity: pairs at most 40 bp apart | not run | -3.8e-5 (-4.5e-5 to -3.2e-5) |
+| Squared disagreement | closer | closer (Delta MSE -6.3e-4) |
+
+What it shows:
+
+- **The correction passed a second locked test, on another lab's data.**
+  - The lab, the assay (targeted capture of cfDNA) and the pipeline were
+    all different.
+  - The plain percentile interval also excludes 0 (-3.3e-5 to -2.1e-5).
+- **The unmerged-mates limit did not drive the result.** Pairs at most
+  40 bp apart, where that limit barely applies, give the same answer.
+- **The corrected covariance again matches the reference on average.**
+  - Observed: 0.00446. Corrected: 0.00128. Reference: 0.00128.
+  - So the observed value is 3.5 times too large. In the A third of the
+    reads, 71% of it is shared-read noise.
+- **The noise ends where molecules end.** cfDNA fragments are about 167 bp
+  long.
+  - The noise term falls with distance and is exactly 0 for pairs 150 to
+    200 bp apart. No molecule covers both sites there, and the correction
+    changes nothing, as it should.
+  - In the RRBS cohorts it was still present at 200 bp.
+- **The shape of the distance curve changes.** The observed covariance
+  falls 85% from 0-10 bp to 150-200 bp. The noise-free reference falls
+  about 47%.
+- **Every stratum with shared reads improves.**
+  - By distance: -54% at 0 to 10 bp and -25% at 40 to 60 bp.
+  - By depth: -47% to -49%.
+  - Pairs that share under half of their reads show no real change.
+- **The section 6 comparisons repeat the development results**
+  (descriptive):
+
+  | | Pearson | Variance-only | Full correction | Ding & Gentleman |
+  |---|---|---|---|---|
+  | Valid share | 93% | 8% | 13% | 64% converged (2,000 pairs) |
+  | MSE against the reference, 23,100 common pairs | **0.221** | 0.350 | 0.400 | not run |
+  | MSE, 166 pairs where all four are valid | **0.214** | 0.358 | 0.375 | 0.765 |
+
+  | Ranking score (all pairs average: 1.1e-2) | Top 1% | Top 10% | Top 25% |
+  |---|---|---|---|
+  | Observed squared disagreement | **6.5e-5** | 1.4e-4 | 2.4e-4 |
+  | Manhattan agreement | **6.5e-5** | **1.2e-4** | **2.3e-4** |
+  | Frozen F+ | 7.3e-5 | 1.6e-4 | 3.1e-4 |
+  | Corrected, positive part + 1.645 SE | 1.8e-4 | 1.6e-4 | 2.6e-4 |
+  | Corrected (plain) | 5.8e-3 | 3.4e-3 | 2.1e-3 |
+  | Spearman | 1.3e-3 | 4.9e-3 | 7.8e-3 |
+
+  The main ranking comparison stated in the lock compares the corrected
+  variant with the observed score and with F+. The corrected variant is
+  worse than the observed score at 1% and 5%, and similar at 10%. At 25%
+  it falls between the observed score and F+.
+- **What this does not show.**
+  - Other tissues: cfDNA from healthy people comes mostly from blood
+    cells.
+  - Whole-genome bisulfite data with long fragments, where many mates are
+    not merged.
+  - That no PCR copies remain after deduplication by position.
+
+Files: `Scripts/Task65.SharedReadNoise.ExternalTest2.Oct01.2026.R` and
+`.Rout`, `Results/Task65_Primary.csv`, `Task65_ByStratum.csv`,
+`Task65_CorrelationRecovery.csv`, `Task65_Ranking.csv`,
+`Task65_MEcorBaseline.csv`, `Results/Fig46_ExternalTest2.png`.
+
+![The second locked external test, by distance, depth and overlap](Results/Fig46_ExternalTest2.png)
 
 ### 16.13 Where this leaves the work
 
@@ -1824,15 +1897,22 @@ Running under the Task 64 lock.
 - **The correction works under its assumptions.** It uses each donor's joint
   read states. In simulation it is unbiased when the model holds.
 - **It works on real data.** Against a reference that shares no reads, it
-  cuts the squared error by 41% in colon (development) and by 48% in blood
-  (the locked external test).
-- **It helps covariance, not correlation or ranking.** In development, a
-  corrected correlation did worse than plain Pearson. Ranking pairs by the
-  corrected disagreement found truly similar pairs less well than the
-  observed disagreement (16.11).
+  cuts the squared error:
+  - by 41% in colon (development);
+  - by 48% in blood (the first locked test, same study);
+  - by 48% in plasma from another lab, assay and pipeline (the second
+    locked test).
+
+  In both locked tests, the corrected covariance matched the noise-free
+  reference on average.
+- **It helps covariance, not correlation or ranking.** In development and
+  in plasma:
+  - a corrected correlation did worse than plain Pearson;
+  - ranking pairs by the corrected disagreement found truly similar pairs
+    less well than the observed disagreement (16.11, 16.12).
 - **Not yet shown.**
-  - Other labs, pipelines and assays. The second external test (16.12)
-    addresses this.
+  - Tissues other than blood-derived samples and colon.
+  - Whole-genome bisulfite data and long reads.
   - Robustness when PCR copies remain.
 - **Possibly new, not proven new.** The subtraction is known: CompDTUme
   does it for transcripts. What may be new is the closed-form estimate from
@@ -1842,10 +1922,14 @@ Running under the Task 64 lock.
 
 1. ~~**Finish the prior-art search.**~~ **Done** (16.9). It found
    CompDTUme, which makes the novelty claim narrower.
-2. **A second cohort from a different lab and pipeline.** Chosen,
-   screened and locked (16.10). The test is running (16.12).
-3. ~~**The plan's section 6 comparisons.**~~ **Developed** on colon
-   (16.11). They are locked for the second cohort as descriptive results.
+2. ~~**A second cohort from a different lab and pipeline.**~~ **Done**
+   (16.10, 16.12). It met the locked primary criterion.
+3. ~~**The plan's section 6 comparisons.**~~ **Done** in development
+   (16.11) and in the second cohort (16.12). None favours the correction.
+4. **To make the finding more useful** (not started):
+   - show that it changes a standard analysis, such as the fall of
+     co-methylation with distance, or calling co-methylated regions;
+   - add a whole-genome bisulfite cohort with long fragments.
 
 ---
 
