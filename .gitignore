@@ -110,3 +110,10 @@ Results/Task39_RRBS_SiteSummary.csv.gz
 # sites are not named, but each can be found from the public per-site
 # medians, so it is treated like the site summary (a borderline call).
 Results/Fig21_RRBS_StateDefinitions.png
+
+# ---------- Raw GEO and CNGB metadata dumps (Task 68) ----------
+# Full GEO sample records include per-person traits (for example height
+# and weight in GSE186888) that no analysis needs. The run reports and
+# manifests derived from them are committed instead.
+Results/Task68_Metadata/*.soft
+Results/Task68_Metadata/*.html

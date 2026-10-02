@@ -1,0 +1,26 @@
+[
+  {
+    "file": "PRJNA698569_ena.tsv",
+    "url": "https://www.ebi.ac.uk/ena/portal/api/filereport?accession=PRJNA698569&result=read_run&fields=run_accession%2Csample_accession%2Csample_title%2Clibrary_strategy%2Clibrary_layout%2Cread_count%2Cbase_count%2Cfastq_bytes%2Csubmitted_format%2Csubmitted_bytes&format=tsv",
+    "bytes": 5563,
+    "ok": true
+  },
+  {
+    "file": "CNP0003513_resource.html",
+    "url": "https://db.cngb.org/data_resources/project/CNP0003513",
+    "bytes": 1961,
+    "ok": true
+  },
+  {
+    "file": "CNP0005464_resource.html",
+    "url": "https://db.cngb.org/data_resources/project/CNP0005464",
+    "bytes": 1961,
+    "ok": true
+  },
+  {
+    "file": "Steiger2026.html",
+    "url": "https://www.biorxiv.org/content/10.64898/2026.07.27.740934v1.full",
+    "ok": false,
+    "error": "HTTP Error 403: Forbidden"
+  }
+]

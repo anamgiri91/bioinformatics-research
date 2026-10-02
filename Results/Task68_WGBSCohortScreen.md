@@ -1,5 +1,15 @@
 # Task 68: screening WGBS cohorts for an independent test (metadata only)
 
+**Update, 2026-10-02:** the user selected GSE165915 and deferred the plasma
+redo. The [current cluster preparation record](Task68_ClusterExecution.md)
+supersedes the provisional coverage and processing assumptions below.
+Published usable coverage is roughly **4×**, whereas the earlier ~9× was
+computed from raw bases. The sperm libraries require TruSeq-specific
+trimming, not the Swift plasma settings. Two counts-only pilots and a
+52-donor array are prepared; no cluster job has been submitted because SSH
+authentication failed. Counts-only feasibility precedes the final outcome
+protocol lock; no sperm methylation outcomes have been inspected.
+
 Recorded on 2026-10-01. This is step 3 of the next steps in
 `plan_shared_read_noise.md`: choose an independent whole-genome bisulfite
 cohort from metadata, with recoverable whole-fragment identity and enough
@@ -27,7 +37,7 @@ donors and coverage.
 
 | Series | What it is | Donors of one type | Raw reads | Size | Verdict |
 |---|---|---|---|---|---|
-| **GSE165915** (PRJNA698569) | Sperm WGBS, men from the Faroe Islands (George Washington University) | **52** | **Public, paired 2 x 150** | about 90 M pairs each (about 9x); **743 GB** of FASTQ | **Best candidate.** It needs a cluster |
+| **GSE165915** (PRJNA698569) | Sperm WGBS, men from the Faroe Islands (George Washington University) | **52** | **Public, paired 2 x 150** | about 90 M pairs each; published usable coverage ~4×; **743 GB** of FASTQ | **Selected.** Split-coverage feasibility is untested |
 | GSE173787 (PRJNA727170) | CD19 B cells from blood, multiple sclerosis study | up to 133, patients and controls mixed | Public, paired | about 165 M pairs each; 817 GB | Second choice. Disease status is mixed, and it needs a cluster |
 | GSE186888 | White blood cells, WGBS, "CNVS-NORM" donors | 46 | **None linked in GEO** (no SRA relation) | not known | Fails: whole fragments cannot be rebuilt from GEO |
 | GSE107729 (PRJNA421218) | Sorted brain neurons and oligodendrocytes, schizophrenia study | 53 NeuN+ (25 controls) | Public, paired | about 463 M pairs each; **15.4 TB** | Too large; few controls of one type |
@@ -48,9 +58,10 @@ donors and coverage.
   CpG pairs will be nearly constant. Constant pairs carry little
   shared-read covariance, so the test's power will rest on the variable
   pairs.
-- **Depth is moderate.** At about 9x, the split leaves about 3 reads per
-  part. Many CpG pairs will fail the eligibility rule, so the pair count
-  could be far below that of the earlier tests.
+- **Depth may be limiting.** At roughly 4× usable coverage, equal splitting
+  averages only about 1.3 reads per part. Eligibility requires at least two
+  reads at both sites in every part, so feasibility must be measured from
+  counts rather than inferred from raw sequencing yield.
 - **Exposure groups.** The cohort was chosen for high organochlorine
   exposure. That is a population trait, not a mixture of tissues, but it
   should be recorded as a covariate.
@@ -61,12 +72,16 @@ hundred CPU hours, so it is a job for the leap2 cluster. On the laptop, a
 pilot of one or two donors could check depth and fragment structure
 first. That would cost about 15 GB and a few hours per donor.
 
-## Before any cluster run
+## Current execution gates
 
-1. Freeze the reconstruction rules from the Task 66 pilot: trimming,
-   alignment, duplicate policy, mate linkage and conflict handling.
-2. Write the locked protocol: the Task 64 endpoint, with partitions
-   assigned per whole fragment. Calibrate the interval for this design
-   (depth about 9x, sperm-like spread) in simulation first.
-3. Hash the sample list, code and reference, and commit the lock before
-   processing any methylation data.
+1. Verify cluster access, tools, reference and storage; run the two
+   metadata-selected counts-only pilots with TruSeq-specific trimming,
+   paired deduplication and whole-fragment partitions.
+2. After pilot QC, measure coverage eligibility across all 52 donors.
+   Keep methylation states out of the feasibility summaries.
+3. Calibrate the interval for the observed coverage/missingness design and
+   sperm-like spread. Finalize conflict handling and use the Task 64
+   covariance-error endpoint, with the Task 67 absolute contrast secondary.
+4. Hash the sample list, code, settings and reference, and commit the final
+   lock before computing or inspecting methylation outcomes. Do not claim
+   this metadata screen or the counts-only pilot is a completed external test.

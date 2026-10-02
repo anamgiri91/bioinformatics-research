@@ -1,0 +1,9 @@
+{
+  "status": "metadata-only cohort choice; not an external-analysis lock",
+  "donors": 52,
+  "compressed_fastq_bytes": 742806907554,
+  "sources": {
+    "Results/Task68_Metadata/GSE165915.soft": "6c7863b257e2899360dface90c43158775454021cf5fef9602fea3880b9744ad",
+    "Results/Task68_Metadata/PRJNA698569_files.tsv": "583ca02c2168432c4e509bc8547b6a4f3313c487f1efbfa13825940c9ce86700"
+  }
+}
