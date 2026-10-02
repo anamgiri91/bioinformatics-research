@@ -1,0 +1,8 @@
+example,D,D0,Dmin,Dmax,alignment_scale,absolute_similarity,linear_kappa,centered_alignment,piecewise_alignment_rejected
+identical_constant,0,0,0,0,0,1,,,
+different_constants,9,9,9,9,0,0,0,,
+identical_varying,0,2.96296296296296,0,4.44444444444444,2.96296296296296,1,1,1,1
+inverse_varying,4.44444444444444,2.96296296296296,0,4.44444444444444,2.96296296296296,0.506172839506173,-0.5,-0.5,-1
+shifted_perfect_correlation,7,7,7,7,0,0.222222222222222,0,,
+shared_single_rare_patient,0,0.944444444444445,0,1,0.944444444444445,1,1,1,1
+separate_rare_patients,1,0.944444444444445,0,1,0.944444444444445,0.888888888888889,-0.0588235294117638,-0.0588235294117637,-1

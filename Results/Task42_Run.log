@@ -1,0 +1,30 @@
+PASS: exhaustive null mean and bounds; rare-event counterexample; disjoint-support degeneracy
+PASS: candidate equals scaled weighted kappa; same per-pair permutation p-values as L1
+   pairs defined defined_share median_absolute_similarity
+   <int>   <int>         <num>                      <num>
+1: 32664   24697     0.7560923                   0.962963
+   median_centered_alignment median_linear_kappa share_positive_given_defined
+                       <num>               <num>                        <num>
+1:                 0.6516129           0.2702703                    0.8430174
+   share_at_plus_one_given_defined share_at_minus_one_given_defined
+                             <num>                            <num>
+1:                       0.2346034                      0.001336195
+   max_weighted_kappa_equivalence_error
+                                  <num>
+1:                         5.107026e-15
+        measure     null_mean null_mean_q025 null_mean_q975 sampled_pairs
+         <char>         <num>          <num>          <num>         <int>
+1:     centered  0.0003788887    -0.06274490     0.09906693           512
+2:    piecewise -0.2906142056    -0.39352751    -0.14187923           512
+3: linear_kappa  0.0005523356    -0.03065484     0.05143748           512
+   permutations candidate_vs_L1_permutation_p_mismatches
+          <int>                                    <int>
+1:          199                                        0
+2:          199                                        0
+3:          199                                        0
+   sampled_pairs full_defined full_defined_becomes_undefined_when_one_removed
+           <int>        <int>                                           <int>
+1:           512          383                                              83
+   median_absolute_change q95_absolute_change max_absolute_change
+                    <num>               <num>               <num>
+1:             0.00836913           0.1201263            0.924031

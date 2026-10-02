@@ -1,0 +1,12 @@
+{
+  "input_md5": "2694e03ae196b462b5fc3b65a6337792",
+  "seed": 20260928,
+  "complete_consecutive_pairs": 32664,
+  "bins": 10,
+  "permutation_pairs": 512,
+  "permutations": 199,
+  "definition": "C=(D0-D)/max(D0-Dmin,Dmax-D0); undefined when denominator<=1e-12",
+  "novelty": "A proposed descriptor derived from weighted kappa; not established as a new correlation",
+  "script_md5": "5d22487463c4ba632a7a804ff85ecfe9",
+  "R_version": "R version 4.6.0 (2026-04-24)"
+}
