@@ -1,0 +1,7 @@
+window,state,sites,cells,IQR2_low,IQR2_normal,IQR2_high,pct_IQR2_low,pct_IQR2_normal,pct_IQR2_high,IQR3_low,IQR3_high,pct_IQR3_low,pct_IQR3_high
+index100,LM,5,90,0,90,0,0,1,0,0,0,0,0
+index100,M,4,72,0,72,0,0,1,0,0,0,0,0
+index100,HM,37,666,17,649,0,0.0255,0.9745,0,8,0,0.012,0
+index100,R,54,972,20,951,1,0.0206,0.9784,0.001,4,0,0.0041,0
+tight100,L,72,1296,0,1163,133,0,0.8974,0.1026,0,128,0,0.0988
+tight100,LM,28,504,0,437,67,0,0.8671,0.1329,0,65,0,0.129

@@ -1,0 +1,4 @@
+scope,outlier_cells,with_neighbour,share_with_neighbour,share_with_neighbour_shuffled,events_3plus,events_3plus_shuffled,cells_in_events,cells_in_events_shuffled
+all complete sites,48005,22749,0.4739,0.1827,3159,448,13623,1400.2
+index100,38,13,0.3421,0.0342,,,,
+tight100,200,121,0.605,0.2252,,,,
