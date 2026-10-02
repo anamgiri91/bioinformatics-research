@@ -1,0 +1,13 @@
+method,tissue,recall.cells,recall.single,recall.region.events,calls.per.sample.clean,median.calls.per.sample,spike.precision,pct.contrary,shifted.array.burden.ratio,stability,budget.recall.cells,budget.recall.single,budget.recall.region.events,k.used
+SHARP.cpg,Normal,0.5991,0.6123,0.598,479.2,418,0.1429,8.49,0.68,0.6479,0.5806,0.5919,0.5847,12
+SHARP.region,Normal,0.3957,4e-04,0.5938,149.2,99,0.2605,9.28,0.39,0.6836,,,,12
+ext.recon,Normal,0.7031,0.6949,0.7515,9421,5295,0.0102,58.78,13.09,0.1613,0.1835,0.1701,0.1985,
+ext.recon.floor,Normal,0.6159,0.6244,0.6364,3832.8,1530,0.0217,24.85,19.45,0.5049,0.2276,0.2155,0.246,
+SEM.3IQR,Normal,0.6257,0.589,0.6706,5677.8,1039,0.015,1.01,59.53,0.5741,0.3309,0.2701,0.3728,
+bio.stat.dev,Normal,0.7537,0.762,0.7781,14892.2,10447,0.007,0,8.74,0.8086,0.1129,0.1063,0.1243,
+epimut.style,Normal,0.3428,0.0017,0.5229,409.4,95,0.1048,13.5,12.49,0.7343,,,,
+SHARP.cpg,Tumor,,,,3099.5,2811,,3.76,0.94,,0.5806,0.5919,0.5847,12
+SHARP.region,Tumor,,,,1166.1,850,,7.41,1.53,,,,,12
+ext.recon,Tumor,,,,45161.9,41104,,52.64,2.79,,0.1835,0.1701,0.1985,
+SEM.3IQR,Tumor,,,,8747.3,4869,,0.14,10.85,,0.3309,0.2701,0.3728,
+bio.stat.dev,Tumor,,,,14889.2,10936,,0,4.88,,0.1129,0.1063,0.1243,

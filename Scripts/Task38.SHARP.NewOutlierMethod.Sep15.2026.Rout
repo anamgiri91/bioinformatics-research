@@ -1,0 +1,894 @@
+
+R version 4.6.0 (2026-04-24) -- "Because it was There"
+Copyright (C) 2026 The R Foundation for Statistical Computing
+Platform: aarch64-apple-darwin23
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # ================================================================
+> # Task 38 - SHARP: a new outlier detector, built from the literature
+> #           and from this project's own failure analysis
+> # Date: Sep 15, 2026
+> #
+> # THE REQUEST (2026-09-15)
+> #
+> #   "Try out new ways of detecting outliers. Read new papers ... use
+> #    their ideas to invent something new that might work."
+> #
+> # WHY A NEW METHOD, AND WHY A NEW YARDSTICK
+> #
+> #   Tasks 24-37 found five separate things wrong with per-CpG outlier
+> #   flags on this cohort:
+> #     1. single-CpG cutoffs sit inside the array's measurement noise at
+> #        compressed (L, H) sites                           (Tasks 22, 32)
+> #     2. with n = 53 a cohort's own tail is an order statistic, not an
+> #        estimate                                                (Task 13)
+> #     3. non-uniquely mapping probes manufacture flags           (Task 36)
+> #     4. whole arrays (N14, N15, N17) are offset, most visibly on type II
+> #        probes, and dominate every burden ranking          (Tasks 36, 37)
+> #     5. a flag is "extreme" but not necessarily "large"   (Tasks 26, 32)
+> #
+> #   The repo's benchmark so far scores stability under added noise. That
+> #   rewards flagging less, and it has no ground truth. This task adds the
+> #   yardstick used by ramr, OUTRIDER and METAFORA: inject artificial
+> #   epimutations of known size into the real data and measure recall,
+> #   next to the false calls a method makes on the untouched data.
+> #
+> # IDEAS BORROWED, AND WHERE EACH GOES
+> #
+> #   Zhou et al. 2017 (probe masks)        -> step 1, drop M_general probes
+> #   RCP / ENmix (Niu et al. 2016)         -> step 2, remove each array's
+> #                                            design-type offset
+> #   OUTRIDER (Brechtmann 2018), METAFORA  -> step 3, remove hidden factors
+> #   (2026)                                   before scoring; number chosen
+> #                                            by injected outliers (OUTRIDER)
+> #                                            and by Gavish-Donoho (METAFORA)
+> #   limma eBayes (Smyth 2004)             -> step 4, shrink each CpG's scale
+> #                                            toward CpGs like it
+> #   Task 32 measured noise; Borealis      -> step 4, scale never below the
+> #                                            platform's noise; "too small to
+> #                                            call" class
+> #   moderated t (limma); BH FDR           -> step 5, p-values and FDR
+> #   epimutacions, ramr, Garg et al. 2020  -> step 6, >= 3 CpGs within 1 kb
+> #   SEM reliability (Markov et al. 2024)  -> motivation for 4-6: single-CpG
+> #                                            calls at low-variance CpGs
+> #                                            replicate worst
+> #
+> # THE METHOD: SHARP
+> #   S hrunken scale     H armonised arrays     A djusted for hidden factors
+> #   R egion-aware       P robe-masked
+> #
+> #   1. mask    drop probes with Zhou M_general = TRUE
+> #   2. harmonise  for each sample, each probe design (I-red, I-green, II)
+> #              and each tenth of the cohort-median range, subtract the
+> #              sample's median deviation. Removes whole-array offsets;
+> #              a focal event touches too few probes to move a median of
+> #              thousands.
+> #   3. adjust  remove the top k principal components of the residual
+> #              matrix (sample space, 53 x 53, so it is exact and cheap)
+> #   4. scale   per-CpG MAD of the adjusted residuals, shrunk toward the
+> #              median of CpGs with the same design and median bin
+> #              (limma's moment estimator), floored at the Task 32 noise
+> #              level for the CpG's state
+> #   5. test    z = residual / scale, p from a t distribution with the
+> #              moderated degrees of freedom, BH q-values over every cell
+> #   6. call    SHARP.cpg:    q <= 0.05 AND |adjusted delta-beta| >= 0.10
+> #              SHARP.region: seed-and-extend. Runs of >= 3 consecutive
+> #              CpGs (each gap <= 1 kb) with p <= 0.01, |d| >= 0.05, same
+> #              sign, containing at least one SHARP.cpg call, mean |d| >=
+> #              0.10. The extension threshold is what lets a region call
+> #              recover CpGs that are individually too weak.
+> #
+> # COMPARED AGAINST (all computable from local data)
+> #   ext.recon         OutlierMeth ext flags, thresholds reconstructed from
+> #                     the Task 13 flag matrix (bracket midpoint; where a site
+> #                     has no flag on a side, the cohort max/min, which is
+> #                     the most permissive threshold consistent with the
+> #                     observed flags)
+> #   ext.recon.floor   the same + |beta - cohort median| >= 0.10 (Task 26/32)
+> #   SEM.3IQR          Gentilini et al. 2015: beyond Q1 - 3 IQR / Q3 + 3 IQR
+> #   bio.stat.dev      Task 30: state-pooled 96th percentile of deviation
+> #   epimut.style      inspired by epimutacions' quantile method: beyond the
+> #                     leave-one-out 0.5 / 99.5 % quantile, |d| >= 0.15, and
+> #                     >= 3 such CpGs within 1 kb. Not a reimplementation.
+> #
+> # EVALUATION
+> #   A. two independent spike-in sets injected into the real Alive Normal
+> #      matrix, only at unmasked probes: 600 single-CpG and 300 regional
+> #      (3-6 CpGs within 1 kb) events at each mixing fraction pi in
+> #      {0.10, 0.20, 0.35, 0.50}. hyper: b' = b + pi (1 - b); hypo:
+> #      b' = b (1 - pi) - a clonal fraction pi fully (un)methylated.
+> #      Direction follows the state (L/LM up, H/HM down, M/R random).
+> #      Set A chooses k; set B scores everything.
+> #   B. per method, at its own default:   recall by realised |delta-beta|,
+> #      region-event recall (>= 50% of its CpGs), background calls per
+> #      sample on clean data, share contrary to state, burden of the three
+> #      type-II-shifted arrays relative to the median sample, stability
+> #      (signed Jaccard, clean vs clean + N(0, 0.01)).
+> #   C. at a matched false-call budget: each method's continuous score is
+> #      thresholded so that the CLEAN data give 0.1% calls; recall is then
+> #      read off the spiked data. The fair comparison.
+> #   D. ablation: SHARP with each step removed.
+> #   E. real data, both tissues: calls per sample; what happens to
+> #      N14/N15/N17 and T14-T17; the Task 36 sites.
+> #
+> # OUTPUT (all aggregates; no individual value at a named CpG)
+> #   Results/Task38_KSelection.csv, Task38_MethodScores.csv,
+> #   Task38_RecallByEffect.csv, Task38_Ablation.csv,
+> #   Task38_SampleBurden.csv, Task38_Task36Sites.csv
+> #   Results/Fig16_SHARP_Recall.png, Fig17_SHARP_Budget.png,
+> #   Results/Fig18_SHARP_Ablation.png
+> # ================================================================
+> 
+> options(stringsAsFactors = FALSE)
+> suppressPackageStartupMessages({ library(data.table); library(matrixStats) })
+> QUICK <- nzchar(Sys.getenv("TASK38_QUICK"))   # chr21-22, few spikes: a smoke test
+> 
+> pick_dir <- function(...) { for (d in c(...)) if (dir.exists(d)) return(d)
++   stop("no candidate directory exists") }
+> src_dir <- pick_dir(
++   "/home/s_s355/research3.data/TCGA/filter.BRCA.UCEC.Aug17.2022/sorted.TCGA.380355cg.files",
++   path.expand("~/Downloads/tcga_brca_380355cg"))
+> repo_dir <- pick_dir("/mmfs1/home/wln26/Experiments.Outlier.July31.2026",
++                      path.expand("~/Desktop/bioinformatics-research"))
+> out_dir <- file.path(repo_dir, "Results")
+> inputs <- list(
++   Normal = file.path(src_dir, "Sorted.BRCA.53Alive.Normal.380355cg.75col.May28.2026.txt"),
++   Tumor  = file.path(src_dir, "Sorted.BRCA.53Alive.Tumor.380355cg.75col.May28.2026.txt"))
+> flag_ext <- function(tissue) file.path(out_dir, sprintf("Task13_%s_extref_flags.csv", tissue))
+> 
+> STATES   <- c("L", "LM", "M", "HM", "H", "R")
+> TAIL     <- c(L = "upper", LM = "upper", M = "both", HM = "lower", H = "lower", R = "both")
+> CONTRARY <- c(L = -1, LM = -1, H = 1, HM = 1)
+> Q_FDR    <- 0.05
+> DELTA    <- 0.10
+> EXT_P    <- 0.01; EXT_D <- 0.05; MIN_RUN <- 3; GAP_BP <- 1000
+> PIS      <- c(0.10, 0.20, 0.35, 0.50)
+> N_SINGLE <- if (QUICK) 60 else 600
+> N_REGION <- if (QUICK) 30 else 300
+> K_GRID   <- if (QUICK) c(0, 2, 5) else c(0, 1, 2, 3, 5, 8, 12, 20)
+> BUDGET   <- 0.001
+> NOISE_SD <- 0.01
+> SHIFTED  <- list(Normal = c("N14", "N15", "N17"), Tumor = c("T14", "T15", "T16", "T17"))
+> TASK36_SITES <- c("cg01731685","cg03304299","cg25563983","cg20009101","cg17204569",
++   "cg03966099","cg13472645","cg01474260","cg15668074","cg16234298","cg20353484","cg07885834")
+> 
+> say <- function(...) cat(sprintf(...), "\n", sep = "")
+> write_out <- function(tbl, f) { fwrite(tbl, file.path(out_dir, f))
++   say("  written: %s (%d rows)", file.path(out_dir, f), nrow(tbl)) }
+> t0 <- proc.time()[["elapsed"]]
+> tick <- function(msg) say("[%6.0fs] %s", proc.time()[["elapsed"]] - t0, msg)
+> 
+> say("=========================================================")
+=========================================================
+> say("TASK 38 - SHARP%s", if (QUICK) "  (QUICK smoke test: chr21-22)" else "")
+TASK 38 - SHARP
+> say("=========================================================")
+=========================================================
+> 
+> # ------------------------------------------------
+> # 0. Annotation and measured noise
+> # ------------------------------------------------
+> man <- fread(file.path(repo_dir, "Data/zhou_HM450/HM450.hg38.manifest.tsv.gz"),
++              select = c("Probe_ID", "type", "channel"), showProgress = FALSE)
+> man[, design := ifelse(type == "II", "II", paste0("I.", channel))]
+> msk <- fread(file.path(repo_dir, "Data/zhou_HM450/HM450.hg38.mask.tsv.gz"),
++              select = c("Probe_ID", "M_general"), showProgress = FALSE)
+> noise <- fread(file.path(out_dir, "Task32_MeasuredNoise.csv"))[pair.set == "<= 100 bp"]
+> 
+> load_tissue <- function(tissue) {
++   d <- fread(inputs[[tissue]], sep = "\t", showProgress = FALSE)
++   if (QUICK) d <- d[Chromosome %in% c("chr21", "chr22")]
++   chrn <- suppressWarnings(as.integer(sub("chr", "", d$Chromosome)))
++   chrn[d$Chromosome == "chrX"] <- 23L
++   d <- d[order(chrn, d$Start)]
++   cols <- grep(if (tissue == "Normal") "^N[0-9]+$" else "^T[0-9]+$", names(d), value = TRUE)
++   B <- as.matrix(d[, ..cols])
++   meta <- data.table(id = d$Composite.Element.REF, chr = d$Chromosome, pos = d$Start,
++                      st = d$methy.state)
++   meta[, design := man$design[match(id, man$Probe_ID)]]
++   meta[is.na(design), design := "II"]
++   meta[, masked := id %in% msk[M_general == TRUE, Probe_ID]]
++   meta[, link := c(FALSE, chr[-1] == chr[-.N] & diff(pos) <= GAP_BP)]
++   sg <- noise[noise$tissue == tissue]
++   fallback <- sg[methy.state == "ALL", sigma.p10]
++   meta[, sigma.tech := sg$sigma.p10[match(st, sg$methy.state)]]
++   meta[is.na(sigma.tech), sigma.tech := fallback]
++   list(B = B, meta = meta, cols = cols)
++ }
+> 
+> # ------------------------------------------------
+> # helpers
+> # ------------------------------------------------
+> trigammaInverse <- function(x) {            # limma's Newton iteration
++   y <- 0.5 + 1 / x
++   for (i in 1:60) { tri <- trigamma(y); dif <- tri * (1 - tri / x) / psigamma(y, 2)
++     y <- y + dif; if (max(-dif / y) < 1e-8) break }
++   y
++ }
+> fit_prior <- function(s2, d) {              # limma fitFDist, method of moments
++   s2 <- pmax(s2, 1e-10); e <- log(s2) - digamma(d / 2) + log(d / 2)
++   evar <- var(e) - trigamma(d / 2)
++   if (evar > 0) { d0 <- 2 * trigammaInverse(evar)
++     s02 <- exp(mean(e) + digamma(d0 / 2) - log(d0 / 2)) }
++   else { d0 <- Inf; s02 <- exp(mean(e)) }
++   c(d0 = d0, s02 = s02)
++ }
+> 
+> # runs of consecutive same-sign candidate CpGs linked by <= 1 kb, >= MIN_RUN
+> # long; returns a logical matrix of cells belonging to a qualifying run
+> run_calls <- function(S, link, seed = NULL, D = NULL, min_mean = NULL) {
++   out <- matrix(FALSE, nrow(S), ncol(S))
++   n <- nrow(S)
++   for (j in seq_len(ncol(S))) {
++     s <- S[, j]; idx <- which(s != 0); if (length(idx) < MIN_RUN) next
++     prev_same <- c(FALSE, s[-1] != 0 & s[-1] == s[-n] & link[-1])
++     rid <- cumsum(!prev_same)[idx]
++     dt <- data.table(i = idx, rid = rid)
++     if (!is.null(seed)) dt[, sd := seed[idx, j]]
++     if (!is.null(D)) dt[, ad := abs(D[idx, j])]
++     keep <- dt[, .(ok = .N >= MIN_RUN &&
++                       (is.null(seed) || any(sd)) &&
++                       (is.null(min_mean) || mean(ad) >= min_mean)), by = rid][ok == TRUE, rid]
++     out[dt[rid %in% keep, i], j] <- TRUE
++   }
++   out
++ }
+> 
+> # ------------------------------------------------
+> # SHARP
+> # ------------------------------------------------
+> sharp <- function(B, meta, k = "gd", mask = TRUE, harmonise = TRUE, shrink = TRUE,
++                   noisefloor = TRUE, delta = DELTA, region = TRUE, want_score = FALSE) {
++   rows <- if (mask) which(!meta$masked) else seq_len(nrow(B))
++   X <- B[rows, , drop = FALSE]; m <- meta[rows]
++   med0 <- rowMedians(X)
++   R <- X - med0
++   bin <- pmin(floor(med0 * 10), 9L)
++   grp <- paste(m$design, bin)
++   if (harmonise) {
++     for (idx in split(seq_along(grp), grp)) {
++       if (length(idx) < 200) next
++       R[idx, ] <- sweep(R[idx, , drop = FALSE], 2, colMedians(R[idx, , drop = FALSE]))
++     }
++     R <- R - rowMedians(R)
++   }
++   C <- crossprod(R); e <- eigen(C, symmetric = TRUE)
++   sv <- sqrt(pmax(e$values, 0)); ar <- ncol(R) / nrow(R)
++   omega <- 0.56 * ar^3 - 0.95 * ar^2 + 1.82 * ar + 1.43
++   k_gd <- sum(sv > omega * median(sv))
++   k_use <- if (identical(k, "gd")) k_gd else as.integer(k)
++   if (k_use > 0) {
++     V <- e$vectors[, seq_len(k_use), drop = FALSE]
++     R <- R - tcrossprod(R %*% V, V)
++     R <- R - rowMedians(R)
++   }
++   s2 <- rowMads(R)^2
++   d <- 0.37 * (ncol(R) - 1)                 # MAD efficiency ~37% of the SD
++   s2post <- s2; df <- rep(d, length(s2))
++   if (shrink) {
++     for (idx in split(seq_along(grp), grp)) {
++       if (length(idx) < 200) next
++       pr <- fit_prior(s2[idx], d)
++       if (is.finite(pr[["d0"]])) {
++         s2post[idx] <- (pr[["d0"]] * pr[["s02"]] + d * s2[idx]) / (pr[["d0"]] + d)
++         df[idx] <- pr[["d0"]] + d
++       } else { s2post[idx] <- pr[["s02"]]; df[idx] <- 1e6 }
++     }
++   }
++   if (noisefloor) s2post <- pmax(s2post, m$sigma.tech^2)
++   s2post <- pmax(s2post, 1e-8)
++   Z <- R / sqrt(s2post)
++   P <- 2 * pt(-abs(Z), df)
++   Q <- matrix(p.adjust(as.vector(P), "BH"), nrow(P))
++   call <- (Q <= Q_FDR) & (abs(R) >= delta)
++   Scpg <- sign(R) * call
++   Sreg <- NULL
++   if (region) {
++     cand <- sign(R) * ((P <= EXT_P) & (abs(R) >= EXT_D))
++     inrun <- run_calls(cand, m$link, seed = call, D = R, min_mean = delta)
++     Sreg <- sign(R) * inrun
++   }
++   out <- list(rows = rows, cpg = Scpg, region = Sreg, k = k_use, k_gd = k_gd,
++               n.small = sum(Q <= Q_FDR & abs(R) < delta))
++   if (want_score) out$score <- abs(Z) * (abs(R) >= delta) * sign(R)
++   out
++ }
+> 
+> # ------------------------------------------------
+> # baselines, all on the full matrix; scores signed by direction
+> # ------------------------------------------------
+> ext_thresholds <- function(B, F) {
++   up <- F == 1 & !is.na(F); dn <- F == -1 & !is.na(F)
++   Bu <- B; Bu[!up] <- NA; Bnu <- B; Bnu[up] <- NA
++   Bd <- B; Bd[!dn] <- NA; Bnd <- B; Bnd[dn] <- NA
++   anyu <- rowAnys(up); anyd <- rowAnys(dn)
++   P <- ifelse(anyu, (suppressWarnings(rowMins(Bu, na.rm = TRUE)) +
++                      suppressWarnings(rowMaxs(Bnu, na.rm = TRUE))) / 2, rowMaxs(B))
++   N <- ifelse(anyd, (suppressWarnings(rowMaxs(Bd, na.rm = TRUE)) +
++                      suppressWarnings(rowMins(Bnd, na.rm = TRUE))) / 2, rowMins(B))
++   na <- rowAlls(is.na(F)); P[na] <- NA; N[na] <- NA
++   list(P = P, N = N)
++ }
+> ext_calls <- function(B, th, floor = 0) {
++   S <- (B > th$P) - (B < th$N); S[is.na(S)] <- 0
++   if (floor > 0) S <- S * (abs(B - rowMedians(B)) >= floor)
++   S
++ }
+> ext_score <- function(B, th, floor = 0) {
++   up <- B - th$P; dn <- th$N - B
++   sc <- ifelse(up >= dn, up, -dn); sc[is.na(sc)] <- 0
++   if (floor > 0) sc <- sc * (abs(B - rowMedians(B)) >= floor)
++   sc
++ }
+> sem_parts <- function(B) {
++   q <- rowQuantiles(B, probs = c(0.25, 0.75), type = 7)
++   iqr <- pmax(q[, 2] - q[, 1], 1e-4)
++   list(lo = (q[, 1] - B) / iqr, hi = (B - q[, 2]) / iqr)
++ }
+> sem_calls <- function(B) { p <- sem_parts(B); (p$hi > 3) - (p$lo > 3) }
+> sem_score <- function(B) { p <- sem_parts(B); ifelse(p$hi >= p$lo, p$hi, -p$lo) }
+> bio_dev <- function(B, st, q = 0.96, score = FALSE) {
++   X <- B - rowMedians(B); o <- matrix(0, nrow(X), ncol(X))
++   for (s in STATES) {
++     k <- which(st == s); if (!length(k)) next
++     pool <- as.vector(X[k, ]); tl <- TAIL[[s]]
++     hi <- if (tl == "upper") quantile(pool, q, names = FALSE) else
++           if (tl == "both") quantile(pool, 1 - (1 - q) / 2, names = FALSE) else Inf
++     lo <- if (tl == "lower") quantile(pool, 1 - q, names = FALSE) else
++           if (tl == "both") quantile(pool, (1 - q) / 2, names = FALSE) else -Inf
++     Xs <- X[k, , drop = FALSE]
++     o[k, ] <- if (score) ifelse(Xs - hi >= lo - Xs, Xs - hi, -(lo - Xs)) else (Xs > hi) - (Xs < lo)
++   }
++   if (score) { o[!is.finite(o)] <- 0 }
++   o
++ }
+> epimut_calls <- function(B, link) {
++   n <- ncol(B); h <- (n - 2) * 0.995 + 1; fr <- h - floor(h); lo_i <- floor(h)
++   o <- sapply(c(1, 2, 3, n - 2, n - 1, n), function(w) rowOrderStats(B, which = w))
++   # leave-one-out 99.5% quantile of the other n-1 values, for the two largest
++   # values of each row (only they can exceed it) - and mirrored for the low tail
++   up_if_max <- o[, 4] + fr * (o[, 5] - o[, 4])
++   up_if_2nd <- o[, 4] + fr * (o[, 6] - o[, 4])
++   dn_if_min <- o[, 3] - fr * (o[, 3] - o[, 2])
++   dn_if_2nd <- o[, 3] - fr * (o[, 3] - o[, 1])
++   med <- rowMedians(B)
++   S <- ((B == o[, 6] & B > up_if_max) | (B == o[, 5] & B > up_if_2nd)) -
++        ((B == o[, 1] & B < dn_if_min) | (B == o[, 2] & B < dn_if_2nd))
++   S <- S * (abs(B - med) >= 0.15)
++   sign(S) * run_calls(S, link)
++ }
+> 
+> # ------------------------------------------------
+> # spike-ins
+> # ------------------------------------------------
+> make_spikes <- function(meta, cols, seed, exclude = NULL) {
++   set.seed(seed)
++   ok <- which(!meta$masked)
++   dir_of <- function(st) ifelse(st %in% c("L", "LM"), 1L, ifelse(st %in% c("H", "HM"), -1L,
++                          sample(c(-1L, 1L), length(st), replace = TRUE)))
++   ev <- list(); eid <- 0L
++   chain_ok <- which(!meta$masked & c(meta$link[-1], FALSE) &
++                     c(meta$link[-(1:2)], FALSE, FALSE) &
++                     !c(meta$masked[-1], TRUE) & !c(meta$masked[-(1:2)], TRUE, TRUE))
++   for (pi in PIS) {
++     rs <- sample(ok, N_SINGLE); js <- sample.int(length(cols), N_SINGLE, replace = TRUE)
++     for (t in seq_len(N_SINGLE)) { eid <- eid + 1L
++       ev[[eid]] <- data.table(event = eid, kind = "single", pi = pi, row = rs[t], col = js[t],
++                               dir = dir_of(meta$st[rs[t]])) }
++     seeds <- sample(chain_ok, N_REGION); jr <- sample.int(length(cols), N_REGION, replace = TRUE)
++     for (t in seq_len(N_REGION)) {
++       want <- sample(3:6, 1); r <- seeds[t]; rr <- r
++       while (length(rr) < want && r + 1 <= nrow(meta) && meta$link[r + 1] && !meta$masked[r + 1]) {
++         r <- r + 1; rr <- c(rr, r) }
++       eid <- eid + 1L
++       d0 <- dir_of(meta$st[seeds[t]])
++       ev[[eid]] <- data.table(event = eid, kind = "region", pi = pi, row = rr, col = jr[t], dir = d0)
++     }
++   }
++   sp <- rbindlist(ev)
++   sp <- sp[!duplicated(sp[, .(row, col)])]
++   if (!is.null(exclude)) sp <- sp[!paste(row, col) %in% paste(exclude$row, exclude$col)]
++   sp
++ }
+> apply_spikes <- function(B, sp) {
++   Bs <- B; cell <- cbind(sp$row, sp$col); b <- B[cell]
++   nb <- ifelse(sp$dir > 0, b + sp$pi * (1 - b), b * (1 - sp$pi))
++   Bs[cell] <- nb
++   sp[, realised := abs(nb - b)]
++   Bs
++ }
+> EFFECT_BINS <- c(0, 0.05, 0.10, 0.20, 0.30, 1.01)
+> EFFECT_LAB  <- c("<0.05", "0.05-0.10", "0.10-0.20", "0.20-0.30", ">=0.30")
+> 
+> # ------------------------------------------------
+> # scoring a call matrix (full-size signed matrix, 0 = no call)
+> # ------------------------------------------------
+> full_matrix <- function(res, part, nr, nc) {
++   S <- matrix(0, nr, nc); S[res$rows, ] <- res[[part]]; S
++ }
+> score_calls <- function(S_clean, S_spiked, S_noisy, sp, meta, cols, shifted, method, tissue = "Normal") {
++   univ <- which(!meta$masked)
++   cell <- cbind(sp$row, sp$col)
++   hit <- S_spiked[cell] == sp$dir
++   spk <- copy(sp)[, hit := hit]
++   bg_clean <- colSums(S_clean[univ, ] != 0)
++   spike_mask <- matrix(FALSE, nrow(S_spiked), ncol(S_spiked)); spike_mask[cell] <- TRUE
++   bg_spiked <- sum(S_spiked[univ, ] != 0 & !spike_mask[univ, ])
++   st <- meta$st
++   contr <- 0; tot <- 0
++   for (s in names(CONTRARY)) { k <- intersect(univ, which(st == s))
++     contr <- contr + sum(S_clean[k, ] == CONTRARY[[s]]); tot <- tot + sum(S_clean[k, ] != 0) }
++   a <- S_clean[univ, ]; b <- S_noisy[univ, ]
++   u <- sum(a != 0 | b != 0); stab <- if (u) sum(a != 0 & a == b) / u else NA
++   sh <- cols %in% shifted
++   reg <- spk[kind == "region", .(det = mean(hit) >= 0.5), by = event]
++   data.table(tissue = tissue, method = method,
++     recall.cells = round(mean(spk$hit), 4),
++     recall.single = round(spk[kind == "single", mean(hit)], 4),
++     recall.region.events = round(mean(reg$det), 4),
++     calls.per.sample.clean = round(mean(bg_clean), 1),
++     median.calls.per.sample = median(bg_clean),
++     spike.precision = round(sum(spk$hit) / (sum(spk$hit) + bg_spiked), 4),
++     pct.contrary = round(100 * contr / max(tot, 1), 2),
++     shifted.array.burden.ratio = round(mean(bg_clean[sh]) / max(median(bg_clean[!sh]), 1), 2),
++     stability = round(stab, 4))
++ }
+> recall_by_effect <- function(S_spiked, sp, method) {
++   spk <- copy(sp)[, hit := S_spiked[cbind(row, col)] == dir]
++   spk[, effect := cut(realised, EFFECT_BINS, EFFECT_LAB, right = FALSE)]
++   spk[, .(n = .N, recall = round(mean(hit), 4)), by = .(kind, effect)][, method := method][]
++ }
+> budget_recall <- function(sc_clean, sc_spiked, sp, meta, method, budget = BUDGET) {
++   univ <- which(!meta$masked)
++   thr <- quantile(abs(sc_clean[univ, ]), 1 - budget, names = FALSE)
++   if (thr <= 0) thr <- .Machine$double.eps
++   v <- sc_spiked[cbind(sp$row, sp$col)]
++   hit <- abs(v) >= thr & sign(v) == sp$dir
++   spk <- copy(sp)[, hit := hit]
++   reg <- spk[kind == "region", .(det = mean(hit) >= 0.5), by = event]
++   data.table(method = method, budget = budget, threshold = signif(thr, 4),
++              realised.clean.rate = round(mean(abs(sc_clean[univ, ]) >= thr), 5),
++              recall.cells = round(mean(hit), 4),
++              recall.single = round(spk[kind == "single", mean(hit)], 4),
++              recall.region.events = round(mean(reg$det), 4))
++ }
+> 
+> # ================================================================
+> # NORMAL: spike-ins, k selection, benchmark, ablation
+> # ================================================================
+> tick("loading Normal")
+[     1s] loading Normal
+> nd <- load_tissue("Normal"); B <- nd$B; meta <- nd$meta; cols <- nd$cols
+> nr <- nrow(B); nc <- ncol(B)
+> say("CpGs: %d   masked (Zhou M_general): %d   samples: %d", nr, sum(meta$masked), nc)
+CpGs: 380355   masked (Zhou M_general): 9687   samples: 53
+> 
+> fx <- fread(flag_ext("Normal"), showProgress = FALSE)
+> F <- as.matrix(fx[match(meta$id, fx$cgID), ..cols]); rm(fx); invisible(gc())
+> th_ext <- ext_thresholds(B, F); rm(F); invisible(gc())
+> stopifnot(all(ext_calls(B, th_ext)[!is.na(th_ext$P)] %in% c(-1, 0, 1)))
+> 
+> spA <- make_spikes(meta, cols, seed = 3801)
+> spB <- make_spikes(meta, cols, seed = 3802, exclude = spA)
+> BA <- apply_spikes(B, spA); BB <- apply_spikes(B, spB)
+> set.seed(3803)
+> BN <- pmin(pmax(B + matrix(rnorm(length(B), 0, NOISE_SD), nr), 0), 1)
+> say("spike set A: %d cells in %d events; set B: %d cells in %d events",
++     nrow(spA), uniqueN(spA$event), nrow(spB), uniqueN(spB$event))
+spike set A: 7324 cells in 3599 events; set B: 7323 cells in 3598 events
+> say("realised |delta-beta| in set B: median %.3f, IQR %.3f-%.3f",
++     median(spB$realised), quantile(spB$realised, .25), quantile(spB$realised, .75))
+realised |delta-beta| in set B: median 0.194, IQR 0.097-0.340
+> 
+> # ---- k selection on set A (OUTRIDER), next to Gavish-Donoho (METAFORA) ----
+> tick("k selection on spike set A")
+[     6s] k selection on spike set A
+> ksel <- list()
+> for (kk in K_GRID) {
++   rc <- sharp(B, meta, k = kk, region = FALSE, want_score = TRUE)
++   ra <- sharp(BA, meta, k = kk, region = FALSE, want_score = TRUE)
++   scC <- full_matrix(rc, "score", nr, nc); scA <- full_matrix(ra, "score", nr, nc)
++   br <- budget_recall(scC, scA, spA, meta, paste0("SHARP.k", kk))
++   SA <- full_matrix(ra, "cpg", nr, nc)
++   hitA <- mean(SA[cbind(spA$row, spA$col)] == spA$dir)
++   ksel[[length(ksel) + 1]] <- data.table(k = kk, k.gavish.donoho = rc$k_gd,
++     budget.recall.cells = br$recall.cells, default.recall.cells = round(hitA, 4),
++     calls.per.sample.clean = round(sum(full_matrix(rc, "cpg", nr, nc) != 0) / nc, 1))
++   say("  k = %2d   budget recall %.3f   default recall %.3f   clean calls/sample %.1f   (GD k = %d)",
++       kk, br$recall.cells, hitA, ksel[[length(ksel)]]$calls.per.sample.clean, rc$k_gd)
++   rm(rc, ra, scC, scA, SA); invisible(gc())
++ }
+  k =  0   budget recall 0.458   default recall 0.623   clean calls/sample 2427.6   (GD k = 12)
+  k =  1   budget recall 0.499   default recall 0.649   clean calls/sample 1872.8   (GD k = 12)
+  k =  2   budget recall 0.514   default recall 0.654   clean calls/sample 1884.1   (GD k = 12)
+  k =  3   budget recall 0.535   default recall 0.649   clean calls/sample 1416.8   (GD k = 12)
+  k =  5   budget recall 0.553   default recall 0.645   clean calls/sample 1094.2   (GD k = 12)
+  k =  8   budget recall 0.581   default recall 0.636   clean calls/sample 779.2   (GD k = 12)
+  k = 12   budget recall 0.588   default recall 0.605   clean calls/sample 479.2   (GD k = 12)
+  k = 20   budget recall 0.546   default recall 0.528   clean calls/sample 240.6   (GD k = 12)
+> ksel <- rbindlist(ksel)
+> K_BEST <- ksel$k[which.max(ksel$budget.recall.cells)]
+> say("k chosen on set A: %d  (Gavish-Donoho would choose %d)", K_BEST, ksel$k.gavish.donoho[1])
+k chosen on set A: 12  (Gavish-Donoho would choose 12)
+> write_out(ksel, "Task38_KSelection.csv")
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task38_KSelection.csv (8 rows)
+> rm(BA); invisible(gc())
+> 
+> # ---- benchmark on set B ----
+> tick("benchmark on spike set B")
+[   144s] benchmark on spike set B
+> scores <- list(); effects <- list(); budgets <- list(); burden <- list()
+> add_method <- function(name, SC, SS, SN, scC = NULL, scS = NULL) {
++   scores[[name]]  <<- score_calls(SC, SS, SN, spB, meta, cols, SHIFTED$Normal, name)
++   effects[[name]] <<- recall_by_effect(SS, spB, name)
++   if (!is.null(scC)) budgets[[name]] <<- budget_recall(scC, scS, spB, meta, name)
++   burden[[name]]  <<- data.table(tissue = "Normal", method = name, sample = cols,
++                                  calls = colSums(SC[!meta$masked, ] != 0))
++   say("  %-18s recall %.3f  single %.3f  region events %.3f  calls/sample %.0f  contrary %.1f%%  shifted ratio %.2f  stability %.3f",
++       name, scores[[name]]$recall.cells, scores[[name]]$recall.single,
++       scores[[name]]$recall.region.events, scores[[name]]$calls.per.sample.clean,
++       scores[[name]]$pct.contrary, scores[[name]]$shifted.array.burden.ratio,
++       scores[[name]]$stability)
++ }
+> 
+> # SHARP (chosen k)
+> rc <- sharp(B, meta, k = K_BEST, want_score = TRUE)
+> rs <- sharp(BB, meta, k = K_BEST, want_score = TRUE)
+> rn <- sharp(BN, meta, k = K_BEST)
+> say("  SHARP on clean Normal: k = %d, 'significant but too small' cells: %d", rc$k, rc$n.small)
+  SHARP on clean Normal: k = 12, 'significant but too small' cells: 45133
+> scC <- full_matrix(rc, "score", nr, nc); scS <- full_matrix(rs, "score", nr, nc)
+> add_method("SHARP.cpg", full_matrix(rc, "cpg", nr, nc), full_matrix(rs, "cpg", nr, nc),
++            full_matrix(rn, "cpg", nr, nc), scC, scS)
+  SHARP.cpg          recall 0.599  single 0.612  region events 0.598  calls/sample 479  contrary 8.5%  shifted ratio 0.68  stability 0.648
+> add_method("SHARP.region", full_matrix(rc, "region", nr, nc), full_matrix(rs, "region", nr, nc),
++            full_matrix(rn, "region", nr, nc))
+  SHARP.region       recall 0.396  single 0.000  region events 0.594  calls/sample 149  contrary 9.3%  shifted ratio 0.39  stability 0.684
+> SHARP_CLEAN_NORMAL <- list(cpg = full_matrix(rc, "cpg", nr, nc), region = full_matrix(rc, "region", nr, nc))
+> rm(rc, rs, rn, scC, scS); invisible(gc())
+> 
+> add_method("ext.recon", ext_calls(B, th_ext), ext_calls(BB, th_ext), ext_calls(BN, th_ext),
++            ext_score(B, th_ext), ext_score(BB, th_ext))
+  ext.recon          recall 0.703  single 0.695  region events 0.751  calls/sample 9421  contrary 58.8%  shifted ratio 13.09  stability 0.161
+> add_method("ext.recon.floor", ext_calls(B, th_ext, 0.10), ext_calls(BB, th_ext, 0.10),
++            ext_calls(BN, th_ext, 0.10), ext_score(B, th_ext, 0.10), ext_score(BB, th_ext, 0.10))
+  ext.recon.floor    recall 0.616  single 0.624  region events 0.636  calls/sample 3833  contrary 24.9%  shifted ratio 19.45  stability 0.505
+> invisible(gc())
+> add_method("SEM.3IQR", sem_calls(B), sem_calls(BB), sem_calls(BN), sem_score(B), sem_score(BB))
+  SEM.3IQR           recall 0.626  single 0.589  region events 0.671  calls/sample 5678  contrary 1.0%  shifted ratio 59.53  stability 0.574
+> invisible(gc())
+> add_method("bio.stat.dev", bio_dev(B, meta$st), bio_dev(BB, meta$st), bio_dev(BN, meta$st),
++            bio_dev(B, meta$st, score = TRUE), bio_dev(BB, meta$st, score = TRUE))
+  bio.stat.dev       recall 0.754  single 0.762  region events 0.778  calls/sample 14892  contrary 0.0%  shifted ratio 8.74  stability 0.809
+> invisible(gc())
+> add_method("epimut.style", epimut_calls(B, meta$link), epimut_calls(BB, meta$link),
++            epimut_calls(BN, meta$link))
+  epimut.style       recall 0.343  single 0.002  region events 0.523  calls/sample 409  contrary 13.5%  shifted ratio 12.49  stability 0.734
+> invisible(gc())
+> 
+> # ---- ablation on set B ----
+> tick("ablation")
+[   226s] ablation
+> abl <- list()
+> variants <- list(
++   full            = list(),
++   no.mask         = list(mask = FALSE),
++   no.harmonise    = list(harmonise = FALSE),
++   no.hidden.factors = list(k = 0),
++   no.shrinkage    = list(shrink = FALSE),
++   no.noise.floor  = list(noisefloor = FALSE),
++   no.delta.floor  = list(delta = 0))
+> for (vn in names(variants)) {
++   args <- modifyList(list(k = K_BEST, region = FALSE, want_score = TRUE), variants[[vn]])
++   rc <- do.call(sharp, c(list(B, meta), args))
++   rs <- do.call(sharp, c(list(BB, meta), args))
++   SC <- full_matrix(rc, "cpg", nr, nc); SS <- full_matrix(rs, "cpg", nr, nc)
++   sc <- score_calls(SC, SS, SC, spB, meta, cols, SHIFTED$Normal, paste0("SHARP.", vn))
++   br <- budget_recall(full_matrix(rc, "score", nr, nc), full_matrix(rs, "score", nr, nc), spB, meta, vn)
++   abl[[vn]] <- cbind(variant = vn, sc[, .(recall.cells, recall.single, recall.region.events,
++     calls.per.sample.clean, spike.precision, pct.contrary, shifted.array.burden.ratio)],
++     budget.recall.cells = br$recall.cells)
++   say("  %-18s recall %.3f  calls/sample %.1f  precision %.3f  contrary %.1f%%  shifted ratio %.2f  budget recall %.3f",
++       vn, sc$recall.cells, sc$calls.per.sample.clean, sc$spike.precision, sc$pct.contrary,
++       sc$shifted.array.burden.ratio, br$recall.cells)
++   rm(rc, rs, SC, SS); invisible(gc())
++ }
+  full               recall 0.599  calls/sample 479.2  precision 0.143  contrary 8.5%  shifted ratio 0.68  budget recall 0.581
+  no.mask            recall 0.599  calls/sample 478.8  precision 0.143  contrary 8.4%  shifted ratio 0.68  budget recall 0.582
+  no.harmonise       recall 0.594  calls/sample 463.3  precision 0.145  contrary 8.3%  shifted ratio 0.74  budget recall 0.579
+  no.hidden.factors  recall 0.609  calls/sample 2427.6  precision 0.033  contrary 1.5%  shifted ratio 5.80  budget recall 0.436
+  no.shrinkage       recall 0.583  calls/sample 363.1  precision 0.175  contrary 6.5%  shifted ratio 0.71  budget recall 0.582
+  no.noise.floor     recall 0.602  calls/sample 518.5  precision 0.135  contrary 9.1%  shifted ratio 0.66  budget recall 0.581
+  no.delta.floor     recall 0.721  calls/sample 1330.7  precision 0.068  contrary 7.3%  shifted ratio 1.48  budget recall 0.598
+> abl <- rbindlist(abl)
+> write_out(abl, "Task38_Ablation.csv")
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task38_Ablation.csv (7 rows)
+> rm(BB, BN); invisible(gc())
+> 
+> # ================================================================
+> # TUMOUR: real data only
+> # ================================================================
+> tick("Tumour, real data")
+[   353s] Tumour, real data
+> Sites36 <- list()
+> site_rows <- function(tissue, meta, S_list) {
++   i <- match(TASK36_SITES, meta$id)
++   rbindlist(lapply(names(S_list), function(nm) data.table(tissue = tissue, method = nm,
++     cgID = TASK36_SITES, masked = meta$masked[i],
++     calls = ifelse(is.na(i), NA_integer_, rowSums(S_list[[nm]][i, , drop = FALSE] != 0)))))
++ }
+> Sites36[["Normal"]] <- site_rows("Normal", meta, list(
++   SHARP.cpg = SHARP_CLEAN_NORMAL$cpg, SHARP.region = SHARP_CLEAN_NORMAL$region,
++   ext.recon = ext_calls(B, th_ext)))
+> rm(B, SHARP_CLEAN_NORMAL); invisible(gc())
+> 
+> td <- load_tissue("Tumor"); B <- td$B; meta_t <- td$meta; cols_t <- td$cols
+> fx <- fread(flag_ext("Tumor"), showProgress = FALSE)
+> F <- as.matrix(fx[match(meta_t$id, fx$cgID), ..cols_t]); rm(fx); invisible(gc())
+> th_t <- ext_thresholds(B, F); rm(F); invisible(gc())
+> rt <- sharp(B, meta_t, k = K_BEST)
+> say("  SHARP on Tumour: k = %d (GD %d)", rt$k, rt$k_gd)
+  SHARP on Tumour: k = 12 (GD 10)
+> tum <- list(SHARP.cpg = full_matrix(rt, "cpg", nrow(B), ncol(B)),
++             SHARP.region = full_matrix(rt, "region", nrow(B), ncol(B)),
++             ext.recon = ext_calls(B, th_t), SEM.3IQR = sem_calls(B),
++             bio.stat.dev = bio_dev(B, meta_t$st))
+> for (nm in names(tum)) {
++   S <- tum[[nm]]; univ <- which(!meta_t$masked); bg <- colSums(S[univ, ] != 0)
++   sh <- cols_t %in% SHIFTED$Tumor
++   contr <- 0; tot <- 0
++   for (s in names(CONTRARY)) { k <- intersect(univ, which(meta_t$st == s))
++     contr <- contr + sum(S[k, ] == CONTRARY[[s]]); tot <- tot + sum(S[k, ] != 0) }
++   scores[[paste0("T.", nm)]] <- data.table(tissue = "Tumor", method = nm,
++     calls.per.sample.clean = round(mean(bg), 1), median.calls.per.sample = median(bg),
++     pct.contrary = round(100 * contr / max(tot, 1), 2),
++     shifted.array.burden.ratio = round(mean(bg[sh]) / max(median(bg[!sh]), 1), 2))
++   burden[[paste0("T.", nm)]] <- data.table(tissue = "Tumor", method = nm, sample = cols_t, calls = bg)
++   say("  %-14s calls/sample %.0f  contrary %.1f%%  shifted ratio %.2f   top 5: %s", nm, mean(bg),
++       100 * contr / max(tot, 1), mean(bg[sh]) / max(median(bg[!sh]), 1),
++       paste(cols_t[order(-bg)][1:5], collapse = ", "))
++ }
+  SHARP.cpg      calls/sample 3099  contrary 3.8%  shifted ratio 0.94   top 5: T10, T35, T40, T5, T7
+  SHARP.region   calls/sample 1166  contrary 7.4%  shifted ratio 1.53   top 5: T7, T30, T17, T45, T40
+  ext.recon      calls/sample 45162  contrary 52.6%  shifted ratio 2.79   top 5: T15, T17, T14, T16, T38
+  SEM.3IQR       calls/sample 8747  contrary 0.1%  shifted ratio 10.85   top 5: T17, T14, T15, T16, T38
+  bio.stat.dev   calls/sample 14889  contrary 0.0%  shifted ratio 4.88   top 5: T15, T14, T17, T16, T38
+> Sites36[["Tumor"]] <- site_rows("Tumor", meta_t, tum[c("SHARP.cpg", "SHARP.region", "ext.recon")])
+> 
+> # ------------------------------------------------
+> # write tables
+> # ------------------------------------------------
+> scores_dt <- rbindlist(scores, fill = TRUE)
+> budgets_dt <- rbindlist(budgets)
+> scores_dt <- merge(scores_dt, budgets_dt[, .(method, budget.recall.cells = recall.cells,
++   budget.recall.single = recall.single, budget.recall.region.events = recall.region.events)],
++   by = "method", all.x = TRUE, sort = FALSE)
+> scores_dt[, k.used := ifelse(grepl("^SHARP", method), K_BEST, NA_integer_)]
+> write_out(scores_dt, "Task38_MethodScores.csv")
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task38_MethodScores.csv (12 rows)
+> eff <- rbindlist(effects); write_out(eff, "Task38_RecallByEffect.csv")
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task38_RecallByEffect.csv (70 rows)
+> bur <- rbindlist(burden)
+> bur[, rank := frank(-calls, ties.method = "min"), by = .(tissue, method)]
+> write_out(bur, "Task38_SampleBurden.csv")
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task38_SampleBurden.csv (636 rows)
+> write_out(rbindlist(Sites36), "Task38_Task36Sites.csv")
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Task38_Task36Sites.csv (72 rows)
+> 
+> say("\n--- summary: Normal, spike set B ---")
+
+--- summary: Normal, spike set B ---
+> print(as.data.frame(scores_dt[tissue == "Normal", .(method, recall.cells, recall.single,
++   recall.region.events, budget.recall.cells, calls.per.sample.clean, spike.precision,
++   pct.contrary, shifted.array.burden.ratio, stability)]), row.names = FALSE)
+          method recall.cells recall.single recall.region.events
+       SHARP.cpg       0.5991        0.6123               0.5980
+    SHARP.region       0.3957        0.0004               0.5938
+       ext.recon       0.7031        0.6949               0.7515
+ ext.recon.floor       0.6159        0.6244               0.6364
+        SEM.3IQR       0.6257        0.5890               0.6706
+    bio.stat.dev       0.7537        0.7620               0.7781
+    epimut.style       0.3428        0.0017               0.5229
+ budget.recall.cells calls.per.sample.clean spike.precision pct.contrary
+              0.5806                  479.2          0.1429         8.49
+                  NA                  149.2          0.2605         9.28
+              0.1835                 9421.0          0.0102        58.78
+              0.2276                 3832.8          0.0217        24.85
+              0.3309                 5677.8          0.0150         1.01
+              0.1129                14892.2          0.0070         0.00
+                  NA                  409.4          0.1048        13.50
+ shifted.array.burden.ratio stability
+                       0.68    0.6479
+                       0.39    0.6836
+                      13.09    0.1613
+                      19.45    0.5049
+                      59.53    0.5741
+                       8.74    0.8086
+                      12.49    0.7343
+> say("\n--- recall by realised effect size (single CpGs) ---")
+
+--- recall by realised effect size (single CpGs) ---
+> print(dcast(eff[kind == "single"], method ~ effect, value.var = "recall"), row.names = FALSE)
+Key: <method>
+          method  <0.05 0.05-0.10 0.10-0.20 0.20-0.30 >=0.30
+          <char>  <num>     <num>     <num>     <num>  <num>
+        SEM.3IQR 0.0000    0.3641    0.5087    0.3816 0.8920
+       SHARP.cpg 0.0182    0.0362    0.6486    0.8114 0.9693
+    SHARP.region 0.0000    0.0000    0.0016    0.0000 0.0000
+    bio.stat.dev 0.0909    0.5124    0.7297    0.8202 0.9841
+    epimut.style 0.0000    0.0016    0.0032    0.0044 0.0000
+       ext.recon 0.1091    0.4613    0.6502    0.6667 0.9318
+ ext.recon.floor 0.1091    0.1845    0.6486    0.6667 0.9318
+> say("\n--- recall by realised effect size (region CpGs) ---")
+
+--- recall by realised effect size (region CpGs) ---
+> print(dcast(eff[kind == "region"], method ~ effect, value.var = "recall"), row.names = FALSE)
+Key: <method>
+          method  <0.05 0.05-0.10 0.10-0.20 0.20-0.30 >=0.30
+          <char>  <num>     <num>     <num>     <num>  <num>
+        SEM.3IQR 0.0027    0.5106    0.6196    0.3476 0.9314
+       SHARP.cpg 0.0000    0.0406    0.7091    0.7866 0.9605
+    SHARP.region 0.0053    0.0330    0.7206    0.7591 0.9500
+    bio.stat.dev 0.0187    0.5790    0.7699    0.8110 0.9863
+    epimut.style 0.0133    0.0144    0.5333    0.5793 0.9033
+       ext.recon 0.2533    0.5376    0.7091    0.6372 0.9220
+ ext.recon.floor 0.0560    0.2054    0.7067    0.6372 0.9220
+> say("\n--- top 5 samples by calls, Normal ---")
+
+--- top 5 samples by calls, Normal ---
+> print(bur[tissue == "Normal" & rank <= 5][order(method, rank)], row.names = FALSE)
+ tissue          method sample calls  rank
+ <char>          <char> <char> <num> <int>
+ Normal        SEM.3IQR    N15 61150     1
+ Normal        SEM.3IQR    N17 60336     2
+ Normal        SEM.3IQR    N14 55304     3
+ Normal        SEM.3IQR    N49 21360     4
+ Normal        SEM.3IQR    N46 18072     5
+ Normal       SHARP.cpg    N38  1657     1
+ Normal       SHARP.cpg     N4  1258     2
+ Normal       SHARP.cpg    N10  1202     3
+ Normal       SHARP.cpg    N33   955     4
+ Normal       SHARP.cpg    N53   914     5
+ Normal    SHARP.region    N38   821     1
+ Normal    SHARP.region     N4   698     2
+ Normal    SHARP.region    N33   436     3
+ Normal    SHARP.region    N30   424     4
+ Normal    SHARP.region    N10   312     5
+ Normal    bio.stat.dev    N15 83747     1
+ Normal    bio.stat.dev    N17 83284     2
+ Normal    bio.stat.dev    N14 76621     3
+ Normal    bio.stat.dev    N35 25559     4
+ Normal    bio.stat.dev    N34 25541     5
+ Normal    epimut.style    N48  3176     1
+ Normal    epimut.style    N34  2804     2
+ Normal    epimut.style    N23  2726     3
+ Normal    epimut.style    N31  2563     4
+ Normal    epimut.style    N17  1607     5
+ Normal       ext.recon    N15 63610     1
+ Normal       ext.recon    N17 62212     2
+ Normal       ext.recon    N14 51021     3
+ Normal       ext.recon    N48 26249     4
+ Normal       ext.recon    N31 22232     5
+ Normal ext.recon.floor    N17 32043     1
+ Normal ext.recon.floor    N15 32021     2
+ Normal ext.recon.floor    N14 22727     3
+ Normal ext.recon.floor    N48 11596     4
+ Normal ext.recon.floor    N31  9895     5
+ tissue          method sample calls  rank
+ <char>          <char> <char> <num> <int>
+> say("\n--- Task 36 sites ---")
+
+--- Task 36 sites ---
+> print(dcast(rbindlist(Sites36), tissue + cgID + masked ~ method, value.var = "calls"), row.names = FALSE)
+Key: <tissue, cgID, masked>
+ tissue       cgID masked SHARP.cpg SHARP.region ext.recon
+ <char>     <char> <lgcl>     <num>        <num>     <num>
+ Normal cg01474260   TRUE         0            0         5
+ Normal cg01731685  FALSE         0            0         5
+ Normal cg03304299  FALSE         0            0         2
+ Normal cg03966099   TRUE         0            0         3
+ Normal cg07885834   TRUE         0            0         0
+ Normal cg13472645   TRUE         0            0         5
+ Normal cg15668074   TRUE         0            0         1
+ Normal cg16234298   TRUE         0            0         3
+ Normal cg17204569   TRUE         0            0         4
+ Normal cg20009101  FALSE         1            1         4
+ Normal cg20353484  FALSE         0            0         2
+ Normal cg25563983   TRUE         0            0         8
+  Tumor cg01474260   TRUE         0            0        14
+  Tumor cg01731685  FALSE         1            0         9
+  Tumor cg03304299  FALSE         0            0         2
+  Tumor cg03966099   TRUE         0            0         9
+  Tumor cg07885834   TRUE         0            0        12
+  Tumor cg13472645   TRUE         0            0        21
+  Tumor cg15668074   TRUE         0            0        21
+  Tumor cg16234298   TRUE         0            0         9
+  Tumor cg17204569   TRUE         0            0        10
+  Tumor cg20009101  FALSE         0            0         8
+  Tumor cg20353484  FALSE         0            0        11
+  Tumor cg25563983   TRUE         0            0        14
+ tissue       cgID masked SHARP.cpg SHARP.region ext.recon
+ <char>     <char> <lgcl>     <num>        <num>     <num>
+> 
+> # ------------------------------------------------
+> # figures (base graphics)
+> # ------------------------------------------------
+> PAL <- c(SHARP.cpg = "#D62728", SHARP.region = "#FF7F0E", ext.recon = "#7F7F7F",
++          ext.recon.floor = "#1F77B4", SEM.3IQR = "#2CA02C", bio.stat.dev = "#9467BD",
++          epimut.style = "#8C564B")
+> png(file.path(out_dir, "Fig16_SHARP_Recall.png"), width = 2700, height = 1200, res = 190)
+> par(mfrow = c(1, 2), mar = c(4.5, 4.6, 3, 1), las = 1, cex.axis = 0.85)
+> for (kd in c("single", "region")) {
++   plot(NA, xlim = c(1, length(EFFECT_LAB)), ylim = c(0, 1), xaxt = "n",
++        xlab = "realised |delta-beta| of the injected change", ylab = "recall (share detected)",
++        main = sprintf("Injected %s outliers (spike set B)", if (kd == "single") "single-CpG" else "regional"))
++   axis(1, at = seq_along(EFFECT_LAB), labels = EFFECT_LAB)
++   for (m in names(PAL)) {
++     e <- eff[kind == kd & method == m]; if (!nrow(e)) next
++     y <- e$recall[match(EFFECT_LAB, e$effect)]
++     lines(seq_along(EFFECT_LAB), y, col = PAL[[m]], lwd = if (grepl("SHARP", m)) 3 else 1.6, type = "b", pch = 16)
++   }
++   if (kd == "single") legend("topleft", bty = "n", cex = 0.75, col = PAL, lwd = 2, legend = names(PAL))
++ }
+> dev.off(); say("  written: %s", file.path(out_dir, "Fig16_SHARP_Recall.png"))
+null device 
+          1 
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Fig16_SHARP_Recall.png
+> 
+> png(file.path(out_dir, "Fig17_SHARP_Budget.png"), width = 2700, height = 1200, res = 190)
+> par(mfrow = c(1, 3), mar = c(8, 4.6, 3, 1), las = 2, cex.axis = 0.8)
+> nsc <- scores_dt[tissue == "Normal"]
+> b1 <- nsc[!is.na(budget.recall.cells)][order(-budget.recall.cells)]
+> barplot(b1$budget.recall.cells, names.arg = b1$method, col = PAL[b1$method], ylim = c(0, 1),
++         main = "Recall at the same false-call budget\n(0.1% of clean cells)", ylab = "recall")
+> b2 <- nsc[order(calls.per.sample.clean)]
+> barplot(pmax(b2$calls.per.sample.clean, 0.5), names.arg = b2$method, col = PAL[b2$method], log = "y",
++         main = "Calls per sample on untouched data\n(log scale)", ylab = "calls per sample")
+> b3 <- nsc[order(shifted.array.burden.ratio)]
+> barplot(pmax(b3$shifted.array.burden.ratio, 0, na.rm = TRUE), names.arg = b3$method, col = PAL[b3$method],
++         main = "Burden of N14/N15/N17\nrelative to the median sample", ylab = "ratio")
+> abline(h = 1, lty = 2)
+> dev.off(); say("  written: %s", file.path(out_dir, "Fig17_SHARP_Budget.png"))
+null device 
+          1 
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Fig17_SHARP_Budget.png
+> 
+> png(file.path(out_dir, "Fig18_SHARP_Ablation.png"), width = 2700, height = 1100, res = 190)
+> par(mfrow = c(1, 3), mar = c(9, 4.6, 3, 1), las = 2, cex.axis = 0.8)
+> cl <- ifelse(abl$variant == "full", "#D62728", "grey60")
+> barplot(abl$budget.recall.cells, names.arg = abl$variant, col = cl, ylim = c(0, 1),
++         main = "Recall at 0.1% budget", ylab = "recall")
+> barplot(pmax(abl$calls.per.sample.clean, 0.5), names.arg = abl$variant, col = cl, log = "y",
++         main = "Calls per sample, clean data (log)", ylab = "calls per sample")
+> barplot(pmax(abl$shifted.array.burden.ratio, 0, na.rm = TRUE), names.arg = abl$variant, col = cl,
++         main = "N14/N15/N17 burden ratio", ylab = "ratio"); abline(h = 1, lty = 2)
+> dev.off(); say("  written: %s", file.path(out_dir, "Fig18_SHARP_Ablation.png"))
+null device 
+          1 
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Fig18_SHARP_Ablation.png
+> 
+> tick("done")
+[   376s] done
+> say("=========================================================")
+=========================================================
+> say("TASK 38 COMPLETE")
+TASK 38 COMPLETE
+> say("=========================================================")
+=========================================================
+> 
+> proc.time()
+   user  system elapsed 
+304.557  51.476 376.111 
