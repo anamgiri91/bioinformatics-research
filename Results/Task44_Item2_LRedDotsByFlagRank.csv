@@ -1,0 +1,3 @@
+tissue,samples,L_red_dots_chr22,from_top4,share_from_top4,even_share_of_4,top4_share_of_all_ext_flags_chr22,samples_with_any,top4
+Normal,53,1894,456,0.2408,0.0755,0.4231,49,N15 N17 N14 N48
+Tumor,53,1977,350,0.177,0.0755,0.203,52,T15 T17 T14 T16

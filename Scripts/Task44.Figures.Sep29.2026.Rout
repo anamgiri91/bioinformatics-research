@@ -1,0 +1,546 @@
+
+R version 4.6.0 (2026-04-24) -- "Because it was There"
+Copyright (C) 2026 The R Foundation for Statistical Computing
+Platform: aarch64-apple-darwin23
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # ================================================================
+> # Task 44 - Figures for report.md (tasks of 2026-09-28)
+> # Date: Sep 29, 2026
+> #
+> # One figure for each finding that report.md showed only as a table.
+> # The RRBS figures (items 4, 5 and 6) read the Task 39 and Task 41
+> # outputs, and Fig21 also reads the RRBS data. Items 1 and 3 read
+> # the Task 40 and Task 36 outputs. Nothing is re-estimated here:
+> # every number drawn comes from the file named in the caption.
+> #
+> #   Fig20  item 4(1)  RRBS: missing data, and IQR outliers
+> #   Fig21  item 6     RRBS: the six states, one real site each
+> #   Fig22  item 4(2)  RRBS: nearby sites share a state
+> #   Fig23  item 5     RRBS: agreement vs correlation, by state pair
+> #   Fig24  item 5     RRBS: scores by distance, true neighbours
+> #   Fig25  item 5     RRBS: real pairs vs patient-shuffled pairs
+> #   Fig26  item 1(3)  what the +100 offset does to beta
+> #   Fig27  item 3     OutlierMeth with the CG ID replaced or removed
+> #   Fig28  item 1(1)  probes that map to more than one place
+> #   Fig29  item 2     L-state red dots and the most flagged samples
+> #                     (also writes Task44_Item2_LRedDotsByFlagRank.csv)
+> #
+> # STYLE
+> #   Reference palette of the dataviz method, light surface #fcfcfb:
+> #   series blue #2a78d6, orange #eb6834, aqua #1baf7a (checked with
+> #   validate_palette.js, all pairs; aqua is below 3:1 contrast, so it
+> #   is always labelled directly). Status colours appear only in Fig27,
+> #   where a cell means works / fails, and always with a text label.
+> #   Solid hairline grid, 2px lines, dots with a surface ring.
+> #
+> # PRIVACY
+> #   No figure names a sample or ties a sample to a site. Fig21 shows
+> #   the 18 values of six unnamed sites, one per state.
+> # ================================================================
+> 
+> suppressPackageStartupMessages({
++   library(data.table); library(ggplot2); library(gridExtra); library(grid); library(scales)
++ })
+Warning message:
+package ‘gridExtra’ was built under R version 4.6.1 
+> 
+> pick_dir <- function(...) { for (d in c(...)) if (dir.exists(d)) return(d)
++   stop("no candidate directory exists") }
+> repo_dir <- pick_dir("/mmfs1/home/wln26/Experiments.Outlier.July31.2026",
++                      path.expand("~/Desktop/bioinformatics-research"))
+> res  <- file.path(repo_dir, "Results")
+> rrbs <- file.path(repo_dir, "Data", "NN.hg38.18P.forw.chr22.w.header.txt")
+> rd   <- function(f) fread(file.path(res, f))
+> 
+> SURF <- "#fcfcfb"; INK <- "#0b0b0b"; INK2 <- "#52514e"; MUTED <- "#898781"
+> GRID <- "#e1e0d9"; GRAY <- "#c3c2b7"
+> BLUE <- "#2a78d6"; ORANGE <- "#eb6834"; AQUA <- "#1baf7a"
+> GOOD <- "#0ca30c"; SERIOUS <- "#ec835a"; CRITICAL <- "#d03b3b"; NOTRUN <- "#ecebe6"
+> states <- c("L", "LM", "M", "HM", "H", "R")
+> 
+> theme_rep <- function() theme_minimal(base_size = 11, base_family = "sans") +
++   theme(plot.background  = element_rect(fill = SURF, colour = NA),
++         panel.background = element_rect(fill = SURF, colour = NA),
++         panel.grid.major = element_line(colour = GRID, linewidth = 0.3),
++         panel.grid.minor = element_blank(),
++         axis.text  = element_text(colour = INK2, size = 9.5),
++         axis.title = element_text(colour = INK2, size = 10),
++         plot.title = element_text(colour = INK, face = "bold", size = 12.5),
++         plot.title.position = "plot",
++         plot.subtitle = element_text(colour = INK2, size = 10, lineheight = 1.1),
++         plot.caption  = element_text(colour = MUTED, size = 8.5, hjust = 0),
++         plot.caption.position = "plot",
++         legend.position = "top", legend.justification = "left",
++         legend.title = element_blank(), legend.text = element_text(colour = INK2, size = 9.5),
++         strip.text = element_text(colour = INK, face = "bold", hjust = 0, size = 10),
++         plot.margin = margin(10, 16, 8, 10))
+> theme_set(theme_rep())
+> 
+> save_fig <- function(name, plot, w, h) {
++   f <- file.path(res, name)
++   ggsave(f, plot, width = w, height = h, dpi = 200, bg = SURF)
++   cat("  written:", f, "\n")
++ }
+> titled <- function(title, ..., widths = NULL) {
++   arrangeGrob(..., ncol = length(list(...)), widths = widths,
++     top = textGrob(title, x = unit(12, "pt"), hjust = 0,
++                    gp = gpar(fontsize = 14, fontface = "bold", col = INK)))
++ }
+> r4 <- function(x) round(x, 4)
+> pct <- function(x, d = 1) paste0(formatC(100 * x, format = "f", digits = d), "%")
+> # ink or white text on a coloured fill, by the fill's luminance
+> on_fill <- function(hex) {
++   rgb <- col2rgb(hex) / 255
++   lin <- ifelse(rgb <= 0.03928, rgb / 12.92, ((rgb + 0.055) / 1.055)^2.4)
++   lum <- 0.2126 * lin[1, ] + 0.7152 * lin[2, ] + 0.0722 * lin[3, ]
++   ifelse(lum > 0.2, INK, "white")
++ }
+> 
+> # ----------------------------------------------------------------
+> # Fig20  item 4(1): missing data and IQR outliers
+> # ----------------------------------------------------------------
+> na <- rd("Task39_RRBS_NAcount.csv")
+> na[, hl := NAcount == 0]
+> p20a <- ggplot(na, aes(factor(NAcount), N / 1000, fill = hl)) +
++   geom_col(width = 0.72) +
++   geom_text(data = na[NAcount %in% c(0, 18)],
++             aes(label = paste0(comma(N), "\n(", pct(share), ")")),
++             vjust = -0.25, colour = INK2, size = 3.2, lineheight = 0.9) +
++   scale_fill_manual(values = c(`TRUE` = BLUE, `FALSE` = GRAY), guide = "none") +
++   scale_x_discrete(expand = expansion(add = 1.2)) +
++   scale_y_continuous(labels = comma, expand = expansion(mult = c(0, 0.16))) +
++   coord_cartesian(clip = "off") +
++   labs(title = "(a) Samples with no data at each site",
++        subtitle = "634,646 CG sites on chr22. Blue: sites with data in all 18 samples.",
++        x = "Number of the 18 samples with no data (NA count)", y = "CG sites (thousands)",
++        caption = "Source: Results/Task39_RRBS_NAcount.csv (Task 39)")
+> 
+> oc <- rd("Task39_RRBS_OutlierCounts.csv")
+> lab20 <- c("complete, L" = "L", "complete, LM" = "LM", "complete, M" = "M",
++            "complete, HM" = "HM", "complete, H" = "H", "complete, R" = "R",
++            "complete, all states" = "All complete sites",
++            "continuous Normal data, 18 samples (simulated)" = "Smooth normal data\n(simulated)")
+> oc <- oc[scope %in% names(lab20)]
+> oc[, row := factor(lab20[scope], levels = rev(lab20))]
+> o20 <- melt(oc, id.vars = "row", measure.vars = c("any_coef2", "any_coef3"))
+> o20[, series := factor(fifelse(variable == "any_coef2", "At least one IQR2 outlier",
++                                 "At least one IQR3 outlier"),
++                         levels = c("At least one IQR2 outlier", "At least one IQR3 outlier"))]
+> o20[, lab := fifelse(row %in% c("All complete sites", "Smooth normal data\n(simulated)"), pct(value), "")]
+> p20b <- ggplot(o20, aes(value, row, fill = series)) +
++   geom_col(position = position_dodge(width = 0.78), width = 0.72) +
++   geom_text(aes(label = lab), position = position_dodge(width = 0.78),
++             hjust = -0.15, colour = INK2, size = 3.1) +
++   scale_fill_manual(values = c(BLUE, ORANGE)) +
++   scale_x_continuous(labels = percent, limits = c(0, 1), expand = expansion(mult = c(0, 0.02))) +
++   labs(title = "(b) Complete sites with at least one IQR outlier",
++        subtitle = "By state, next to what smooth normal data would give.",
++        x = "Share of sites", y = NULL,
++        caption = "Source: Results/Task39_RRBS_OutlierCounts.csv (Task 39)")
+> save_fig("Fig20_RRBS_MissingData_IQROutliers.png",
++          titled("RRBS chr22: most sites have no data, and IQR outliers are far too common",
++                 p20a, p20b, widths = c(1, 1.05)), 13, 5.6)
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Fig20_RRBS_MissingData_IQROutliers.png 
+> 
+> # ----------------------------------------------------------------
+> # Fig21  item 6: the six states, with one real RRBS site each
+> # ----------------------------------------------------------------
+> cs <- fread(file.path(res, "Task39_RRBS_CompleteSiteStates.csv.gz"))
+> sc <- rd("Task39_RRBS_StateCounts.csv")
+> d  <- fread(rrbs, na.strings = "NA", showProgress = FALSE)
+> samp <- grep("^P[0-9]+NF$", names(d), value = TRUE)
+> # the example for each state: the complete site whose median is closest
+> # to the median of that state's site medians (first by position on ties)
+> pick <- rbindlist(lapply(states, function(s) {
++   x <- cs[state == s]; tgt <- median(x$Median)
++   x[order(abs(Median - tgt), pos)][1, .(state = s, pos)]
++ }))
+> vals <- rbindlist(lapply(seq_len(nrow(pick)), function(i)
++   data.table(state = pick$state[i], beta = as.numeric(unlist(d[pos == pick$pos[i], ..samp])))))
+> rm(d); invisible(gc())
+> tsg <- function(m) {   # the TSG rule, to confirm each example's state
++   if (all(m < .2)) "L" else if (all(m > .8)) "H" else if (!any(m < .2) && !any(m > .8)) "M"
++   else if (all(m > .4)) "HM" else if (all(m < .6)) "LM" else "R" }
+> stopifnot(vals[, .N, by = state]$N == 18, !anyNA(vals$beta),
++           identical(vals[, tsg(beta), by = state]$V1, states))
+> vals[, yrow := match(state, rev(states))]
+> vals[, k := .N, by = .(state, beta)][, j := seq_len(.N), by = .(state, beta)]
+> vals[, y := yrow + fifelse(k > 1, (j - (k + 1) / 2) * pmin(0.62 / (k - 1), 0.11), 0)]
+> bands <- data.table(state = states, xmin = c(0, 0, 0.2, 0.4, 0.8, 0), xmax = c(0.2, 0.6, 0.8, 1, 1, 1))
+> bands[, yrow := match(state, rev(states))]
+> rule <- c(L = "all below 0.2", LM = "all below 0.6 (not L or M)", M = "all from 0.2 to 0.8",
++           HM = "all above 0.4 (not H or M)", H = "all above 0.8", R = "none of the above")
+> sc[, lab := paste0(state, ":  ", rule[as.character(state)], "\n", comma(N), " sites (", pct(share), ")")]
+> ylabs <- sc$lab[match(states, sc$state)]
+> p21 <- ggplot() +
++   geom_rect(data = bands, aes(xmin = xmin, xmax = xmax, ymin = yrow - 0.4, ymax = yrow + 0.4),
++             fill = BLUE, alpha = 0.10) +
++   geom_vline(xintercept = c(0.2, 0.4, 0.6, 0.8), colour = MUTED, linewidth = 0.35) +
++   geom_point(data = vals, aes(beta, y), shape = 21, fill = BLUE, colour = SURF,
++              stroke = 0.7, size = 2.6) +
++   scale_x_continuous(breaks = seq(0, 1, 0.2), expand = expansion(add = 0.02)) +
++   scale_y_continuous(breaks = 6:1, labels = ylabs, expand = expansion(add = 0.5)) +
++   labs(title = "The six methylation states of the TSG paper, with one real RRBS site each",
++        subtitle = paste0("Shaded: where all 18 values of a site must lie. Dots: the 18 samples of one ",
++                          "complete RRBS site in that state\n(the site with the most typical median). ",
++                          "Vertical lines: the cut-offs 0.2, 0.4, 0.6 and 0.8."),
++        x = "Methylation level (beta)", y = NULL,
++        caption = paste0("Sources: Data/NN.hg38.18P.forw.chr22.w.header.txt, ",
++                         "Results/Task39_RRBS_CompleteSiteStates.csv.gz and Task39_RRBS_StateCounts.csv"))
+> save_fig("Fig21_RRBS_StateDefinitions.png", p21, 11, 6.6)
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Fig21_RRBS_StateDefinitions.png 
+> 
+> # ----------------------------------------------------------------
+> # Fig22  item 4(2): nearby sites share a state
+> # ----------------------------------------------------------------
+> ag <- rd("Task39_RRBS_StateAgreementByGap.csv")
+> bin22 <- c("(0,10]" = "up to 10", "(10,50]" = "11-50", "(50,100]" = "51-100",
++            "(100,200]" = "101-200", "(200,500]" = "201-500", "(500,1000]" = "501-1,000",
++            "(1000,10000]" = "1,001-\n10,000", "(10000,Inf]" = "over\n10,000")
+> ag[, bin := factor(bin22[gap_bin], levels = bin22)]
+> a22 <- melt(ag, id.vars = "bin", measure.vars = c("same_state", "chance_matched"))
+> a22[, series := factor(fifelse(variable == "same_state", "Real neighbour pairs", "Expected by chance"),
++                        levels = c("Real neighbour pairs", "Expected by chance"))]
+> p22a <- ggplot(a22, aes(bin, value, colour = series, group = series)) +
++   geom_line(linewidth = 0.8) +
++   geom_point(size = 2.6, shape = 21, aes(fill = series), colour = SURF, stroke = 0.7) +
++   geom_text(data = a22[bin == "up to 10"], aes(label = pct(value)), colour = INK2,
++             vjust = -1.1, size = 3.2) +
++   scale_colour_manual(values = c(BLUE, MUTED)) + scale_fill_manual(values = c(BLUE, MUTED)) +
++   scale_y_continuous(labels = percent, limits = c(0, 0.85)) +
++   labs(title = "(a) Pairs of consecutive complete sites in the same state",
++        subtitle = "Beyond 205 bases, every pair skips a site with missing data.",
++        x = "Distance to the next complete site (bases)", y = NULL,
++        caption = "Source: Results/Task39_RRBS_StateAgreementByGap.csv (Task 39)")
+> 
+> tr <- rd("Task39_RRBS_StateTransitions_1kb.csv")
+> tr[, `:=`(from = factor(from, levels = rev(states)), to = factor(to, levels = states))]
+> ramp <- c("#f5f8fc", "#cde2fb", "#86b6ef", "#3987e5", "#1c5cab", "#104281")
+> tr[, fillhex := ramp[pmin(length(ramp), 1 + floor(row_share * (length(ramp) - 1) + 0.5))]]
+> tr[, txt := fifelse(row_share >= 0.005, sprintf("%.0f%%", 100 * row_share), "")]
+> tr[, txtcol := on_fill(fillhex)]
+> p22b <- ggplot(tr, aes(to, from, fill = row_share)) +
++   geom_tile(colour = SURF, linewidth = 1.2) +
++   geom_text(aes(label = txt, colour = txtcol), size = 3.3) +
++   scale_colour_identity() +
++   scale_fill_gradientn(colours = ramp, limits = c(0, 1), labels = percent, name = NULL) +
++   labs(title = "(b) State of the next site, within 1,000 bases",
++        subtitle = "Each row adds to 100%. M has only 57 pairs.",
++        x = "Next site's state", y = "First site's state",
++        caption = "Source: Results/Task39_RRBS_StateTransitions_1kb.csv (Task 39)") +
++   theme(panel.grid.major = element_blank(), legend.position = "right",
++         legend.key.height = unit(26, "pt"), legend.key.width = unit(8, "pt"))
+> save_fig("Fig22_RRBS_NeighbourStates.png",
++          titled("RRBS chr22: nearby sites share a state, and changes are mostly one step",
++                 p22a, p22b, widths = c(1.15, 1)), 13, 5.8)
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Fig22_RRBS_NeighbourStates.png 
+> 
+> # ----------------------------------------------------------------
+> # Fig23  item 5: agreement vs correlation, by state pair
+> # ----------------------------------------------------------------
+> ms <- rd("Task41_MetricsByStatePair.csv")
+> lab23 <- c("L-L" = "L and L", "LM-LM" = "LM and LM", "HM-HM" = "HM and HM",
++            "H-H" = "H and H", "R-R" = "R and R", "different" = "Different states")
+> d23 <- ms[state_pair %in% names(lab23) & measure %in% c("ordinal_similarity", "spearman_levels"),
++           .(state_pair, measure, median, defined_share, pairs)]
+> d23[, row := factor(paste0(lab23[state_pair], "\n", comma(pairs), " pairs"),
++                     levels = rev(paste0(lab23, "\n", comma(d23[match(names(lab23), state_pair), pairs]), " pairs")))]
+> d23[, score := factor(fifelse(measure == "ordinal_similarity",
++                               "Level similarity S: are the levels the same?",
++                               "Spearman: do the two sites move together?"),
++                       levels = c("Level similarity S: are the levels the same?",
++                                  "Spearman: do the two sites move together?"))]
+> seg23 <- dcast(d23, row ~ measure, value.var = "median")
+> cmp23 <- d23[measure == "spearman_levels",
++              .(row, lab = paste0("Spearman can be computed: ", pct(defined_share, 0)))]
+> p23 <- ggplot() +
++   geom_segment(data = seg23, aes(x = spearman_levels, xend = ordinal_similarity, y = row, yend = row),
++                colour = GRAY, linewidth = 0.8) +
++   geom_point(data = d23, aes(median, row, fill = score), shape = 21, colour = SURF,
++              stroke = 0.8, size = 3.8) +
++   geom_text(data = cmp23, aes(x = 1.05, y = row, label = lab), hjust = 0, colour = INK2, size = 3.2) +
++   scale_fill_manual(values = c(BLUE, ORANGE)) +
++   scale_x_continuous(breaks = seq(0, 1, 0.25), limits = c(-0.1, 1.55)) +
++   labs(title = "Agreement and correlation answer different questions",
++        subtitle = paste0("Medians over the 32,664 truly consecutive RRBS pairs with data in all 18 samples.\n",
++                          "Correlation cannot be computed when a site has the same level in every sample, ",
++                          "which is common at L and H sites."),
++        x = "Median score", y = NULL,
++        caption = "Source: Results/Task41_MetricsByStatePair.csv (Task 41). The 4 M-M pairs are not shown.")
+> save_fig("Fig23_RRBS_AgreementVsCorrelation.png", p23, 11, 5.8)
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Fig23_RRBS_AgreementVsCorrelation.png 
+> 
+> # ----------------------------------------------------------------
+> # Fig24  item 5: scores by distance, truly consecutive pairs
+> # ----------------------------------------------------------------
+> mg <- rd("Task41_MetricsByGap.csv")
+> bin24 <- c("(0,10]" = "up to 10", "(10,50]" = "11-50", "(50,100]" = "51-100", "(100,200]" = "101-200")
+> lab24 <- c(agreement_exact = "Exact agreement", ordinal_similarity = "Level similarity S",
++            pearson_raw = "Pearson (beta)", xi_mean = "Chatterjee's xi")
+> mg <- mg[pair_set == "true_consecutive" & gap_bin %in% names(bin24) & measure %in% names(lab24)]
+> mg[, bin := factor(paste0(bin24[gap_bin], "\n", comma(pairs)),
++                    levels = paste0(bin24, "\n", comma(mg[measure == "agreement_exact"][match(names(bin24), gap_bin), pairs])))]
+> mg[, score := factor(lab24[measure], levels = lab24)]
+> mg[, lab := fifelse(gap_bin %in% c("(0,10]", "(100,200]"), sprintf("%.2f", median), "")]
+> p24 <- ggplot(mg, aes(bin, median, group = score)) +
++   geom_ribbon(aes(ymin = q25, ymax = q75), fill = BLUE, alpha = 0.10) +
++   geom_line(colour = BLUE, linewidth = 0.8) +
++   geom_point(shape = 21, fill = BLUE, colour = SURF, stroke = 0.7, size = 2.8) +
++   geom_text(aes(label = lab), vjust = -1.1, colour = INK2, size = 3.1) +
++   facet_wrap(~ score, nrow = 1) +
++   scale_y_continuous(limits = c(min(0, min(mg$q25)) - 0.02, 1.05), breaks = seq(0, 1, 0.25)) +
++   labs(title = "Neighbouring CG sites become less alike as they get further apart",
++        subtitle = paste0("Truly consecutive RRBS pairs with data in all 18 samples. ",
++                          "Line: median. Shaded: middle half of the pairs (Q1 to Q3).\n",
++                          "Part of the fall in agreement comes from the state mix: very close pairs ",
++                          "are more often L sites."),
++        x = "Distance between the two sites (bases), and number of pairs", y = "Score",
++        caption = "Source: Results/Task41_MetricsByGap.csv (Task 41). One pair 205 bases apart is not shown.")
+> save_fig("Fig24_RRBS_SimilarityByDistance.png", p24, 13, 5)
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Fig24_RRBS_SimilarityByDistance.png 
+> 
+> # ----------------------------------------------------------------
+> # Fig25  item 5: real pairs vs patient-shuffled pairs
+> # ----------------------------------------------------------------
+> nm  <- rd("Task41_PermutationNullMeans.csv")
+> pdg <- rd("Task41_PermutationDiagnostic.csv")
+> lab25 <- c(ordinal_similarity = "Level similarity S", kappa_quadratic = "Weighted kappa",
++            pearson_raw = "Pearson (beta), size only", spearman_levels = "Spearman (levels), size only",
++            xi_mean = "Chatterjee's xi")
+> n25 <- melt(nm[, names(lab25), with = FALSE], measure.vars = names(lab25))
+> set.seed(20260929)
+> n25 <- n25[, .(score = factor(lab25[as.character(variable)], levels = lab25), value,
++                y = runif(.N, -0.28, 0.28), type = "Mean after one shuffle of the patients (199 shuffles)")]
+> o25 <- pdg[measure %in% names(lab25),
++            .(score = factor(lab25[measure], levels = lab25), value = observed_mean, y = 0,
++              type = "Mean of the real pairs")]
+> p25 <- ggplot(rbind(n25, o25), aes(value, y, fill = type, size = type)) +
++   geom_point(shape = 21, colour = SURF, stroke = 0.6) +
++   geom_text(data = o25, aes(value, 0.5, label = sprintf("%.3f", value)), inherit.aes = FALSE,
++             colour = INK2, size = 3.2) +
++   facet_wrap(~ score, ncol = 1, scales = "free_x") +
++   scale_fill_manual(values = c("Mean after one shuffle of the patients (199 shuffles)" = GRAY,
++                                "Mean of the real pairs" = BLUE)) +
++   scale_size_manual(values = c(1.9, 4.2), guide = "none") +
++   scale_y_continuous(limits = c(-0.45, 0.7), breaks = NULL) +
++   guides(fill = guide_legend(override.aes = list(size = 3.5))) +
++   labs(title = "Neighbouring sites line up patient by patient, far beyond chance",
++        subtitle = paste0("512 random truly consecutive RRBS pairs. Shuffling the patient order at one site ",
++                          "breaks the link between patients\nbut keeps each site's values. ",
++                          "Every score is higher for the real pairs than after any of the 199 shuffles.\n",
++                          "This shows that the patients line up. It does not show why: a batch effect or ",
++                          "the cell mix can also do this."),
++        x = "Mean score over the 512 pairs", y = NULL,
++        caption = "Source: Results/Task41_PermutationNullMeans.csv and Task41_PermutationDiagnostic.csv (Task 41)") +
++   theme(panel.grid.major.y = element_blank())
+> save_fig("Fig25_RRBS_ShuffleTest.png", p25, 11, 7.2)
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Fig25_RRBS_ShuffleTest.png 
+> 
+> # ----------------------------------------------------------------
+> # Fig26  item 1(3): what the +100 offset does to beta (arithmetic)
+> # ----------------------------------------------------------------
+> tot <- 10^seq(log10(300), log10(20000), length.out = 300)
+> off <- CJ(true_beta = c(0.95, 0.5, 0.05), total = tot)
+> off[, drop := true_beta * 100 / (total + 100)]
+> off[, series := factor(paste("True beta", true_beta), levels = paste("True beta", c(0.95, 0.5, 0.05)))]
+> pts <- rd("Task40_OffsetArithmetic.csv")
+> pts[, series := factor(paste("True beta", true_beta), levels = levels(off$series))]
+> stopifnot(max(abs(pts$shift_down - pts$true_beta * 100 / (pts$total_signal + 100))) < 1e-4)
+> ends <- off[total == min(total)]
+> p26 <- ggplot(off, aes(total, drop, colour = series)) +
++   geom_hline(yintercept = 0.031, colour = MUTED, linewidth = 0.45) +
++   annotate("text", x = 20000, y = 0.031, vjust = -0.6, hjust = 1, colour = INK2, size = 3.2,
++            label = "Typical flag size at H sites: 0.031 (README, Finding 2)") +
++   geom_line(linewidth = 0.8) +
++   geom_point(data = pts, aes(total_signal, shift_down, fill = series), shape = 21,
++              colour = SURF, stroke = 0.7, size = 2.6) +
++   geom_text(data = ends, aes(label = sub("True beta ", "true beta ", series)), hjust = 1.08,
++             colour = INK2, size = 3.2) +
++   scale_colour_manual(values = c(BLUE, ORANGE, AQUA)) +
++   scale_fill_manual(values = c(BLUE, ORANGE, AQUA), guide = "none") +
++   scale_x_log10(labels = comma, breaks = c(300, 1000, 3000, 10000, 20000),
++                 expand = expansion(mult = c(0.2, 0.03))) +
++   labs(title = "The +100 offset pulls beta down most for methylated sites with a weak signal",
++        subtitle = "beta = M / (M + U + 100). How much lower beta reads than M / (M + U). Arithmetic only.",
++        x = "Total signal, M + U (log scale)", y = "How much lower beta reads",
++        caption = "Source: formula; dots are Results/Task40_OffsetArithmetic.csv (Task 40)")
+> save_fig("Fig26_OffsetEffect.png", p26, 10, 5.6)
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Fig26_OffsetEffect.png 
+> 
+> # ----------------------------------------------------------------
+> # Fig27  item 3: OutlierMeth with the CG ID replaced or removed
+> # ----------------------------------------------------------------
+> idt <- rd("Task40_IDTest.csv")
+> # outcome category, and the share of cells that differ (for wrong flags)
+> outcome <- function(r) {
++   if (startsWith(r$result, "error")) return(list("Stops with an error", NA_real_))
++   if (r$identical_cells == r$cells) return(list("Same in every cell", NA_real_))
++   if (r$NA_cells == r$cells) return(list("No flags at all\n(every cell NA)", NA_real_))
++   list("Wrong flags", r$different_cells / r$cells)
++ }
+> fill27 <- c("Same in every cell" = GOOD, "Stops with an error" = SERIOUS,
++             "No flags at all\n(every cell NA)" = CRITICAL, "Wrong flags" = CRITICAL, "Not run" = NOTRUN)
+> self <- idt[reference == "self (53 samples)" & row_names != "cgID, this run"]
+> key27 <- c("cgID" = "CG ID\n(cg13869341)", "chr:position" = "Chromosome and position\n(chr1:15865)",
++            "position only" = "Position number only\n(15865)", "none" = "No ID")
+> col27 <- c("Self reference,\nTask 13's call", "Self reference,\nplain call",
++            "External panel\nlabelled by CG ID", "External panel\nrelabelled to match")
+> cell <- function(tis, ids, col) {
++   r <- switch(col,
++     "Self reference,\nTask 13's call" = self[tissue == tis & row_names == ids & call == "Task 13 call"],
++     "Self reference,\nplain call"     = self[tissue == tis & row_names == ids & call == "plain call"],
++     "External panel\nlabelled by CG ID" = idt[tissue == tis & grepl("^external", reference) &
++                                               row_names == ids & call == "panel keyed by cgID"],
++     "External panel\nrelabelled to match" = if (ids == "cgID")
++         idt[tissue == tis & grepl("^external", reference) & row_names == "cgID"] else
++         idt[tissue == tis & grepl("^external", reference) & row_names == ids & grepl("renamed", call)])
++   if (!nrow(r)) return(list("Not run", NA_real_))
++   outcome(r[1])
++ }
+> grid27 <- function(tis) rbindlist(lapply(names(key27), function(ids) rbindlist(lapply(col27, function(col) {
++   o <- cell(tis, ids, col); data.table(ids, col, category = o[[1]], differ = o[[2]]) }))))
+> g27 <- grid27("Normal")
+> t27 <- grid27("Tumor")
+> # the tumour self-reference outcomes must fall in the same categories
+> stopifnot(identical(g27[grepl("^Self", col), category], t27[grepl("^Self", col), category]))
+> g27[grepl("^Self", col), differ_t := t27[grepl("^Self", col), differ]]
+> g27[, text := fifelse(category == "Wrong flags",
++                       sprintf("Wrong flags\n(%s to %s of cells differ)",
++                               pct(pmin(differ, differ_t, na.rm = TRUE)),
++                               pct(pmax(differ, differ_t, na.rm = TRUE))), category)]
+> g27[, fill := fill27[category]]
+> g27[, `:=`(row = factor(key27[ids], levels = rev(key27)), column = factor(col, levels = col27))]
+> g27[, txtcol := fifelse(fill == NOTRUN, MUTED, on_fill(fill))]
+> p27 <- ggplot(g27, aes(column, row)) +
++   geom_tile(aes(fill = fill), colour = SURF, linewidth = 2.5) +
++   geom_text(aes(label = text, colour = txtcol), size = 3.3, lineheight = 0.95) +
++   scale_fill_identity() + scale_colour_identity() +
++   scale_x_discrete(position = "top") +
++   labs(title = "OutlierMeth only gives the same output when the ID is unique and shared by both tables",
++        subtitle = paste0("All 380,355 sites x 53 samples, compared cell by cell with the run that keeps the ",
++                          "CG ID.\nSelf-reference results were the same in normal and tumour. ",
++                          "The external panel is a stand-in built from the 32 Dead normal samples."),
++        x = NULL, y = NULL,
++        caption = "Source: Results/Task40_IDTest.csv (Task 40). Not run: that combination was not tested.") +
++   theme(panel.grid.major = element_blank(), axis.text = element_text(colour = INK, size = 9.5))
+> save_fig("Fig27_OutlierMeth_IDTest.png", p27, 11.5, 5.4)
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Fig27_OutlierMeth_IDTest.png 
+> 
+> # ----------------------------------------------------------------
+> # Fig28  item 1(1): probes that map to more than one place
+> # ----------------------------------------------------------------
+> mk <- rd("Task40_MaskedProbeFlags.csv")
+> ts <- rd("Task36_TopSites_Summary.csv")
+> tf <- rd("Task36_TopSites_ContraryFlags_Detail.csv")
+> top <- unique(ts[startsWith(cohort, "Alive"), .(cgID, masked = zhou.mask != "none")])
+> n_top <- nrow(top); n_mask <- top[, sum(masked)]
+> n_flag <- nrow(tf); n_mflag <- tf[, sum(cgID %in% top[masked == TRUE, cgID])]
+> stopifnot(n_top == 12, n_mask == 8, n_flag == 79, n_mflag == 57,
++           all(ts[startsWith(cohort, "Alive") & zhou.mask != "none", zhou.mask] == "M_nonuniq"))
+> nu <- mk[probes %like% "M_nonuniq"]
+> d28 <- rbind(
++   data.table(group = "All 380,355 sites,\nnormal", what = c("Share of sites", "Share of flags"),
++              value = c(nu[tissue == "Normal", share_of_CpGs], nu[tissue == "Normal", share_of_ext_flags])),
++   data.table(group = "All 380,355 sites,\ntumour", what = c("Share of sites", "Share of flags"),
++              value = c(nu[tissue == "Tumor", share_of_CpGs], nu[tissue == "Tumor", share_of_ext_flags])),
++   data.table(group = "The 12 sites with the most\ncontrary flags (Task 36)",
++              what = c("Share of sites", "Share of flags"), value = c(n_mask / n_top, n_mflag / n_flag)))
+> d28[, group := factor(group, levels = unique(group))]
+> d28[, what := factor(what, levels = c("Share of sites", "Share of flags"))]
+> d28[, lab := fifelse(group == levels(group)[3],
++                      fifelse(what == "Share of sites", sprintf("%d of %d sites", n_mask, n_top),
++                               sprintf("%d of %d flags", n_mflag, n_flag)), pct(value))]
+> p28 <- ggplot(d28, aes(group, value, fill = what)) +
++   geom_col(position = position_dodge(width = 0.72), width = 0.66) +
++   geom_text(aes(label = lab), position = position_dodge(width = 0.72), vjust = -0.5,
++             colour = INK2, size = 3.3) +
++   scale_fill_manual(values = c(BLUE, ORANGE)) +
++   scale_y_continuous(labels = percent, limits = c(0, 0.85), expand = expansion(mult = c(0, 0.02))) +
++   labs(title = "Probes that map to more than one place: rare overall, but most of the extreme sites",
++        subtitle = paste0("Probes that Zhou et al. (2017) mask because their sequence also matches ",
++                          "elsewhere in the genome (M_nonuniq).\nFlags are ext flags for all sites, ",
++                          "and the 79 contrary ext flags for the 12 top sites."),
++        x = NULL, y = NULL,
++        caption = paste0("Sources: Results/Task40_MaskedProbeFlags.csv (Task 40), ",
++                         "Task36_TopSites_Summary.csv and Task36_TopSites_ContraryFlags_Detail.csv (Task 36)")) +
++   theme(panel.grid.major.x = element_blank())
+> save_fig("Fig28_MaskedProbes.png", p28, 10, 5.6)
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Fig28_MaskedProbes.png 
+> 
+> # ----------------------------------------------------------------
+> # Fig29  item 2: are the L-state red dots from the most flagged samples?
+> #   "Outlying sample" here = a sample with the most ext flags genome-wide
+> #   (Task 33 / Task 37 ranking). A red dot = a contrary ext flag at an
+> #   L-state site (a "too low" flag at a site that is already low).
+> # ----------------------------------------------------------------
+> ol  <- rd("Task37_SampleOutlyingness.csv")[, .(tissue, sample, ext.flags, ext.rank)]
+> cd  <- rbind(rd("Task21_Chr22_ContraryDrivers_Normal.csv"), rd("Task21_Chr22_ContraryDrivers_Tumor.csv"))
+> d29 <- merge(cd[, .(tissue, sample, contrary.L, all.ext.flags)], ol, by = c("tissue", "sample"))
+> stopifnot(nrow(d29) == 106, d29[, .N, by = tissue]$N == 53)
+> d29[, top4 := ext.rank <= 4]
+> s29 <- d29[, .(samples = .N, L_red_dots_chr22 = sum(contrary.L),
++                from_top4 = sum(contrary.L[top4]),
++                share_from_top4 = r4(sum(contrary.L[top4]) / sum(contrary.L)),
++                even_share_of_4 = r4(4 / .N),
++                top4_share_of_all_ext_flags_chr22 = r4(sum(all.ext.flags[top4]) / sum(all.ext.flags)),
++                samples_with_any = sum(contrary.L > 0),
++                top4 = paste(sample[top4][order(ext.rank[top4])], collapse = " ")), by = tissue]
+> fwrite(s29, file.path(res, "Task44_Item2_LRedDotsByFlagRank.csv"))
+> cat("\nItem 2, L-state red dots on chr22 and the four most flagged samples:\n"); print(s29)
+
+Item 2, L-state red dots on chr22 and the four most flagged samples:
+Key: <tissue>
+   tissue samples L_red_dots_chr22 from_top4 share_from_top4 even_share_of_4
+   <char>   <int>            <int>     <int>           <num>           <num>
+1: Normal      53             1894       456          0.2408          0.0755
+2:  Tumor      53             1977       350          0.1770          0.0755
+   top4_share_of_all_ext_flags_chr22 samples_with_any            top4
+                               <num>            <int>          <char>
+1:                            0.4231               49 N15 N17 N14 N48
+2:                            0.2030               52 T15 T17 T14 T16
+> d29[, panel := factor(fifelse(tissue == "Normal", "Normal (53 samples)", "Tumour (53 samples)"),
++                       levels = c("Normal (53 samples)", "Tumour (53 samples)"))]
+> even29 <- d29[, .(even = sum(contrary.L) / .N), by = panel]
+> lab29 <- d29[top4 == TRUE | sample == "N16"]
+> p29 <- ggplot(d29, aes(ext.rank, contrary.L, fill = top4)) +
++   geom_col(width = 0.75) +
++   geom_hline(data = even29, aes(yintercept = even), colour = MUTED, linewidth = 0.45) +
++   geom_text(data = even29, aes(x = 53.5, y = even, label = "same number for every sample"),
++             inherit.aes = FALSE, hjust = 1, vjust = -0.5, colour = INK2, size = 3) +
++   geom_text(data = lab29, aes(label = sample), vjust = -0.4, colour = INK2, size = 3) +
++   facet_wrap(~ panel, ncol = 1) +
++   scale_fill_manual(values = c(`TRUE` = BLUE, `FALSE` = GRAY), guide = "none") +
++   scale_x_continuous(breaks = c(1, 10, 20, 30, 40, 53), expand = expansion(add = 0.8)) +
++   scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
++   labs(title = "The most flagged samples carry more than their share of L-state red dots, but not most of them",
++        subtitle = paste0("Bars: red dots at L sites on chr22 (contrary ext flags), per sample. Samples are sorted ",
++                          "by their total ext flags genome-wide.\nBlue: the four most flagged samples. ",
++                          "They hold ", pct(s29[tissue == "Normal", share_from_top4]), " of the normal and ",
++                          pct(s29[tissue == "Tumor", share_from_top4]), " of the tumour red dots, against ",
++                          pct(4 / 53), " if every sample had the same number."),
++        x = "Samples, ranked by total ext flags genome-wide (1 = most flags)", y = "Red dots at L sites (chr22)",
++        caption = paste0("Sources: Results/Task21_Chr22_ContraryDrivers_Normal.csv and _Tumor.csv (Task 21), ",
++                         "Task37_SampleOutlyingness.csv (Task 37)")) +
++   theme(panel.grid.major.x = element_blank())
+> save_fig("Fig29_Item2_LRedDotsByFlagRank.png", p29, 12, 7)
+  written: /Users/anamgiri/Desktop/bioinformatics-research/Results/Fig29_Item2_LRedDotsByFlagRank.png 
+> 
+> cat("\ndone\n")
+
+done
+> 
+> proc.time()
+   user  system elapsed 
+  1.686   0.136   1.777 
