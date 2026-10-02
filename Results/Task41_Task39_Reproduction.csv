@@ -1,0 +1,8 @@
+Task39,Task41,pairs,missing_disagreements,max_absolute_difference
+agree,agreement_exact,38563,0,4.44444444444442e-05
+agree1,agreement_within_one,38563,0,4.44444444444442e-05
+L1,ordinal_L1,38563,0,4.44444444447356e-05
+L2beta,beta_RMSE,38563,0,4.99989434490089e-05
+kappa_w,kappa_quadratic,38563,0,5.00000000569489e-05
+pearson_beta,pearson_raw,38563,0,4.99992577332464e-05
+spearman,spearman_levels,38563,0,4.99999999999945e-05

@@ -1,0 +1,7 @@
+Input: 634646 sites; 38564 complete; 32664 true consecutive complete pairs
+Computing 70273 true consecutive pairs with >=6 shared observations
+Running 199 patient permutations on 512 random primary pairs
+Permutation 50 of 199 
+Permutation 100 of 199 
+Permutation 150 of 199 
+Completed in 15.6 seconds

@@ -1,0 +1,15 @@
+{
+  "seed": 20260928,
+  "main_n_common": 18,
+  "coverage_sensitivity": [6, 9, 12, 15, 18],
+  "xi_min_n_common": 12,
+  "bin_sensitivity": [5, 10, 20],
+  "permutation_pairs": 512,
+  "permutations": 199,
+  "permutation_scope": "Diagnostic only; no multiplicity-adjusted discoveries or causal claims",
+  "xi_definition": "Exact average over predictor-tie rearrangements in each direction; mean/max of directional averages",
+  "seconds": 15.564,
+  "R_version": "R version 4.6.0 (2026-04-24)",
+  "packages": ["1.18.4", "1.5.0", "4.0.3", "2.0.0"],
+  "script_md5": "6987ba5ea268df9ec8233d40691fa1ba"
+}

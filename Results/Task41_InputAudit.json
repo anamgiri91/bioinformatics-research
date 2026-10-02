@@ -1,0 +1,16 @@
+{
+  "input": "/Users/anamgiri/Desktop/bioinformatics-research/Data/NN.hg38.18P.forw.chr22.w.header.txt",
+  "input_md5": "2694e03ae196b462b5fc3b65a6337792",
+  "sites": 634646,
+  "samples": ["P1NF", "P2NF", "P3NF", "P4NF", "P5NF", "P6NF", "P7NF", "P8NF", "P9NF", "P10NF", "P11NF", "P12NF", "P13NF", "P14NF", "P15NF", "P16NF", "P17NF", "P18NF"],
+  "observed_cells": 1346959,
+  "missing_cells": 10076669,
+  "missing_share": 0.8821,
+  "complete_sites": 38564,
+  "consecutive_file_pairs": 634645,
+  "consecutive_file_complete_pairs": 32664,
+  "consecutive_complete_pairs": 38563,
+  "complete_bridges": 5899,
+  "coordinate_basis": "Input hg38 coordinates preserved; 0/1-based origin not independently verified",
+  "provenance_limit": "No methylated counts, total coverage, covariates or patient metadata supplied"
+}
