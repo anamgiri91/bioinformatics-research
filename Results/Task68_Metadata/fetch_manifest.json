@@ -1,0 +1,44 @@
+[
+  {
+    "file": "GSE173787.soft",
+    "url": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE173787&targ=gsm&form=text&view=full",
+    "bytes": 367433,
+    "ok": true
+  },
+  {
+    "file": "GSE165915.soft",
+    "url": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE165915&targ=gsm&form=text&view=full",
+    "bytes": 211757,
+    "ok": true
+  },
+  {
+    "file": "GSE186458.soft",
+    "url": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE186458&targ=gsm&form=text&view=full",
+    "bytes": 1357376,
+    "ok": true
+  },
+  {
+    "file": "GSE186888.soft",
+    "url": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE186888&targ=gsm&form=text&view=full",
+    "bytes": 179726,
+    "ok": true
+  },
+  {
+    "file": "PRJNA727170_ena.tsv",
+    "url": "https://www.ebi.ac.uk/ena/portal/api/filereport?accession=PRJNA727170&result=read_run&fields=run_accession%2Csample_accession%2Csample_title%2Clibrary_strategy%2Clibrary_layout%2Cread_count%2Cbase_count%2Cfastq_bytes%2Csubmitted_format%2Csubmitted_bytes&format=tsv",
+    "bytes": 15948,
+    "ok": true
+  },
+  {
+    "file": "CNP0003513.html",
+    "url": "https://db.cngb.org/search/project/CNP0003513/",
+    "bytes": 1961,
+    "ok": true
+  },
+  {
+    "file": "CNP0005464.html",
+    "url": "https://db.cngb.org/search/project/CNP0005464/",
+    "bytes": 1961,
+    "ok": true
+  }
+]

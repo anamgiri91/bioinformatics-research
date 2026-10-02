@@ -1,0 +1,20 @@
+[
+  {
+    "file": "GSE107729.soft",
+    "url": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE107729&targ=gsm&form=text&view=full",
+    "bytes": 389988,
+    "ok": true
+  },
+  {
+    "file": "PRJNA421218_ena.tsv",
+    "url": "https://www.ebi.ac.uk/ena/portal/api/filereport?accession=PRJNA421218&result=read_run&fields=run_accession%2Csample_accession%2Csample_title%2Clibrary_strategy%2Clibrary_layout%2Cread_count%2Cbase_count%2Cfastq_bytes%2Csubmitted_format%2Csubmitted_bytes&format=tsv",
+    "bytes": 20170,
+    "ok": true
+  },
+  {
+    "file": "GSE165915_series.soft",
+    "url": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE165915&targ=self&form=text&view=full",
+    "bytes": 5894,
+    "ok": true
+  }
+]
