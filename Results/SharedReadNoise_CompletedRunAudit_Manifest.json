@@ -1,0 +1,25 @@
+{
+  "audited_at": "2026-10-02 03:29:16 UTC",
+  "locks": [
+    {
+      "task": 58,
+      "files": 63,
+      "all_match": true
+    },
+    {
+      "task": 64,
+      "files": 54,
+      "all_match": true
+    }
+  ],
+  "scope": "Output arithmetic and current lock integrity; not a raw-read reanalysis or bootstrap rerun",
+  "input_sha256": {
+    "Results/Task58_LockedProtocol.json": "22c0e7ce2c89d4ec3a43f1f86223f0d963b92d74aee90a428772b2507ae7ed55",
+    "Results/Task59_Primary.csv": "f67ac85fc128aa69f886b6dc27acdaf5a8113fb334a305a67e6057f632328e35",
+    "Data/gtex_wbc_rrbs/srb_pair_results.rds": "b35513794eddf3c01495174a8801adc97c9f76aa78731730c5ce248a16d0741b",
+    "Results/Task64_LockedProtocol.json": "d96b49e1b28eabfadd9d3cbcf9f05b49415ba7ab01cfe6c19909caaad2118c52",
+    "Results/Task65_Primary.csv": "9685fbb2cafdc2270e79f4c8cf722c6c7f601bf9f8954793daa5eddadc98cbf2",
+    "Data/gse149438_plasma_mhap/s6_pair_results.rds": "9442aa4161467e22b18968288f1e13499322a0b286c75d85e632b2f8b84a79b4",
+    "Scripts/SharedReadNoise.CompletedRunAudit.R": "22e67f364100688585186a462afea0c05426342db78320f546d04741771abc49"
+  }
+}
