@@ -2023,8 +2023,8 @@ separate records, hid from the plasma test.
 
 | Distance between CpGs | Shared calls hidden by the mHap rule | Noise term the mHap records still capture |
 |---|---|---|
-| 0 to 10 bp | 0.05% | 99.95% |
-| 20 to 40 bp | 1.4% | 98.7% |
+| 0 to 10 bp | 0.06% | 99.94% |
+| 20 to 40 bp | 1.5% | 98.7% |
 | 40 to 60 bp | 5.3% | 95.7% |
 | 60 to 100 bp | 17% | 79.5% |
 | 100 to 150 bp | 56% | 32% |
