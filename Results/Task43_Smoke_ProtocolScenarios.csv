@@ -1,0 +1,10 @@
+scenario,truth,description
+independent_continuous,independent_null,"Independent Uniform(.05,.95) beta ratios"
+independent_sparse,independent_null,"Independent .05/.95 ratios, high probability .10 at each site"
+independent_bin_boundary,independent_null,"Independent N(.10,.001^2), clipped to [0,1]"
+positive_linear,dependent,"X Uniform(.10,.90); Y=.1+.8X+N(0,.08^2), clipped"
+offset_linear,dependent,"X Uniform(.05,.25); Y=.65+X+N(0,.02^2), clipped"
+inverse_linear,dependent,"X Uniform(.10,.90); Y=1-X+N(0,.08^2), clipped"
+nonlinear_u,dependent,"X Uniform(.02,.98); Y=4(X-.5)^2+N(0,.06^2), clipped"
+within_low_bin,dependent,"X Uniform(.005,.085); Y=X+N(0,.008^2), clipped to [0,.099]"
+shared_patient_factor,dependent_common_cause,"Independent errors: X=.5+.25Z+e1, Y=.5+.25Z+e2; Z~N(0,1), e~N(0,.04^2), clipped"

@@ -1,0 +1,16 @@
+{
+  "seed": 20260929,
+  "n": 18,
+  "replicates_per_scenario": 30,
+  "permutations": 19,
+  "alpha": 0.05,
+  "frozen_before_simulation": true,
+  "denominators": "Rejections/all generated replicates and rejections/defined separately",
+  "methods": ["ordinal_similarity", "linear_kappa", "quadratic_kappa", "pearson_beta", "pearson_levels", "spearman_beta", "spearman_levels", "xi_levels_mean", "dcor_beta", "dcor_levels", "unbiased_dcov2_levels"],
+  "agreement_target": "Positive paired similarity, one-sided",
+  "dependence_target": "Any dependence; Pearson/Spearman absolute, remaining statistics upper-tail",
+  "U_statistic": "Unbiased squared dCov, not normalized, negative values retained; degenerate zero is not omitted",
+  "uncertainty": "Exact binomial 95% intervals across independent synthetic replicates",
+  "no_tuning": "No fitted method, threshold optimization, external cohort access or invented read depths",
+  "script_md5": "4a0c39f2c6dfb63b6946a38e6d972a5f"
+}

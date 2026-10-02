@@ -1,0 +1,20 @@
+PASS: distance kernels, U-centering, singleton degeneracy, independent row permutations
+Scenario 1 of 9 : independent_continuous 
+Completed independent_continuous ; elapsed 0.1 seconds
+Scenario 2 of 9 : independent_sparse 
+Completed independent_sparse ; elapsed 0.2 seconds
+Scenario 3 of 9 : independent_bin_boundary 
+Completed independent_bin_boundary ; elapsed 0.2 seconds
+Scenario 4 of 9 : positive_linear 
+Completed positive_linear ; elapsed 0.3 seconds
+Scenario 5 of 9 : offset_linear 
+Completed offset_linear ; elapsed 0.4 seconds
+Scenario 6 of 9 : inverse_linear 
+Completed inverse_linear ; elapsed 0.4 seconds
+Scenario 7 of 9 : nonlinear_u 
+Completed nonlinear_u ; elapsed 0.5 seconds
+Scenario 8 of 9 : within_low_bin 
+Completed within_low_bin ; elapsed 0.5 seconds
+Scenario 9 of 9 : shared_patient_factor 
+Completed shared_patient_factor ; elapsed 0.6 seconds
+Completed benchmark in 0.6 seconds

@@ -1,0 +1,3 @@
+n,rare_patients,exact_one_sided_overlap_p,identical_profiles_dcor,uncentered_note
+18,1,0.0555555555555556,1,"Perfect score, p=1/18; U-centered distance kernel is zero"
+18,2,0.0065359477124183,1,Two shared rare samples; p=1/153 for maximum-overlap statistic
