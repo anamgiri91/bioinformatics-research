@@ -1,0 +1,442 @@
+
+R version 4.6.0 (2026-04-24) -- "Because it was There"
+Copyright (C) 2026 The R Foundation for Statistical Computing
+Platform: aarch64-apple-darwin23
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # ================================================================
+> # Task 40 - OutlierMeth checks for the 2026-09-28 email
+> #           item 1: probe-sequence problems and the beta offset
+> #           item 3: does the output depend on the CpG ID?
+> # Date: Sep 28, 2026
+> #
+> # THE REQUEST
+> #
+> #   1. Check OutlierMeth (Downs, Thursby & Cope 2023, Epigenetics
+> #      18(1):2213874): (1) did the authors consider the reference
+> #      sequence (repetitive regions, other sequence features)? (2) what
+> #      does "outlier" mean to them? (3) did they consider the offset in
+> #      beta = M / (M + U + 100)?
+> #   3. Run OutlierMeth (1) with the CG ID replaced by the position and
+> #      (2) with the CG ID removed, and see if the output is exactly the
+> #      same.
+> #
+> #   Items 1(1)-(3) are answered from the paper. This script adds the
+> #   data behind two of those answers, and runs item 3.
+> #
+> # WHAT IS RUN
+> #
+> #   Part A (item 1(1)). The paper never masks probes. How many of the
+> #     Task 13 ext flags sit on probes that Zhou et al. 2017 mask? The
+> #     mask file has no repeat column; M_nonuniq (the probe sequence also
+> #     matches another place in the genome) is the closest to
+> #     "repetitive region".
+> #   Part B (item 1(3)). Arithmetic only: how far the +100 offset moves
+> #     beta for a given true methylation fraction and total signal
+> #     M + U. The files hold beta only, so the offset cannot be tested
+> #     on this data.
+> #   Part C (item 3). The package, sourced from Packages/OutlierMeth
+> #     (it is not installed on this machine), run on all 380,355 CpGs
+> #     with four kinds of row name:
+> #       cgID           as in Task 13; must reproduce Task 13 exactly
+> #       chr:position   e.g. "chr1:15865"; unique
+> #       position only  e.g. "15865"; 860 CpGs share a position with a
+> #                      CpG on another chromosome
+> #       none           row names removed
+> #     Each is run two ways: Task 13's call,
+> #       flagMeth(beta[rownames(ref), ], reference = ref, p = 0.01),
+> #     and the plain call flagMeth(beta, reference = ref, p = 0.01).
+> #     Self reference (referenceMeth on the same 53 samples), Normal and
+> #     Tumour. The external panel (tcga.rda) is not on this machine, so
+> #     the external case uses a stand-in with the same structure: a
+> #     reference built from the 32 Dead Normal samples, keyed by cgID,
+> #     applied to the 53 Alive Normal samples.
+> # ================================================================
+> 
+> suppressPackageStartupMessages(library(data.table))
+> 
+> pick_dir <- function(...) { for (d in c(...)) if (dir.exists(d)) return(d)
++   stop("no candidate directory exists") }
+> src_dir <- pick_dir(
++   "/home/s_s355/research3.data/TCGA/filter.BRCA.UCEC.Aug17.2022/sorted.TCGA.380355cg.files",
++   path.expand("~/Downloads/tcga_brca_380355cg"))
+> repo_dir <- pick_dir("/mmfs1/home/wln26/Experiments.Outlier.July31.2026",
++                      path.expand("~/Desktop/bioinformatics-research"))
+> out_dir <- file.path(repo_dir, "Results")
+> pkg_dir <- file.path(repo_dir, "Packages", "OutlierMeth")
+> r4 <- function(x) round(x, 4)
+> 
+> # the package is not installed here; its four functions are plain R,
+> # so sourcing them runs the same code
+> for (f in list.files(file.path(pkg_dir, "R"), pattern = "\\.R$", full.names = TRUE)) source(f)
+> cat("OutlierMeth version", read.dcf(file.path(pkg_dir, "DESCRIPTION"), fields = "Version")[1], "\n")
+OutlierMeth version 1.2.1 
+> 
+> src_file <- function(cohort, tissue) file.path(src_dir, if (cohort == "Alive")
++   sprintf("Sorted.BRCA.53Alive.%s.380355cg.75col.May28.2026.txt", tissue) else
++   sprintf("Sorted.BRCA.32Dead.%s.380355cg.54col.May28.2026.txt", tissue))
+> read_beta <- function(cohort, tissue) {
++   d <- fread(src_file(cohort, tissue))
++   sc <- 5:(which(names(d) == "Min") - 1)
++   b <- as.matrix(d[, ..sc])
++   rownames(b) <- d$Composite.Element.REF
++   list(beta = b, meta = d[, .(cgID = Composite.Element.REF, chr = Chromosome, pos = Start)])
++ }
+> flag_file <- function(tissue, ref) file.path(out_dir, sprintf("Task13_%s_%sref_flags.csv", tissue, ref))
+> flag_matrix <- function(f) as.matrix(f[, grep("^[NT][0-9]+$", names(f), value = TRUE), with = FALSE])
+> 
+> # ----------------------------------------------------------------
+> # Part A. ext flags on probes with sequence problems (Zhou et al. 2017)
+> # ----------------------------------------------------------------
+> msk <- fread(file.path(repo_dir, "Data", "zhou_HM450", "HM450.hg38.mask.tsv.gz"))
+> groups <- list(
++   "maps to more than one place (M_nonuniq)"   = msk[grepl("M_nonuniq", maskUniq), Probe_ID],
++   "common SNP in the probe (SNPcommon_5pt)"   = msk[grepl("SNPcommon_5pt", maskUniq), Probe_ID],
++   "any problem in the general mask (M_general)" = msk[M_general == TRUE, Probe_ID])
+> partA <- rbindlist(lapply(c("Normal", "Tumor"), function(tissue) {
++   f <- fread(flag_file(tissue, "ext"))
++   fm <- flag_matrix(f)
++   n_eval <- rowSums(!is.na(fm)); n_flag <- rowSums(fm != 0, na.rm = TRUE)
++   clean <- !(f$cgID %in% groups[[3]])
++   rate_clean <- sum(n_flag[clean]) / sum(n_eval[clean])
++   rbindlist(lapply(c(names(groups), "not in the general mask"), function(g) {
++     in_g <- if (g == "not in the general mask") clean else f$cgID %in% groups[[g]]
++     data.table(tissue, probes = g, CpGs = sum(in_g), share_of_CpGs = r4(mean(in_g)),
++                ext_flags = sum(n_flag[in_g]),
++                share_of_ext_flags = r4(sum(n_flag[in_g]) / sum(n_flag)),
++                flag_rate = r4(sum(n_flag[in_g]) / sum(n_eval[in_g])),
++                rate_vs_unmasked = round(sum(n_flag[in_g]) / sum(n_eval[in_g]) / rate_clean, 2))
++   }))
++ }))
+> fwrite(partA, file.path(out_dir, "Task40_MaskedProbeFlags.csv"))
+> cat("\nPart A. ext flags on masked probes (Task 13 flag matrices):\n"); print(partA)
+
+Part A. ext flags on masked probes (Task 13 flag matrices):
+   tissue                                      probes   CpGs share_of_CpGs
+   <char>                                      <char>  <int>         <num>
+1: Normal     maps to more than one place (M_nonuniq)   9455        0.0249
+2: Normal     common SNP in the probe (SNPcommon_5pt)    244        0.0006
+3: Normal any problem in the general mask (M_general)   9687        0.0255
+4: Normal                     not in the general mask 370668        0.9745
+5:  Tumor     maps to more than one place (M_nonuniq)   9455        0.0249
+6:  Tumor     common SNP in the probe (SNPcommon_5pt)    244        0.0006
+7:  Tumor any problem in the general mask (M_general)   9687        0.0255
+8:  Tumor                     not in the general mask 370668        0.9745
+   ext_flags share_of_ext_flags flag_rate rate_vs_unmasked
+       <num>              <num>     <num>            <num>
+1:     14455             0.0281    0.0297             1.09
+2:       263             0.0005    0.0210             0.78
+3:     14696             0.0286    0.0294             1.09
+4:    499314             0.9714    0.0271             1.00
+5:     79078             0.0320    0.1622             1.25
+6:      1552             0.0006    0.1241             0.96
+7:     80643             0.0326    0.1616             1.24
+8:   2393583             0.9674    0.1299             1.00
+> 
+> # ----------------------------------------------------------------
+> # Part B. how far the +100 offset moves beta (arithmetic)
+> # ----------------------------------------------------------------
+> # true_beta = M / (M + U); with the offset, beta = M / (M + U + 100)
+> #           = true_beta * total / (total + 100), where total = M + U
+> partB <- CJ(total_signal = c(500, 1000, 2000, 5000, 10000, 20000),
++             true_beta = c(0.05, 0.5, 0.95))
+> partB[, beta_with_offset := r4(true_beta * total_signal / (total_signal + 100))]
+> partB[, shift_down := r4(true_beta - beta_with_offset)]
+> fwrite(partB, file.path(out_dir, "Task40_OffsetArithmetic.csv"))
+> cat("\nPart B. beta with and without the +100 offset:\n"); print(partB)
+
+Part B. beta with and without the +100 offset:
+Key: <total_signal, true_beta>
+    total_signal true_beta beta_with_offset shift_down
+           <num>     <num>            <num>      <num>
+ 1:          500      0.05           0.0417     0.0083
+ 2:          500      0.50           0.4167     0.0833
+ 3:          500      0.95           0.7917     0.1583
+ 4:         1000      0.05           0.0455     0.0045
+ 5:         1000      0.50           0.4545     0.0455
+ 6:         1000      0.95           0.8636     0.0864
+ 7:         2000      0.05           0.0476     0.0024
+ 8:         2000      0.50           0.4762     0.0238
+ 9:         2000      0.95           0.9048     0.0452
+10:         5000      0.05           0.0490     0.0010
+11:         5000      0.50           0.4902     0.0098
+12:         5000      0.95           0.9314     0.0186
+13:        10000      0.05           0.0495     0.0005
+14:        10000      0.50           0.4950     0.0050
+15:        10000      0.95           0.9406     0.0094
+16:        20000      0.05           0.0498     0.0002
+17:        20000      0.50           0.4975     0.0025
+18:        20000      0.95           0.9453     0.0047
+> 
+> # ----------------------------------------------------------------
+> # Part C. does the output change when the CpG ID changes?
+> # ----------------------------------------------------------------
+> catch <- function(expr) tryCatch(expr, error = function(e) e)
+> pad_task13 <- function(beta, flag) {       # Task 13's padding step
++   full <- matrix(NA, nrow = nrow(beta), ncol = ncol(beta), dimnames = dimnames(beta))
++   full[rownames(flag), ] <- flag
++   full
++ }
+> describe <- function(res, base) {
++   if (inherits(res, "error"))
++     return(list(result = paste("error:", conditionMessage(res))))
++   same <- (is.na(res) & is.na(base)) | (!is.na(res) & !is.na(base) & res == base)
++   list(result = "ran", cells = length(res), identical_cells = sum(same),
++        different_cells = sum(!same), rows_with_a_difference = sum(rowSums(!same) > 0),
++        hypo_flags = sum(res == -1, na.rm = TRUE), hyper_flags = sum(res == 1, na.rm = TRUE),
++        NA_cells = sum(is.na(res)))
++ }
+> name_rows <- function(b, meta, ids) {
++   rownames(b) <- switch(ids, "cgID" = meta$cgID,
++                         "chr:position" = paste0(meta$chr, ":", meta$pos),
++                         "position only" = as.character(meta$pos),
++                         "none" = NULL)
++   b
++ }
+> id_kinds <- c("cgID", "chr:position", "position only", "none")
+> 
+> partC <- list()
+> for (tissue in c("Normal", "Tumor")) {
++   x <- read_beta("Alive", tissue)
++   stopifnot(anyDuplicated(paste(x$meta$chr, x$meta$pos)) == 0, is.integer(x$meta$pos))
++   base <- NULL
++   for (ids in id_kinds) {
++     t0 <- Sys.time()
++     b <- name_rows(x$beta, x$meta, ids)
++     ref <- catch(referenceMeth(b))
++     ref_note <- if (inherits(ref, "error")) paste("error:", conditionMessage(ref)) else
++       paste0(nrow(ref), " rows; first names ", paste(head(rownames(ref), 2), collapse = ", "))
++     matched <- if (inherits(ref, "error")) NA_integer_ else length(intersect(rownames(b), rownames(ref)))
++     t13  <- if (inherits(ref, "error")) ref else catch(pad_task13(b, flagMeth(b[rownames(ref), ], reference = ref, p = 0.01)))
++     flat <- if (inherits(ref, "error")) ref else catch(flagMeth(b, reference = ref, p = 0.01))
++     if (ids == "cgID") {
++       base <- t13
++       saved <- fread(flag_file(tissue, "self"))
++       stopifnot(identical(saved$cgID, rownames(base)))
++       partC[[length(partC) + 1]] <- c(list(tissue = tissue, reference = "self (53 samples)",
++         row_names = "cgID, this run", call = "vs the saved Task 13 file", reference_rows = ref_note,
++         rows_matched = matched), describe(base, flag_matrix(saved)))
++     }
++     for (call in c("Task 13 call", "plain call")) {
++       res <- if (call == "Task 13 call") t13 else flat
++       partC[[length(partC) + 1]] <- c(list(tissue = tissue, reference = "self (53 samples)",
++         row_names = ids, call = call, reference_rows = ref_note, rows_matched = matched),
++         describe(res, base))
++     }
++     cat(tissue, ids, "done in", round(as.numeric(Sys.time() - t0, units = "secs")), "s\n")
++     rm(b, ref, t13, flat); invisible(gc())
++   }
++   if (tissue == "Normal") {
++     # external case, stand-in panel: 32 Dead Normal samples keyed by cgID
++     dead <- read_beta("Dead", "Normal")
++     stopifnot(identical(rownames(dead$beta), rownames(x$beta)))
++     ref_dead <- referenceMeth(dead$beta)
++     ext_base <- flagMeth(x$beta, reference = ref_dead, p = 0.01)
++     ref_dead_pos <- ref_dead
++     rownames(ref_dead_pos) <- paste0(x$meta$chr, ":", x$meta$pos)[match(rownames(ref_dead), x$meta$cgID)]
++     ext_runs <- list(
++       list("cgID", "panel keyed by cgID", ref_dead),
++       list("chr:position", "panel keyed by cgID", ref_dead),
++       list("chr:position", "panel renamed to chr:position", ref_dead_pos),
++       list("none", "panel keyed by cgID", ref_dead))
++     for (er in ext_runs) {
++       b <- name_rows(x$beta, x$meta, er[[1]])
++       res <- catch(flagMeth(b, reference = er[[3]], p = 0.01))
++       partC[[length(partC) + 1]] <- c(list(tissue = tissue, reference = "external stand-in (32 Dead Normal)",
++         row_names = er[[1]], call = er[[2]], reference_rows = paste(nrow(er[[3]]), "rows"),
++         rows_matched = length(intersect(rownames(b), rownames(er[[3]])))),
++         describe(res, ext_base))
++     }
++     rm(dead, ref_dead, ref_dead_pos, ext_base, b, res)
++   }
++   rm(x, base); invisible(gc())
++ }
+Normal cgID done in 119 s
+Normal chr:position done in 134 s
+Normal position only done in 125 s
+Normal none done in 408 s
+Tumor cgID done in 1244 s
+Tumor chr:position done in 128 s
+Tumor position only done in 127 s
+Tumor none done in 130 s
+> partC <- rbindlist(partC, fill = TRUE)
+> fwrite(partC, file.path(out_dir, "Task40_IDTest.csv"))
+> cat("\nPart C. OutlierMeth output with the CpG ID replaced or removed:\n")
+
+Part C. OutlierMeth output with the CpG ID replaced or removed:
+> print(partC[, !"reference_rows"])
+    tissue                          reference      row_names
+    <char>                             <char>         <char>
+ 1: Normal                  self (53 samples) cgID, this run
+ 2: Normal                  self (53 samples)           cgID
+ 3: Normal                  self (53 samples)           cgID
+ 4: Normal                  self (53 samples)   chr:position
+ 5: Normal                  self (53 samples)   chr:position
+ 6: Normal                  self (53 samples)  position only
+ 7: Normal                  self (53 samples)  position only
+ 8: Normal                  self (53 samples)           none
+ 9: Normal                  self (53 samples)           none
+10: Normal external stand-in (32 Dead Normal)           cgID
+11: Normal external stand-in (32 Dead Normal)   chr:position
+12: Normal external stand-in (32 Dead Normal)   chr:position
+13: Normal external stand-in (32 Dead Normal)           none
+14:  Tumor                  self (53 samples) cgID, this run
+15:  Tumor                  self (53 samples)           cgID
+16:  Tumor                  self (53 samples)           cgID
+17:  Tumor                  self (53 samples)   chr:position
+18:  Tumor                  self (53 samples)   chr:position
+19:  Tumor                  self (53 samples)  position only
+20:  Tumor                  self (53 samples)  position only
+21:  Tumor                  self (53 samples)           none
+22:  Tumor                  self (53 samples)           none
+    tissue                          reference      row_names
+    <char>                             <char>         <char>
+                             call rows_matched                         result
+                           <char>        <int>                         <char>
+ 1:     vs the saved Task 13 file       380355                            ran
+ 2:                  Task 13 call       380355                            ran
+ 3:                    plain call       380355                            ran
+ 4:                  Task 13 call       380355                            ran
+ 5:                    plain call       380355                            ran
+ 6:                  Task 13 call         1716 error: subscript out of bounds
+ 7:                    plain call         1716                            ran
+ 8:                  Task 13 call            0 error: subscript out of bounds
+ 9:                    plain call            0                            ran
+10:           panel keyed by cgID       380355                            ran
+11:           panel keyed by cgID            0                            ran
+12: panel renamed to chr:position       380355                            ran
+13:           panel keyed by cgID            0                            ran
+14:     vs the saved Task 13 file       380355                            ran
+15:                  Task 13 call       380355                            ran
+16:                    plain call       380355                            ran
+17:                  Task 13 call       380355                            ran
+18:                    plain call       380355                            ran
+19:                  Task 13 call         1716 error: subscript out of bounds
+20:                    plain call         1716                            ran
+21:                  Task 13 call            0 error: subscript out of bounds
+22:                    plain call            0                            ran
+                             call rows_matched                         result
+                           <char>        <int>                         <char>
+       cells identical_cells different_cells rows_with_a_difference hypo_flags
+       <int>           <int>           <int>                  <int>      <int>
+ 1: 20158815        20158815               0                      0     380350
+ 2: 20158815        20158815               0                      0     380350
+ 3: 20158815        20158815               0                      0     380350
+ 4: 20158815        20158815               0                      0     380350
+ 5: 20158815        20158815               0                      0     380350
+ 6:       NA              NA              NA                     NA         NA
+ 7: 20158815           19457        20139358                 380354      29199
+ 8:       NA              NA              NA                     NA         NA
+ 9: 20158815               0        20158815                 380355          0
+10: 20158815        20158815               0                      0    1396461
+11: 20158815               0        20158815                 380355          0
+12: 20158815        20158815               0                      0    1396461
+13: 20158815               0        20158815                 380355          0
+14: 20158815        20158815               0                      0     380354
+15: 20158815        20158815               0                      0     380354
+16: 20158815        20158815               0                      0     380354
+17: 20158815        20158815               0                      0     380354
+18: 20158815        20158815               0                      0     380354
+19:       NA              NA              NA                     NA         NA
+20: 20158815           30905        20127910                 380348      23264
+21:       NA              NA              NA                     NA         NA
+22: 20158815               0        20158815                 380355          0
+       cells identical_cells different_cells rows_with_a_difference hypo_flags
+       <int>           <int>           <int>                  <int>      <int>
+    hyper_flags NA_cells
+          <int>    <int>
+ 1:      380353        0
+ 2:      380353        0
+ 3:      380353        0
+ 4:      380353        0
+ 5:      380353        0
+ 6:          NA       NA
+ 7:       43377 20067867
+ 8:          NA       NA
+ 9:           0 20158815
+10:      802714        0
+11:           0 20158815
+12:      802714        0
+13:           0 20158815
+14:      380355        0
+15:      380355        0
+16:      380355        0
+17:      380355        0
+18:      380355        0
+19:          NA       NA
+20:       37465 20067867
+21:          NA       NA
+22:           0 20158815
+    hyper_flags NA_cells
+          <int>    <int>
+> print(partC[, .(tissue, row_names, call, reference_rows)])
+    tissue      row_names                          call
+    <char>         <char>                        <char>
+ 1: Normal cgID, this run     vs the saved Task 13 file
+ 2: Normal           cgID                  Task 13 call
+ 3: Normal           cgID                    plain call
+ 4: Normal   chr:position                  Task 13 call
+ 5: Normal   chr:position                    plain call
+ 6: Normal  position only                  Task 13 call
+ 7: Normal  position only                    plain call
+ 8: Normal           none                  Task 13 call
+ 9: Normal           none                    plain call
+10: Normal           cgID           panel keyed by cgID
+11: Normal   chr:position           panel keyed by cgID
+12: Normal   chr:position panel renamed to chr:position
+13: Normal           none           panel keyed by cgID
+14:  Tumor cgID, this run     vs the saved Task 13 file
+15:  Tumor           cgID                  Task 13 call
+16:  Tumor           cgID                    plain call
+17:  Tumor   chr:position                  Task 13 call
+18:  Tumor   chr:position                    plain call
+19:  Tumor  position only                  Task 13 call
+20:  Tumor  position only                    plain call
+21:  Tumor           none                  Task 13 call
+22:  Tumor           none                    plain call
+    tissue      row_names                          call
+    <char>         <char>                        <char>
+                                     reference_rows
+                                             <char>
+ 1: 380355 rows; first names cg13869341, cg14008030
+ 2: 380355 rows; first names cg13869341, cg14008030
+ 3: 380355 rows; first names cg13869341, cg14008030
+ 4: 380355 rows; first names chr1:15865, chr1:18827
+ 5: 380355 rows; first names chr1:15865, chr1:18827
+ 6:                   380355 rows; first names 1, 2
+ 7:                   380355 rows; first names 1, 2
+ 8:                   380355 rows; first names 1, 2
+ 9:                   380355 rows; first names 1, 2
+10:                                     380355 rows
+11:                                     380355 rows
+12:                                     380355 rows
+13:                                     380355 rows
+14: 380355 rows; first names cg13869341, cg14008030
+15: 380355 rows; first names cg13869341, cg14008030
+16: 380355 rows; first names cg13869341, cg14008030
+17: 380355 rows; first names chr1:15865, chr1:18827
+18: 380355 rows; first names chr1:15865, chr1:18827
+19:                   380355 rows; first names 1, 2
+20:                   380355 rows; first names 1, 2
+21:                   380355 rows; first names 1, 2
+22:                   380355 rows; first names 1, 2
+                                     reference_rows
+                                             <char>
+> cat("\ndone\n")
+
+done
+> 
+> proc.time()
+    user   system  elapsed 
+1161.260    6.000 2727.989 

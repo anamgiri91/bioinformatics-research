@@ -1,0 +1,23 @@
+tissue,reference,row_names,call,reference_rows,rows_matched,result,cells,identical_cells,different_cells,rows_with_a_difference,hypo_flags,hyper_flags,NA_cells
+Normal,self (53 samples),"cgID, this run",vs the saved Task 13 file,"380355 rows; first names cg13869341, cg14008030",380355,ran,20158815,20158815,0,0,380350,380353,0
+Normal,self (53 samples),cgID,Task 13 call,"380355 rows; first names cg13869341, cg14008030",380355,ran,20158815,20158815,0,0,380350,380353,0
+Normal,self (53 samples),cgID,plain call,"380355 rows; first names cg13869341, cg14008030",380355,ran,20158815,20158815,0,0,380350,380353,0
+Normal,self (53 samples),chr:position,Task 13 call,"380355 rows; first names chr1:15865, chr1:18827",380355,ran,20158815,20158815,0,0,380350,380353,0
+Normal,self (53 samples),chr:position,plain call,"380355 rows; first names chr1:15865, chr1:18827",380355,ran,20158815,20158815,0,0,380350,380353,0
+Normal,self (53 samples),position only,Task 13 call,"380355 rows; first names 1, 2",1716,error: subscript out of bounds,,,,,,,
+Normal,self (53 samples),position only,plain call,"380355 rows; first names 1, 2",1716,ran,20158815,19457,20139358,380354,29199,43377,20067867
+Normal,self (53 samples),none,Task 13 call,"380355 rows; first names 1, 2",0,error: subscript out of bounds,,,,,,,
+Normal,self (53 samples),none,plain call,"380355 rows; first names 1, 2",0,ran,20158815,0,20158815,380355,0,0,20158815
+Normal,external stand-in (32 Dead Normal),cgID,panel keyed by cgID,380355 rows,380355,ran,20158815,20158815,0,0,1396461,802714,0
+Normal,external stand-in (32 Dead Normal),chr:position,panel keyed by cgID,380355 rows,0,ran,20158815,0,20158815,380355,0,0,20158815
+Normal,external stand-in (32 Dead Normal),chr:position,panel renamed to chr:position,380355 rows,380355,ran,20158815,20158815,0,0,1396461,802714,0
+Normal,external stand-in (32 Dead Normal),none,panel keyed by cgID,380355 rows,0,ran,20158815,0,20158815,380355,0,0,20158815
+Tumor,self (53 samples),"cgID, this run",vs the saved Task 13 file,"380355 rows; first names cg13869341, cg14008030",380355,ran,20158815,20158815,0,0,380354,380355,0
+Tumor,self (53 samples),cgID,Task 13 call,"380355 rows; first names cg13869341, cg14008030",380355,ran,20158815,20158815,0,0,380354,380355,0
+Tumor,self (53 samples),cgID,plain call,"380355 rows; first names cg13869341, cg14008030",380355,ran,20158815,20158815,0,0,380354,380355,0
+Tumor,self (53 samples),chr:position,Task 13 call,"380355 rows; first names chr1:15865, chr1:18827",380355,ran,20158815,20158815,0,0,380354,380355,0
+Tumor,self (53 samples),chr:position,plain call,"380355 rows; first names chr1:15865, chr1:18827",380355,ran,20158815,20158815,0,0,380354,380355,0
+Tumor,self (53 samples),position only,Task 13 call,"380355 rows; first names 1, 2",1716,error: subscript out of bounds,,,,,,,
+Tumor,self (53 samples),position only,plain call,"380355 rows; first names 1, 2",1716,ran,20158815,30905,20127910,380348,23264,37465,20067867
+Tumor,self (53 samples),none,Task 13 call,"380355 rows; first names 1, 2",0,error: subscript out of bounds,,,,,,,
+Tumor,self (53 samples),none,plain call,"380355 rows; first names 1, 2",0,ran,20158815,0,20158815,380355,0,0,20158815

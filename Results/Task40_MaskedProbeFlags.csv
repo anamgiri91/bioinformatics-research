@@ -1,0 +1,9 @@
+tissue,probes,CpGs,share_of_CpGs,ext_flags,share_of_ext_flags,flag_rate,rate_vs_unmasked
+Normal,maps to more than one place (M_nonuniq),9455,0.0249,14455,0.0281,0.0297,1.09
+Normal,common SNP in the probe (SNPcommon_5pt),244,6e-04,263,5e-04,0.021,0.78
+Normal,any problem in the general mask (M_general),9687,0.0255,14696,0.0286,0.0294,1.09
+Normal,not in the general mask,370668,0.9745,499314,0.9714,0.0271,1
+Tumor,maps to more than one place (M_nonuniq),9455,0.0249,79078,0.032,0.1622,1.25
+Tumor,common SNP in the probe (SNPcommon_5pt),244,6e-04,1552,6e-04,0.1241,0.96
+Tumor,any problem in the general mask (M_general),9687,0.0255,80643,0.0326,0.1616,1.24
+Tumor,not in the general mask,370668,0.9745,2393583,0.9674,0.1299,1
