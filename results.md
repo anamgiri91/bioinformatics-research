@@ -2005,6 +2005,59 @@ local commits preceding the results; this is not public preregistration.
    split coverage. Extend interval calibration to that design. The already
    inspected cohorts cannot serve as new untouched validation.
 
+### 16.15 Plasma fragments rebuilt from raw reads (Task 66 pilot)
+
+This picks up Codex's plan after its usage limit. The question was how
+much the mHap records, which split some fragments' two mates into
+separate records, hid from the plasma test.
+
+- **Donor:** one healthy control, GSM4502069 (SRR11615795), 6,615,769 read
+  pairs.
+- **Processing:** trimming for Swift libraries, Bismark 0.24.2 and bowtie2
+  on full hg19, then deduplication.
+- **Two versions:** each fragment was rebuilt twice, with its mates always
+  linked, and with the mHapTools rule (merge only when the mates' CpG
+  ranges overlap).
+- **Checks:** site depths were identical in both versions for all
+  1,592,276 pairs, and the mHap rule only ever removed shared calls.
+
+| Distance between CpGs | Shared calls hidden by the mHap rule | Noise term the mHap records still capture |
+|---|---|---|
+| 0 to 10 bp | 0.05% | 99.95% |
+| 20 to 40 bp | 1.4% | 98.7% |
+| 40 to 60 bp | 5.3% | 95.7% |
+| 60 to 100 bp | 17% | 79.5% |
+| 100 to 150 bp | 56% | 32% |
+| 150 to 200 bp | 100% | 0% |
+
+The table uses pairs with both sites at 6 or more reads.
+
+- **The plasma result stands.** For close pairs, the records kept almost
+  all of the shared signal. Pairs at most 40 bp apart are 92% of the
+  Task 65 test.
+- **The far-pair zero was an artefact.** Fragments do cover both sites
+  150 to 200 bp apart, but the records split every one of them. So zero
+  correction there did not mean that no molecule covers both sites,
+  which is what Codex's audit warned.
+- **Who gets split.** 12.3% of fragments are split. The share rises with
+  fragment length: 4% at 100 to 150 bp, 25% at 200 to 250 bp, and over
+  80% beyond 250 bp.
+- **Pipeline check.** Our records agree with mHapBrowser's own file for
+  this donor on site depth (r = 0.95, median ratio 1.00). But they share
+  fewer calls, 0.92 times as many at 0 to 10 bp and 0.47 times at 100 to
+  150 bp, probably because I trimmed the reads more. So the hidden shares
+  above are likely upper bounds for the published files.
+- **Scope.** One donor, used as a post-result sensitivity analysis. It is
+  not a new test.
+
+Files: `Scripts/Task66.PlasmaFragments.Pilot.sh`, `.Extract.Oct01.2026.py`,
+`.Compare.Oct01.2026.R`, `Results/Task66_Pilot_HiddenSharing.csv`,
+`Task66_Pilot_FragmentStructure.csv`, `Task66_Pilot_vsMHapBrowser.csv`,
+`Results/Fig47_PlasmaHiddenSharing.png`; access record
+`Results/Task66_PlasmaFragmentRecovery_Access.md`.
+
+![What the mHap records hid, for one plasma donor rebuilt from raw reads](Results/Fig47_PlasmaHiddenSharing.png)
+
 ---
 
 ## Files
