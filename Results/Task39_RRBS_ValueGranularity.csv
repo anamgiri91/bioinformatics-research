@@ -1,0 +1,14 @@
+metric,value
+values (complete sites),694152
+share exactly 0,0.3827
+share exactly 1,0.1712
+share exactly 0.4,0.0055
+share exactly 0.8,0.0106
+sites holding a 0.4 or 0.8 (level and state cut-offs disagree),8549
+share of such sites,0.2217
+0<v<1 values with a denominator <= 1000,1
+"implied depth lower bound, 10%",4
+"implied depth lower bound, 25%",7
+"implied depth lower bound, 50%",11
+"implied depth lower bound, 75%",18
+"implied depth lower bound, 90%",26

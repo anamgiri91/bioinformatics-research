@@ -1,0 +1,3 @@
+tissue,sites,samples,max_abs_diff_quantiles,coef2_match,coef2_mismatch_sites,coef3_match,methy_state_match,bimodal_sites
+Normal,380355,53,0,0.999994741754414,2,1,1,0
+Tumor,380355,53,0,1,0,0.999997370877207,1,0
