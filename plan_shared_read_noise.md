@@ -1,7 +1,8 @@
 # Item 5 plan: correcting shared-fragment sampling error in inter-donor CpG covariance
 
-Updated: 2026-10-01. **Status: development plan, carried out through phase H
-on 2026-10-01 (Tasks 53 to 65).** Two locked external tests met their primary
+Updated: 2026-10-02. **Status: Tasks 53–65 completed; Task 67 development
+analysis completed; Task 68 cluster preparation ready, access blocked.**
+The full plasma redo is deferred at the user's request. Two locked external tests met their primary
 criterion:
 - Task 59: blood, from the same study;
 - Task 65: plasma cfDNA from another lab, assay and pipeline.
@@ -41,6 +42,8 @@ assumed in advance.
 | Per-donor joint-count pipeline | Implemented for PAT and mHap records | Plasma has incomplete mate linkage; records cannot automatically be equated with physical fragments |
 | External benchmarks | Blood and plasma tests both meet their locked numerical criterion | Plasma's reference-independence requirement remains incompletely supported |
 | Novelty | Updated Task 60 audit identifies known estimator and subtraction identities | Possible contribution is the CpG-specific empirical finding; novelty is not established |
+| Distance decay | Task 67 absolute near–far contrast run in colon and blood, with depth/density and regional matching | Estimated technical contribution persists; sparse support and intervals crossing zero prevent a claim of improved decay accuracy |
+| WGBS generalisation | GSE165915 selected: 52 sperm donors, paired raw reads; manifests and counts-only cluster scripts prepared | No job submitted: SSH authentication failed; split-coverage feasibility and final external lock remain pending |
 
 Relevant project records:
 
@@ -567,20 +570,32 @@ duplicating whole cohorts in memory. Use new output locations for this project
 stage and preserve frozen Task 47 scores and validation outputs as historical
 records. Record deviations when fixes follow inspection of outcomes.
 
-**Next steps after Tasks 53 to 65:**
+**Current execution order, updated 2026-10-02:**
 
-1. Recover or verify whole-fragment identity for the plasma data before
-   treating its reference as independent. Obtain mate-aware alignments if
-   available, keep every physical fragment within one partition, and
-   quantify changes relative to the existing record-level analysis. This
-   will be a post-result sensitivity analysis, not a second untouched test.
-   If identity cannot be recovered, retain the limitation explicitly.
-2. Prespecify a standard-analysis endpoint: either a depth/composition-aware
-   co-methylation decay analysis or co-methylated-region calling. The saved
-   distance profiles are descriptive; zero represented overlap at 150–200
-   bp does not establish a physical fragment-length cutoff.
-3. Choose an independent WGBS cohort from metadata, requiring verified
-   whole-fragment identity, sufficient donors and coverage after splitting.
-   Check uncertainty calibration for its design, then lock inputs, code,
-   endpoint, eligible donor rules and the decision criterion before seeing
-   its pairwise outcomes. Do not reuse inspected plasma as new validation.
+1. **Task 67 development analysis: done.** Use an absolute near-minus-far
+   covariance contrast, avoiding a noisy reference ratio. Match depth and
+   reference CpG density within 1-Mb blocks, without using observed
+   methylation or spread to choose weights. The estimated drop shrinks by
+   54.7% in colon and 71.5% in blood on the matched cached subsets, but
+   both intervals for the change in squared reference error cross zero.
+   These are exploratory results, not a new locked validation. See the
+   [analysis and calibration report](Results/Task67_DistanceDecay_Report.md).
+2. **Task 68 counts-only feasibility: next.** Run the two metadata-selected
+   GSE165915 sperm pilots on the cluster, verify library-specific trimming,
+   whole-mate linkage, deduplication, reference coordinates, fragment lengths,
+   storage and usable split coverage. Then run the 52-donor counts-only array
+   and count pairs with at least 20 eligible donors. The published coverage
+   is roughly 4×, so the earlier raw-bases estimate of 9× cannot establish
+   feasibility. [Cluster scripts and execution record](Results/Task68_ClusterExecution.md)
+   are ready; SSH authentication for `wln26@leap2.txstate.edu` currently fails.
+3. **Calibrate and lock before WGBS outcomes.** Extend known-target simulations
+   to the actual low-depth missingness design and nonlinear error endpoint.
+   Freeze sample list, reference, counting/consensus rules, support weights,
+   software, seeds, exclusions and inference before computing pairwise
+   methylation results. Retain covariance estimation error as primary and
+   the absolute decay contrast as secondary. Do not lower eligibility after
+   examining outcomes. A failed primary result cannot be rescued by decay.
+4. **Plasma cohort redo: deferred.** The one-donor Task 66 pilot found hidden
+   shared fragments at long gaps; the full 46-donor rerun remains undone.
+   Preserve the existing reference-independence qualification. Any future
+   redo is a post-result sensitivity analysis, not untouched validation.

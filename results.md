@@ -1993,17 +1993,16 @@ local commits preceding the results; this is not public preregistration.
    (16.10, 16.12). It met the locked primary criterion.
 3. ~~**The plan's section 6 comparisons.**~~ **Done** in development
    (16.11) and in the second cohort (16.12). None favours the correction.
-4. **Resolve fragment identity before strengthening the plasma claim.**
-   Recover both mates from alignments, if available, and partition whole
-   fragments; otherwise retain this unmet independence requirement.
-5. **Test the effect on a standard analysis.** The distance profiles above
-   are descriptive. Prespecify a depth/composition-aware decay analysis or
-   a co-methylated-region endpoint, its uncertainty and controls, before
-   evaluating it on new data.
-6. **Choose an independent WGBS cohort from metadata and lock its test.**
-   Require recoverable whole-fragment identity and sufficient donors and
-   split coverage. Extend interval calibration to that design. The already
-   inspected cohorts cannot serve as new untouched validation.
+4. **Plasma cohort redo: deferred by the user on 2026-10-02.** The one-donor
+   fragment pilot is reported in 16.15; it does not establish reference
+   independence for all 46 donors. Retain that qualification.
+5. **Distance-decay development analysis: done** (16.16). The matched
+   absolute contrast changes, but accuracy improvement remains unproven.
+   Declare its endpoint and uncertainty before evaluation in a new cohort.
+6. **Sperm WGBS cohort selected; cluster preparation done** (16.17).
+   Restore cluster access, verify whole-fragment counts and split coverage,
+   extend calibration, and lock the test before inspecting outcomes.
+   The already inspected cohorts cannot serve as untouched validation.
 
 ### 16.15 Plasma fragments rebuilt from raw reads (Task 66 pilot)
 
@@ -2057,6 +2056,92 @@ Files: `Scripts/Task66.PlasmaFragments.Pilot.sh`, `.Extract.Oct01.2026.py`,
 `Results/Task66_PlasmaFragmentRecovery_Access.md`.
 
 ![What the mHap records hid, for one plasma donor rebuilt from raw reads](Results/Fig47_PlasmaHiddenSharing.png)
+
+### 16.16 Distance decay after matching depth, density and genomic region (Task 67)
+
+Run on 2026-10-02 in the already examined colon and blood cohorts. Plasma
+was not rerun. This is development, not a new independent test.
+
+The endpoint is mean covariance at 0–10 bp minus mean covariance at
+150–200 bp. Raw, corrected and cross-partition reference estimates use
+identical pairs and donor masks. Distance bands are matched within 1-Mb
+blocks on coarse depth and reference CpG-density bins; observed methylation
+and spread do not determine weights. An absolute contrast replaces the
+initial draft's ratio, whose reference denominator would also be noisy.
+
+| Quantity | Colon | Blood |
+|---|---|---|
+| Matched near / far pairs | 280 / 72 | 776 / 187 |
+| Raw covariance drop | 0.003706 | 0.0008982 |
+| Corrected drop | 0.001678 | 0.0002557 |
+| Cross-partition reference drop | 0.0009823 | 0.0004379 |
+| Estimated technical contribution | 0.002027 | 0.0006424 |
+| Reduction relative to the raw point contrast | 54.7% | 71.5% |
+| Change in squared contrast error | -6.93e-6 | -1.79e-7 |
+| Exploratory 95% interval for that error change | [-2.11e-5, 5.13e-6] | [-1.31e-6, 7.29e-7] |
+
+Estimated shared-read noise contributes to the apparent covariance drop
+after this matching. However, both accuracy-gain intervals cross zero;
+improved decay estimation is **not established**. Common support is sparse,
+so the percentages describe these matched subsets, not all CpGs. Covariance
+also depends on marginal biological variability; this is not an estimate
+of a causal interaction range.
+
+Both points and intervals use the same matched subset of the saved
+modulo-25 donor-matrix cache. The intervals use 2,000 joint donor/block
+bootstrap draws. Four known-target simulation settings, with 300 datasets
+each, gave conservative 99.7–100% coverage for the linear contrasts. They
+do not establish calibration for the nonlinear squared-error endpoint or
+random low-depth eligibility; these intervals remain exploratory.
+
+The full seven-bin profiles use all eligible pairs and match depth/density
+across bins. They are descriptive and do not additionally match regions,
+so their target differs from the table above.
+
+![Descriptive covariance profiles, with and without depth/density adjustment](Results/Fig48_AdjustedDistanceDecay.png)
+
+Details, support counts and reproduction commands:
+[Task 67 report](Results/Task67_DistanceDecay_Report.md).
+
+### 16.17 Sperm WGBS cluster preparation (Task 68)
+
+The selected cohort is GSE165915: 52 sperm donors, with 26 each from low
+and high DDE-exposure groups. GEO and ENA records map to 52 distinct
+BioSamples and paired runs, totaling 742.8 GB of compressed FASTQs.
+The study reports roughly **4× usable coverage**; the earlier ~9× estimate
+used raw bases and cannot establish feasibility after three-way splitting.
+See the [study methods](https://doi.org/10.3389/fgene.2022.929471).
+
+A metadata-only manifest, two-donor pilot and 52-donor SLURM array are
+prepared. They use TruSeq-specific trimming, full hg38 alignment, paired
+deduplication and deterministic whole-fragment A/B/C assignment. This
+first stage counts coverage and shared fragments without computing
+methylation outcomes. Synthetic alignment checks and shell validation pass.
+
+**No cluster job has been submitted:** SSH reached `leap2.txstate.edu`, but
+authentication for `wln26` failed. Once access is restored, the pilot must
+check usable depth, fragment lengths, mapping and storage before expanding.
+The final external protocol remains unlocked until counts-only feasibility
+and design-specific calibration are complete. Covariance error stays
+primary; distance decay is secondary. No WGBS generalisation result is
+available yet.
+
+**Depth check from the study's own CpG reports (counts only).** Cluster
+access is blocked, so the usable depth was read from the published Bismark
+CpG reports of the two pilot donors.
+- **Depth:** mean 2.91 and 2.60 reads per CpG (median 2). That is below
+  the published 4x.
+- **Eligibility:** a donor is eligible for a given pair only 3 to 4% of the
+  time.
+- **Projection:** if the other donors look like these two, about 608,000
+  pairs (2.6%) would have 20 or more eligible donors. They come mostly
+  from better-covered regions outside repeats.
+- **What it means:** the sperm test would rest on a few percent of pairs.
+  The B-cell cohort GSE173787 (53 samples, about 15x raw) would make most
+  pairs usable.
+
+Manifest, job files, commands, access status and the depth check:
+[Task 68 execution record](Results/Task68_ClusterExecution.md).
 
 ---
 
