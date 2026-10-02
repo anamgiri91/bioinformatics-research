@@ -92,3 +92,21 @@ Results/Task36_TopSites_Summary.csv
 
 # The Sep 15 report quotes per-sample beta values at named CpGs.
 sep15.docx
+
+# ---------- PRIVATE: single individuals' values in Tasks 36, 39, 44 ----------
+# Task 36 console log: prints single samples' betas at named CpGs, the
+# same content as the Task 36 detail tables above.
+Scripts/Task36.TopSiteDeepDive.Sep15.2026.Rout
+# Task 36 figures. Fig13 plots every sample's beta at 12 named CpGs,
+# extremes included; Fig14 and Fig19 label named samples' betas at named
+# CpGs.
+Results/Fig13_TopSites_RawBeta.png
+Results/Fig14_Pair_Neighbourhood.png
+Results/Fig19_Pair2_Neighbourhood.png
+# RRBS (18 patients, another lab's data): the per-site summary's Min and
+# Max are single individuals' values at named sites, as for Task 36.
+Results/Task39_RRBS_SiteSummary.csv.gz
+# Fig21 plots all 18 individuals' values at six real RRBS sites. The
+# sites are not named, but each can be found from the public per-site
+# medians, so it is treated like the site summary (a borderline call).
+Results/Fig21_RRBS_StateDefinitions.png
