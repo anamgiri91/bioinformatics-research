@@ -1,0 +1,23 @@
+{
+  "saved_at_utc": "2026-10-03T02:41:06.254898+00:00",
+  "status": "paused_by_user; no automatic restart",
+  "sha256": {
+    "AGENTS.md": "507161b0cfe88bcbd15049ebc57b1a827a80e03f2bc221cf295b9be449ae11eb",
+    "SESSION_HANDOFF.md": "0817b467a135a54462d1ce089f43c1387dd6ddfb403941e3d07eac115d5f1549",
+    "plan_shared_read_noise.md": "0f6b1f5340bbfe69be4f1046883cbebe327f869fe68f0f53f7c17962a0d755ef",
+    "results.md": "d750568ef5e087bf6afa3ebae61f2f269b55f9c9f1e6ce3b2e273244e0d292c6",
+    "Results/Task68_LocalExecution.md": "70dc9595b8aee5f0056604f2787e15b780d8efa45e77ff7c400892b7cba3b24b",
+    "Results/Task68_LocalSetup.json": "cee5330116978738d4a977ee39cae7073cbbd83277172c5b8e2b955e6a80a2b0",
+    "Results/Task68_ShutdownRecord.json": "8510c6158d2c80f69e902f64ce42e1fc5bfabd43f6523f24a49d5980496e0c37",
+    "Results/Task68_PauseSnapshot.json": "b6a4a2b3ba1435505f5f70fa8acefbd110980b274539b1995366d9c3c9aec9e4",
+    "Results/Task68_SpermPilotSamples.tsv": "b30010596fd1962134dd08755832557374ca243d470cb4f31eecad6e0a969a3f",
+    "Scripts/Task68.LocalPilot.sh": "f846454f70a1a48981c99568ccb535e814c22ad9b45af8b268c774839af0053f",
+    "Scripts/Task68.SpermPilot.py": "1f5e98c2d098311b317077f226b3c0516546755f856d3187da4680a5829445c4",
+    "Scripts/Task68.PrepareReference.py": "dceb6a6cbf205a436d112c1171f12259f2bafdb8566d4c2f88b0482056a4448d",
+    "Scripts/Task68.DownloadPilot.py": "51ec56bf84f016674aa7c758bfe973abdac69524d24ae0945c4557ba4d856f41",
+    "Scripts/Task68.RunLocal.py": "3bb3fb06cf9e8725b9fc89f622f9580da02547fb58d5c95b0510d2469ee7907a",
+    "Scripts/Task68.PilotChecks.py": "198255f928bbc9d0adf00026ad986794e729705dc5e367d91dc00099924a5134",
+    "Scripts/SharedReadNoise.CoverageQC.py": "73b7c9318964bed14701112b9295e129f9d177fc2e8d6587f816197d287931ab"
+  },
+  "large_data": "Preserved in local ignored Data/; not included in git checkpoint."
+}

@@ -1,0 +1,23 @@
+{
+  "requested_by_user": true,
+  "stopped_at_utc": "2026-10-03T02:35:18.672227+00:00",
+  "signal": "SIGTERM",
+  "files_deleted": false,
+  "processes": {
+    "44261": "/opt/homebrew/Cellar/python@3.11/3.11.15_4/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python Scripts/Task68.PrepareReference.py",
+    "44264": "/usr/bin/time -l -o /Users/anamgiri/Desktop/bioinformatics-research/Data/gse165915_sperm_reference/bismark_genome_preparation.resources.txt /Users/anamgiri/Desktop/bioinformatics-research/Data/shared_fragment_tools/Bismark-0.24.2/bismark_genome_preparation --bowtie2 /Users/anamgiri/Desktop/bioinformatics-research/Data/gse165915_sperm_reference/hg38_bismark",
+    "44265": "perl /Users/anamgiri/Desktop/bioinformatics-research/Data/shared_fragment_tools/Bismark-0.24.2/bismark_genome_preparation --bowtie2 /Users/anamgiri/Desktop/bioinformatics-research/Data/gse165915_sperm_reference/hg38_bismark",
+    "44327": "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python /opt/homebrew/bin/bowtie2-build --threads 1 -f genome_mfa.GA_conversion.fa BS_GA",
+    "44332": "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python /opt/homebrew/bin/bowtie2-build --threads 1 -f genome_mfa.CT_conversion.fa BS_CT",
+    "44336": "/opt/homebrew/Cellar/bowtie2/2.5.5/bin/bowtie2-build-s --wrapper basic-0 --threads 1 -f genome_mfa.CT_conversion.fa BS_CT",
+    "44345": "/opt/homebrew/Cellar/bowtie2/2.5.5/bin/bowtie2-build-s --wrapper basic-0 --threads 1 -f genome_mfa.GA_conversion.fa BS_GA",
+    "45282": "/opt/homebrew/Cellar/python@3.11/3.11.15_4/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python Scripts/Task68.DownloadPilot.py --row 1",
+    "45777": "/opt/homebrew/Cellar/python@3.11/3.11.15_4/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python Scripts/Task68.RunLocal.py --row 1 --reference-pid 44261 --download-pid 45282",
+    "46571": "curl --fail --location --retry 3 --silent --show-error --max-time 1800 --range 2684354560-2818572287 --max-filesize 134217728 --output /Users/anamgiri/Desktop/bioinformatics-research/Data/gse165915_sperm_wgbs/SRR13602252/R2.download_parts/002684354560-002818572287.partial --write-out %{http_code} https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR136/052/SRR13602252/SRR13602252_2.fastq.gz",
+    "46635": "curl --fail --location --retry 3 --silent --show-error --max-time 1800 --range 2818572288-2952790015 --max-filesize 134217728 --output /Users/anamgiri/Desktop/bioinformatics-research/Data/gse165915_sperm_wgbs/SRR13602252/R2.download_parts/002818572288-002952790015.partial --write-out %{http_code} https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR136/052/SRR13602252/SRR13602252_2.fastq.gz",
+    "46725": "curl --fail --location --retry 3 --silent --show-error --max-time 1800 --range 2952790016-3087007743 --max-filesize 134217728 --output /Users/anamgiri/Desktop/bioinformatics-research/Data/gse165915_sperm_wgbs/SRR13602252/R2.download_parts/002952790016-003087007743.partial --write-out %{http_code} https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR136/052/SRR13602252/SRR13602252_2.fastq.gz",
+    "46746": "curl --fail --location --retry 3 --silent --show-error --max-time 1800 --range 3087007744-3221225471 --max-filesize 134217728 --output /Users/anamgiri/Desktop/bioinformatics-research/Data/gse165915_sperm_wgbs/SRR13602252/R2.download_parts/003087007744-003221225471.partial --write-out %{http_code} https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR136/052/SRR13602252/SRR13602252_2.fastq.gz"
+  },
+  "verified_no_related_processes": true,
+  "verified_at_utc": "2026-10-03T02:39:47.174399+00:00"
+}
