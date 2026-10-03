@@ -1,0 +1,32 @@
+{
+  "status": "local operational setup; not a statistical external lock",
+  "python": "3.11.15 (main, Mar  3 2026, 00:52:57) [Clang 16.0.0 (clang-1600.0.26.6)]",
+  "numpy": "2.3.3",
+  "pysam": "0.23.3",
+  "cutadapt": "5.2",
+  "trim_galore_commit": "4edff97d22f3837d42a29e4afbfaeb6e07ffb11b",
+  "reference": {
+    "source": "https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/initial/hg38.fa.gz",
+    "compressed_md5": "1c9dcaddfa41027f17cd8f7a82c7293b",
+    "reference_sha256": "5be01555d98347fdb3714dc84c6f77c9d8bc774adcf32c6f7a8fa06f5baf5e51"
+  },
+  "sha256": {
+    "Scripts/Task68.LocalPilot.sh": "f846454f70a1a48981c99568ccb535e814c22ad9b45af8b268c774839af0053f",
+    "Scripts/Task68.SpermPilot.py": "1f5e98c2d098311b317077f226b3c0516546755f856d3187da4680a5829445c4",
+    "Scripts/Task68.PrepareReference.py": "dceb6a6cbf205a436d112c1171f12259f2bafdb8566d4c2f88b0482056a4448d",
+    "Scripts/Task68.DownloadPilot.py": "51ec56bf84f016674aa7c758bfe973abdac69524d24ae0945c4557ba4d856f41",
+    "Scripts/Task68.RunLocal.py": "3bb3fb06cf9e8725b9fc89f622f9580da02547fb58d5c95b0510d2469ee7907a",
+    "Scripts/SharedReadNoise.CoverageQC.py": "73b7c9318964bed14701112b9295e129f9d177fc2e8d6587f816197d287931ab",
+    "Results/Task68_SpermPilotSamples.tsv": "b30010596fd1962134dd08755832557374ca243d470cb4f31eecad6e0a969a3f"
+  },
+  "checks": [
+    "paired TruSeq clipping fixture passed",
+    "restart integrity checks passed",
+    "Python compilation passed"
+  ],
+  "in_progress": [
+    "full hg38 bisulfite indexing",
+    "first donor FASTQ download"
+  ],
+  "scientific_results_available": false
+}
