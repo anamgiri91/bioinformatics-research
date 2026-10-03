@@ -1,5 +1,11 @@
 # Task 68: GSE165915 cluster preparation
 
+**Superseded execution route, 2026-10-02:** the user instructed us not to
+use the cluster. Do not run the SSH or SLURM steps below. Continue via the
+[local-only execution plan](Task68_LocalExecution.md). The methods and
+metadata below remain a preparation record; cluster access is no longer
+an active dependency.
+
 Updated 2026-10-02. The user selected the sperm WGBS cohort and deferred the
 plasma cohort redo. **No cluster job has been submitted.** An SSH check
 reached `leap2.txstate.edu`, but `wln26` authentication failed. Cluster
@@ -176,5 +182,5 @@ GSM5058029, about 260 MB each) were used.
 - **The alternative.** GSE173787 (53 CD19+ B-cell samples, about 15x
   raw, 316 GB) would make most pairs usable. But it mixes multiple
   sclerosis patients and controls.
-- **The cluster pilot is still needed** to confirm this with
+- **The whole-fragment pilot is still needed**, now locally, to confirm this with
   whole-fragment counts from our own pipeline.

@@ -1999,8 +1999,8 @@ local commits preceding the results; this is not public preregistration.
 5. **Distance-decay development analysis: done** (16.16). The matched
    absolute contrast changes, but accuracy improvement remains unproven.
    Declare its endpoint and uncertainty before evaluation in a new cohort.
-6. **Sperm WGBS cohort selected; cluster preparation done** (16.17).
-   Restore cluster access, verify whole-fragment counts and split coverage,
+6. **Sperm WGBS cohort selected; first local pilot paused by the user** (16.17).
+   After resumption, complete the pilot, verify whole-fragment counts and split coverage,
    extend calibration, and lock the test before inspecting outcomes.
    The already inspected cohorts cannot serve as untouched validation.
 
@@ -2103,7 +2103,7 @@ so their target differs from the table above.
 Details, support counts and reproduction commands:
 [Task 67 report](Results/Task67_DistanceDecay_Report.md).
 
-### 16.17 Sperm WGBS cluster preparation (Task 68)
+### 16.17 Sperm WGBS preparation (Task 68)
 
 The selected cohort is GSE165915: 52 sperm donors, with 26 each from low
 and high DDE-exposure groups. GEO and ENA records map to 52 distinct
@@ -2118,16 +2118,24 @@ deduplication and deterministic whole-fragment A/B/C assignment. This
 first stage counts coverage and shared fragments without computing
 methylation outcomes. Synthetic alignment checks and shell validation pass.
 
-**No cluster job has been submitted:** SSH reached `leap2.txstate.edu`, but
-authentication for `wln26` failed. Once access is restored, the pilot must
-check usable depth, fragment lengths, mapping and storage before expanding.
+**Execution changed to local-only at the user's request.** No cluster job
+was submitted, and cluster access is no longer a dependency. The Mac has
+24 GiB RAM and about 684 GiB free; the two pilots fit available disk space,
+but retaining the full cohort's raw reads does not. Trim Galore is installed,
+the hg38 FASTA is checksum-verified and its CpG map is built. The user then
+requested shutdown: all indexing/download/controller jobs were stopped,
+and completed chunks and partial files were retained. No alignment began.
+Resume only when requested, following [the handoff](SESSION_HANDOFF.md).
+Run pilots sequentially and
+measure usable depth, fragment lengths, mapping, memory, time and storage
+before expanding. No local sperm alignment has been run yet.
 The final external protocol remains unlocked until counts-only feasibility
 and design-specific calibration are complete. Covariance error stays
 primary; distance decay is secondary. No WGBS generalisation result is
 available yet.
 
-**Depth check from the study's own CpG reports (counts only).** Cluster
-access is blocked, so the usable depth was read from the published Bismark
+**Depth check from the study's own CpG reports (counts only).**
+Usable depth was read from the published Bismark
 CpG reports of the two pilot donors.
 - **Depth:** mean 2.91 and 2.60 reads per CpG (median 2). That is below
   the published 4x.
@@ -2140,7 +2148,9 @@ CpG reports of the two pilot donors.
   The B-cell cohort GSE173787 (53 samples, about 15x raw) would make most
   pairs usable.
 
-Manifest, job files, commands, access status and the depth check:
+Current prerequisites and local commands:
+[Task 68 local execution plan](Results/Task68_LocalExecution.md).
+Earlier preparation, manifest and depth check:
 [Task 68 execution record](Results/Task68_ClusterExecution.md).
 
 ---

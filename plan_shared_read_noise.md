@@ -1,7 +1,10 @@
 # Item 5 plan: correcting shared-fragment sampling error in inter-donor CpG covariance
 
 Updated: 2026-10-02. **Status: Tasks 53–65 completed; Task 67 development
-analysis completed; Task 68 cluster preparation ready, access blocked.**
+analysis completed; Task 68 PAUSED at the user's request after setup/downloads started.**
+All related jobs are stopped. Resume from [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
+only when the user asks to continue; saved downloads and reference files are retained.
+The user instructed us not to use the cluster; no SSH or SLURM work is planned.
 The full plasma redo is deferred at the user's request. Two locked external tests met their primary
 criterion:
 - Task 59: blood, from the same study;
@@ -43,7 +46,7 @@ assumed in advance.
 | External benchmarks | Blood and plasma tests both meet their locked numerical criterion | Plasma's reference-independence requirement remains incompletely supported |
 | Novelty | Updated Task 60 audit identifies known estimator and subtraction identities | Possible contribution is the CpG-specific empirical finding; novelty is not established |
 | Distance decay | Task 67 absolute near–far contrast run in colon and blood, with depth/density and regional matching | Estimated technical contribution persists; sparse support and intervals crossing zero prevent a claim of improved decay accuracy |
-| WGBS generalisation | GSE165915 selected: 52 sperm donors, paired raw reads; manifests and counts-only cluster scripts prepared | No job submitted: SSH authentication failed; split-coverage feasibility and final external lock remain pending |
+| WGBS generalisation | GSE165915 selected: 52 sperm donors; first pilot paused before alignment; verified hg38 FASTA/map and completed download chunks retained | Rebuild interrupted indices and resume downloads after user requests continuation; pilot QC, cohort feasibility and final external lock remain pending |
 
 Relevant project records:
 
@@ -581,13 +584,17 @@ records. Record deviations when fixes follow inspection of outcomes.
    These are exploratory results, not a new locked validation. See the
    [analysis and calibration report](Results/Task67_DistanceDecay_Report.md).
 2. **Task 68 counts-only feasibility: next.** Run the two metadata-selected
-   GSE165915 sperm pilots on the cluster, verify library-specific trimming,
+   GSE165915 sperm pilots sequentially on this Mac, verify library-specific trimming,
    whole-mate linkage, deduplication, reference coordinates, fragment lengths,
-   storage and usable split coverage. Then run the 52-donor counts-only array
-   and count pairs with at least 20 eligible donors. The published coverage
+   storage and usable split coverage. Row 1 is paused: Trim Galore and
+   the hg38 FASTA/map are ready, but incomplete indexing and downloads were
+   stopped at the user's request. All jobs are off; see the handoff before
+   restarting with fresh process IDs. Expansion to all 52 donors requires a sequential storage plan:
+   raw FASTQs alone exceed current free disk space. Count pairs with at
+   least 20 eligible donors before proceeding to outcomes. The published coverage
    is roughly 4×, so the earlier raw-bases estimate of 9× cannot establish
-   feasibility. [Cluster scripts and execution record](Results/Task68_ClusterExecution.md)
-   are ready; SSH authentication for `wln26@leap2.txstate.edu` currently fails.
+   feasibility. Follow the [local execution plan](Results/Task68_LocalExecution.md).
+   Do not use the cluster or retry SSH.
 3. **Calibrate and lock before WGBS outcomes.** Extend known-target simulations
    to the actual low-depth missingness design and nonlinear error endpoint.
    Freeze sample list, reference, counting/consensus rules, support weights,

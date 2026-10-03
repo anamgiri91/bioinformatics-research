@@ -1,13 +1,14 @@
 # Task 68: screening WGBS cohorts for an independent test (metadata only)
 
-**Update, 2026-10-02:** the user selected GSE165915 and deferred the plasma
-redo. The [current cluster preparation record](Task68_ClusterExecution.md)
+**Update, 2026-10-02:** the user selected GSE165915, deferred the plasma
+redo, and subsequently instructed us not to use the cluster. Follow the
+[local-only execution plan](Task68_LocalExecution.md). The [preparation record](Task68_ClusterExecution.md)
 supersedes the provisional coverage and processing assumptions below.
 Published usable coverage is roughly **4×**, whereas the earlier ~9× was
 computed from raw bases. The sperm libraries require TruSeq-specific
 trimming, not the Swift plasma settings. Two counts-only pilots and a
-52-donor array are prepared; no cluster job has been submitted because SSH
-authentication failed. Counts-only feasibility precedes the final outcome
+52-donor array were prepared; no cluster job was submitted. The array is
+not the current execution route. Counts-only feasibility precedes the final outcome
 protocol lock; no sperm methylation outcomes have been inspected.
 
 Recorded on 2026-10-01. This is step 3 of the next steps in
@@ -44,7 +45,7 @@ donors and coverage.
 | GSE186458 | Human methylome atlas, sorted cells | at most 36 per group, many cell types | Public | about 30x each | Same lab and pipeline as GSE233417; not independent |
 | CNP0003513, CNP0005464 (CNGB) | cfDNA WGBS projects | not read | the portal returned only a page shell | not known | Not assessed |
 
-## The choice, if a cluster run goes ahead
+## The selected cohort
 
 **GSE165915 (sperm, 52 men)** best meets the requirements:
 - one tissue;
@@ -66,15 +67,15 @@ donors and coverage.
   exposure. That is a population trait, not a mixture of tissues, but it
   should be recorded as a covariate.
 
-**Not feasible on this laptop.** It means 743 GB of downloads and about
-4.7 billion read pairs to align. At typical Bismark speeds that is several
-hundred CPU hours, so it is a job for the leap2 cluster. On the laptop, a
-pilot of one or two donors could check depth and fragment structure
-first. That would cost about 15 GB and a few hours per donor.
+**The complete raw cohort cannot be retained on this laptop's current free
+disk.** It means 743 GB of downloads and about 4.7 billion read pairs to
+align. The selected two-donor pilot totals 23.35 GB and can be processed
+sequentially. Measure actual runtime and working storage locally before
+designing sequential full-cohort processing; no cluster will be used.
 
 ## Current execution gates
 
-1. Verify cluster access, tools, reference and storage; run the two
+1. Verify local tools, reference and storage; run the two
    metadata-selected counts-only pilots with TruSeq-specific trimming,
    paired deduplication and whole-fragment partitions.
 2. After pilot QC, measure coverage eligibility across all 52 donors.
